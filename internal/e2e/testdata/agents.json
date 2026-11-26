@@ -3,6 +3,22 @@
     "name": "claude",
     "title": "Claude",
     "mcpUserOnly": false,
+    "mcpShape": {
+      "scopes": [
+        "user",
+        "project",
+        "local"
+      ],
+      "offSwitch": true,
+      "approval": true,
+      "sse": true,
+      "userSwitch": "MCP_USER_SWITCH_PROJECT",
+      "checkedScopes": [
+        "plugin",
+        "claudeai"
+      ],
+      "projectSwitchShared": false
+    },
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "Claude Code deletes sessions after 30 days by default",
@@ -12,6 +28,7 @@
     "name": "codex",
     "title": "Codex",
     "mcpUserOnly": false,
+    "mcpShape": null,
     "goAgentSwitch": true,
     "signIn": "codex login",
     "expires": "",
@@ -21,6 +38,17 @@
     "name": "ante",
     "title": "Ante",
     "mcpUserOnly": true,
+    "mcpShape": {
+      "scopes": [
+        "user"
+      ],
+      "offSwitch": false,
+      "approval": false,
+      "sse": false,
+      "userSwitch": "MCP_USER_SWITCH_UNSPECIFIED",
+      "checkedScopes": [],
+      "projectSwitchShared": false
+    },
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "",
@@ -30,6 +58,7 @@
     "name": "omp",
     "title": "oh-my-pi",
     "mcpUserOnly": false,
+    "mcpShape": null,
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "",
@@ -39,6 +68,7 @@
     "name": "opencode",
     "title": "OpenCode",
     "mcpUserOnly": false,
+    "mcpShape": null,
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "",
@@ -48,6 +78,7 @@
     "name": "pi",
     "title": "Pi",
     "mcpUserOnly": false,
+    "mcpShape": null,
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "",
@@ -57,6 +88,18 @@
     "name": "pig",
     "title": "PiG",
     "mcpUserOnly": false,
+    "mcpShape": {
+      "scopes": [
+        "user",
+        "project"
+      ],
+      "offSwitch": true,
+      "approval": false,
+      "sse": false,
+      "userSwitch": "MCP_USER_SWITCH_EVERYWHERE",
+      "checkedScopes": [],
+      "projectSwitchShared": true
+    },
     "goAgentSwitch": false,
     "signIn": "",
     "expires": "",

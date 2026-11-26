@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/tty"
 )
@@ -63,8 +64,11 @@ func (Claude) Logout(ctx context.Context, folder, name string) error {
 // Project is the folder Claude files folder's local servers under.
 func (Claude) Project(folder string) string { return claude.Project(folder) }
 
-// UserOnly is false: Claude's is the whole model (mcp.Config).
-func (Claude) UserOnly() bool { return false }
+// Shape is the whole model: Claude's is what mcp.Config follows.
+func (Claude) Shape() model.MCPShape {
+	return model.MCPShape{Scopes: []string{"user", "project", "local"}, Switch: true, UserSwitch: model.SwitchProject, Approval: true, SSE: true,
+		Checked: []string{"plugin", "claudeai"}}
+}
 
 // ChecksInFolder is true: `claude mcp list` runs in the folder, reading
 // its settings and .mcp.json (mcp.Config).

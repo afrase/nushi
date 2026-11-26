@@ -2963,6 +2963,7 @@ class Agent extends $pb.GeneratedMessage {
     $core.bool? goAgentSwitch,
     $core.String? signIn,
     $core.String? expires,
+    McpShape? mcpShape,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -2981,6 +2982,7 @@ class Agent extends $pb.GeneratedMessage {
     if (goAgentSwitch != null) result.goAgentSwitch = goAgentSwitch;
     if (signIn != null) result.signIn = signIn;
     if (expires != null) result.expires = expires;
+    if (mcpShape != null) result.mcpShape = mcpShape;
     return result;
   }
 
@@ -3014,6 +3016,8 @@ class Agent extends $pb.GeneratedMessage {
     ..aOB(16, _omitFieldNames ? '' : 'goAgentSwitch')
     ..aOS(17, _omitFieldNames ? '' : 'signIn')
     ..aOS(18, _omitFieldNames ? '' : 'expires')
+    ..aOM<McpShape>(19, _omitFieldNames ? '' : 'mcpShape',
+        subBuilder: McpShape.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3068,7 +3072,7 @@ class Agent extends $pb.GeneratedMessage {
   void clearResume() => $_clearField(3);
 
   /// Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
-  /// and Ante's from API 80.
+  /// Ante's from API 80, PiG's from API 157.
   @$pb.TagNumber(4)
   $core.bool get mcp => $_getBF(3);
   @$pb.TagNumber(4)
@@ -3212,6 +3216,19 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasExpires() => $_has(15);
   @$pb.TagNumber(18)
   void clearExpires() => $_clearField(18);
+
+  /// What its MCP config has, which Settings › MCP servers offers by (API
+  /// 157); unset from an older daemon, where mcp_user_only says it.
+  @$pb.TagNumber(19)
+  McpShape get mcpShape => $_getN(16);
+  @$pb.TagNumber(19)
+  set mcpShape(McpShape value) => $_setField(19, value);
+  @$pb.TagNumber(19)
+  $core.bool hasMcpShape() => $_has(16);
+  @$pb.TagNumber(19)
+  void clearMcpShape() => $_clearField(19);
+  @$pb.TagNumber(19)
+  McpShape ensureMcpShape() => $_ensure(16);
 }
 
 /// An agent's adapter.
@@ -10330,10 +10347,12 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
   factory ListMcpServersResponse({
     $core.Iterable<McpServer>? servers,
     $core.String? checkError,
+    $core.bool? folderTrusted,
   }) {
     final result = ListMcpServersResponse._();
     if (servers != null) result.servers.addAll(servers);
     if (checkError != null) result.checkError = checkError;
+    if (folderTrusted != null) result.folderTrusted = folderTrusted;
     return result;
   }
 
@@ -10353,6 +10372,7 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
     ..pPM<McpServer>(1, _omitFieldNames ? '' : 'servers',
         subBuilder: McpServer.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'checkError')
+    ..aOB(3, _omitFieldNames ? '' : 'folderTrusted')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10391,6 +10411,18 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
   $core.bool hasCheckError() => $_has(1);
   @$pb.TagNumber(2)
   void clearCheckError() => $_clearField(2);
+
+  /// Whether the agent trusts the folder, so loads its project servers
+  /// (PiG's trust.json, as its servers' untrusted says); absent for an
+  /// agent with no folder trust of its own (Claude's, Ante's) (API 157).
+  @$pb.TagNumber(3)
+  $core.bool get folderTrusted => $_getBF(2);
+  @$pb.TagNumber(3)
+  set folderTrusted($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFolderTrusted() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFolderTrusted() => $_clearField(3);
 }
 
 class McpServer extends $pb.GeneratedMessage {
@@ -10405,6 +10437,8 @@ class McpServer extends $pb.GeneratedMessage {
     $core.bool? off,
     $core.String? offBy,
     $core.bool? approved,
+    $core.bool? untrusted,
+    $core.String? held,
   }) {
     final result = McpServer._();
     if (name != null) result.name = name;
@@ -10417,6 +10451,8 @@ class McpServer extends $pb.GeneratedMessage {
     if (off != null) result.off = off;
     if (offBy != null) result.offBy = offBy;
     if (approved != null) result.approved = approved;
+    if (untrusted != null) result.untrusted = untrusted;
+    if (held != null) result.held = held;
     return result;
   }
 
@@ -10443,6 +10479,8 @@ class McpServer extends $pb.GeneratedMessage {
     ..aOB(8, _omitFieldNames ? '' : 'off')
     ..aOS(9, _omitFieldNames ? '' : 'offBy')
     ..aOB(10, _omitFieldNames ? '' : 'approved')
+    ..aOB(11, _omitFieldNames ? '' : 'untrusted')
+    ..aOS(12, _omitFieldNames ? '' : 'held')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10567,6 +10605,168 @@ class McpServer extends $pb.GeneratedMessage {
   $core.bool hasApproved() => $_has(9);
   @$pb.TagNumber(10)
   void clearApproved() => $_clearField(10);
+
+  /// A project server the agent doesn't load because the folder isn't
+  /// trusted in it (PiG: until its trust.json, or defaultProjectTrust
+  /// "always", says so; trusted in pig itself, its start's prompt or
+  /// /trust). It hides no server of its name, and a check passes it by
+  /// (API 157).
+  @$pb.TagNumber(11)
+  $core.bool get untrusted => $_getBF(10);
+  @$pb.TagNumber(11)
+  set untrusted($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasUntrusted() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearUntrusted() => $_clearField(11);
+
+  /// Why its switch can't act here, in words for the switch's tooltip;
+  /// empty when it can. PiG's: "Set by this folder's .pig/mcp.json", on one
+  /// of yours whose "enabled" a trusted folder's file overrides (API 157).
+  @$pb.TagNumber(12)
+  $core.String get held => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set held($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasHeld() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearHeld() => $_clearField(12);
+}
+
+/// What an agent's MCP config has of Claude Code's model (API 157).
+class McpShape extends $pb.GeneratedMessage {
+  factory McpShape({
+    $core.Iterable<$core.String>? scopes,
+    $core.bool? offSwitch,
+    $core.bool? approval,
+    $core.bool? sse,
+    McpUserSwitch? userSwitch,
+    $core.Iterable<$core.String>? checkedScopes,
+    $core.bool? projectSwitchShared,
+  }) {
+    final result = McpShape._();
+    if (scopes != null) result.scopes.addAll(scopes);
+    if (offSwitch != null) result.offSwitch = offSwitch;
+    if (approval != null) result.approval = approval;
+    if (sse != null) result.sse = sse;
+    if (userSwitch != null) result.userSwitch = userSwitch;
+    if (checkedScopes != null) result.checkedScopes.addAll(checkedScopes);
+    if (projectSwitchShared != null)
+      result.projectSwitchShared = projectSwitchShared;
+    return result;
+  }
+
+  McpShape._();
+
+  factory McpShape.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      McpShape()..mergeFromBuffer(data, registry);
+  factory McpShape.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      McpShape()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'McpShape',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: McpShape.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'scopes')
+    ..aOB(2, _omitFieldNames ? '' : 'offSwitch')
+    ..aOB(3, _omitFieldNames ? '' : 'approval')
+    ..aOB(4, _omitFieldNames ? '' : 'sse')
+    ..aE<McpUserSwitch>(5, _omitFieldNames ? '' : 'userSwitch',
+        enumValues: McpUserSwitch.values)
+    ..pPS(6, _omitFieldNames ? '' : 'checkedScopes')
+    ..aOB(7, _omitFieldNames ? '' : 'projectSwitchShared')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  McpShape clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  McpShape copyWith(void Function(McpShape) updates) =>
+      super.copyWith((message) => updates(message as McpShape)) as McpShape;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use McpShape() / McpShape.new instead')
+  static McpShape create() => McpShape._();
+  static $pb.GeneratedMessage $_createMessage() => McpShape._();
+  @$core.override
+  McpShape createEmptyInstance() => McpShape._();
+  @$core.pragma('dart2js:noInline')
+  static McpShape getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<McpShape>(McpShape.$_createMessage);
+  static McpShape? _defaultInstance;
+
+  /// Where its servers are added and changed, in the order offered:
+  /// Claude's "user", "project", "local"; Ante's "user"; PiG's "user",
+  /// "project".
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get scopes => $_getList(0);
+
+  /// A server turns off and on (SetMcpServerOn): Claude's and PiG's
+  /// (PiG's by "enabled" in the file that has it); user_switch says where
+  /// it reaches for one of yours.
+  @$pb.TagNumber(2)
+  $core.bool get offSwitch => $_getBF(1);
+  @$pb.TagNumber(2)
+  set offSwitch($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOffSwitch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOffSwitch() => $_clearField(2);
+
+  /// A project's servers are approved one by one (Claude's .mcp.json, and
+  /// McpServer.approved); without it they load with the folder's trust in
+  /// the agent, and one not loaded is McpServer.untrusted.
+  @$pb.TagNumber(3)
+  $core.bool get approval => $_getBF(2);
+  @$pb.TagNumber(3)
+  set approval($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasApproval() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearApproval() => $_clearField(3);
+
+  /// It speaks the legacy SSE transport (Claude's).
+  @$pb.TagNumber(4)
+  $core.bool get sse => $_getBF(3);
+  @$pb.TagNumber(4)
+  set sse($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSse() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSse() => $_clearField(4);
+
+  /// Where the switch on one of yours reaches: Claude's PROJECT, PiG's
+  /// EVERYWHERE (API 157).
+  @$pb.TagNumber(5)
+  McpUserSwitch get userSwitch => $_getN(4);
+  @$pb.TagNumber(5)
+  set userSwitch(McpUserSwitch value) => $_setField(5, value);
+  @$pb.TagNumber(5)
+  $core.bool hasUserSwitch() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearUserSwitch() => $_clearField(5);
+
+  /// The scopes only the check fills, whose servers no file of the
+  /// agent's gives: Claude's "plugin" and "claudeai" (API 157).
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get checkedScopes => $_getList(5);
+
+  /// A project server's switch writes the project's own file, which
+  /// everyone on the repository shares (PiG's .pig/mcp.json); false: a
+  /// file of yours alone (Claude's .claude/settings.local.json, kept out of
+  /// git) (API 157).
+  @$pb.TagNumber(7)
+  $core.bool get projectSwitchShared => $_getBF(6);
+  @$pb.TagNumber(7)
+  set projectSwitchShared($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasProjectSwitchShared() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearProjectSwitchShared() => $_clearField(7);
 }
 
 class AddMcpServerRequest extends $pb.GeneratedMessage {
@@ -37894,7 +38094,10 @@ class NushiServiceApi {
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
   /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
   /// refused for it. Login and Logout are refused only when that Ante has no
-  /// sign-in for MCP servers (before 0.2.15).
+  /// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+  /// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+  /// until PiG trusts the folder), checked by `pig mcp list --json` in the
+  /// folder and signed in to by `pig mcp login`; McpShape says what it has.
   $async.Future<ListMcpServersResponse> listMcpServers(
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',
@@ -37924,9 +38127,13 @@ class NushiServiceApi {
   /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
   /// project's .claude/settings.local.json). A user or local server: as the
   /// agent's own switch does, asked of the agent (Claude: /mcp in a
-  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-  /// any other scope (Claude's plugins' servers and claude.ai connectors)
-  /// and by an agent with no off switch.
+  /// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+  /// 157): "enabled" in the file that has the server, so one of yours is on
+  /// or off everywhere (McpShape.user_switch); refused, with
+  /// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+  /// it. Refused for any other scope (Claude's plugins' servers and
+  /// claude.ai connectors) and by an agent with no off switch. These
+  /// changes and the sign-ins are the Mac's app's alone (macOnly).
   $async.Future<SetMcpServerOnResponse> setMcpServerOn(
           $pb.ClientContext? ctx, SetMcpServerOnRequest request) =>
       _client.invoke<SetMcpServerOnResponse>(ctx, 'NushiService',

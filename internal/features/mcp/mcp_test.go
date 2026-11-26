@@ -14,12 +14,15 @@ import (
 
 type fakeConfig struct {
 	files, checked []model.MCPServer
-	calls          []string // "add <name> <config>", "remove <name>"
+	checkErr       error
+	accountErr     error           // what Login and Logout fail with
+	shape          *model.MCPShape // Claude's scopes when nil
+	calls          []string        // "add <name> <config>", "remove <name>"
 }
 
 func (f *fakeConfig) Servers(string) ([]model.MCPServer, error) { return f.files, nil }
 func (f *fakeConfig) Check(context.Context, string) ([]model.MCPServer, error) {
-	return f.checked, nil
+	return f.checked, f.checkErr
 }
 func (f *fakeConfig) Add(ctx context.Context, _, _, name, config string) error {
 	if ctx.Err() != nil {
@@ -43,10 +46,15 @@ func (f *fakeConfig) SetOn(_ context.Context, _, scope, name string, on bool) er
 	f.calls = append(f.calls, fmt.Sprintf("on %s %s %v", scope, name, on))
 	return nil
 }
-func (f *fakeConfig) Login(context.Context, string, string) error  { return nil }
-func (f *fakeConfig) Logout(context.Context, string, string) error { return nil }
-func (f *fakeConfig) UserOnly() bool                               { return false }
-func (f *fakeConfig) ChecksInFolder() bool                         { return true }
+func (f *fakeConfig) Login(context.Context, string, string) error  { return f.accountErr }
+func (f *fakeConfig) Logout(context.Context, string, string) error { return f.accountErr }
+func (f *fakeConfig) Shape() model.MCPShape {
+	if f.shape != nil {
+		return *f.shape
+	}
+	return model.MCPShape{Scopes: []string{"user", "project", "local"}}
+}
+func (f *fakeConfig) ChecksInFolder() bool { return true }
 
 func TestListMergesTheCheck(t *testing.T) {
 	svc := New("claude", &fakeConfig{
@@ -163,7 +171,7 @@ func TestSecretsAreMaskedWhereverTheyAre(t *testing.T) {
 		`{"url":"https://u:p@h.io/s/aB3dE5fG7hJ9kL1mN3/x?apiKey=k1&v=2#t","headers":{"A":"b"},"headersHelper":"get-token"}`:                                                                      `{"headers":{"A":"••••"},"headersHelper":"••••","url":"https://••••@h.io/s/••••/x?apiKey=••••\u0026v=••••#••••"}`,
 		`{"url":"https://h.io/my-server-2024-edition/v1"}`:                                                                                                                                       `{"url":"https://h.io/my-server-2024-edition/v1"}`,
 		`{"command":"docker","args":["run","-e","LOG=1","--api-key","sk-1","--token=t","GH_TOKEN=g","--port","80","plain=1"]}`:                                                                   `{"args":["run","-e","LOG=••••","--api-key","••••","--token=••••","GH_TOKEN=••••","--port","80","plain=1"],"command":"docker"}`,
-		`{"command":"x","args":["-H","Authorization: Bearer t1","--header","X-Key: k2","Bearer t3","sh -c 'curl -H \"Authorization: Bearer t4\" --token t5 https://h.io/?aB3dE5fG7hJ9kL1mN3'"]}`: `{"args":["-H","Authorization: ••••","--header","X-Key: ••••","••••","sh -c 'curl -H \"Authorization: •••• Bearer •••• --token •••• https://h.io/?••••'"],"command":"x"}`,
+		`{"command":"x","args":["-H","Authorization: Bearer t1","--header","X-Key: k2","Bearer t3","sh -c 'curl -H \"Authorization: Bearer t4\" --token t5 https://h.io/?aB3dE5fG7hJ9kL1mN3'"]}`: `{"args":["-H","Authorization: ••••","--header","X-Key: ••••","••••","sh -c 'curl -H \"Authorization: ••••\" --token •••• https://h.io/?••••'"],"command":"x"}`,
 		`{"command":"npx srv --password pw https://h.io/?k=v"}`:                                                                                                                                  `{"command":"npx srv --password •••• https://h.io/?k=••••"}`,
 		// Secrets' shapes wherever they stand (tech debt review 2026-11-22):
 		// a positional token, one inside sh -c, a JWT in a URL's path.
@@ -230,6 +238,36 @@ func TestAChangeReachesTheChatsItAffects(t *testing.T) {
 	}
 }
 
+// folderConfig is a Config whose project servers count in the folder
+// alone (PiG's .pig/mcp.json, not a parent's).
+type folderConfig struct{ fakeConfig }
+
+func (folderConfig) OwnFolderOnly() bool { return true }
+
+// A project change of such an agent tells only the folder's chats, not
+// its subfolders', which never read that file.
+func TestAFolderOnlyChangeTellsTheFolder(t *testing.T) {
+	var reached []string
+	svc := New("pig", &folderConfig{}, func(_ string, affected func(string) bool) {
+		for _, f := range []string{"/r", "/r/sub", "/rx"} {
+			if affected(f) {
+				reached = append(reached, f)
+			}
+		}
+	})
+	noErr(t, svc.Add(context.Background(), "/r", "project", "s", `{"command":"x"}`))
+	if !reflect.DeepEqual(reached, []string{"/r"}) {
+		t.Errorf("reached %v", reached)
+	}
+}
+
+func noErr(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // The app going away mid-edit doesn't stop it halfway (removed, not added).
 func TestAnEditOutlivesTheApp(t *testing.T) {
 	cfg := &fakeConfig{files: []model.MCPServer{{Name: "s", Scope: "user", Config: `{"command":"x"}`}}}
@@ -290,3 +328,131 @@ func TestSetOnGoesByScope(t *testing.T) {
 		t.Errorf("chats told = %q", reached) // the project's, not every folder's
 	}
 }
+
+// scopedConfig is a Config whose check says each server's scope (PiG's).
+type scopedConfig struct{ fakeConfig }
+
+func (scopedConfig) ChecksByScope() bool { return true }
+
+// A check that says each server's scope is matched by scope and name: a
+// project entry the agent refused (its error, failed) doesn't take your
+// server's state or hide yours; a server the check didn't report stays
+// unchecked, not "Not in use here" (PiG's list ignores a project trusted
+// only by defaultProjectTrust "always", which a session honours); one it
+// reports for a name it hid stays hidden while the winner went
+// unreported (that same "always").
+func TestAScopedCheckMatchesByScopeAndName(t *testing.T) {
+	svc := New("pig", &scopedConfig{fakeConfig{
+		files: []model.MCPServer{{Name: "shared", Scope: "user", Shadowed: true}, {Name: "mine", Scope: "user"},
+			{Name: "quiet", Scope: "user", Shadowed: true}, {Name: "shared", Scope: "project"},
+			{Name: "proj", Scope: "project"}, {Name: "quiet", Scope: "project"}},
+		checked: []model.MCPServer{{Name: "shared", Scope: "user", State: "failed", Detail: "closed"}, {Name: "mine", Scope: "user", State: "connected"},
+			{Name: "shared", Scope: "project", State: "failed", Detail: "legacy SSE"}, {Name: "quiet", Scope: "user", State: "connected"}},
+	}}, nil)
+	got, _, err := svc.List(context.Background(), "/f", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var says []string
+	for _, g := range got {
+		says = append(says, fmt.Sprintf("%s %s %s %q %v", g.Scope, g.Name, g.State, g.Detail, g.Shadowed))
+	}
+	want := []string{`user shared failed "closed" false`, `user mine connected "" false`, `user quiet  "" true`,
+		`project shared failed "legacy SSE" false`, `project proj  "" false`, `project quiet  "" false`}
+	if !reflect.DeepEqual(says, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(says, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// A switch on yours that reaches everywhere (PiG's) tells every chat of
+// the agent; one for the project (Claude's) only the project's.
+func TestAnEverywhereSwitchTellsEveryChat(t *testing.T) {
+	for reach, want := range map[model.Reach][]string{model.SwitchEverywhere: {"/p", "/p/sub", "/q"}, model.SwitchProject: {"/p", "/p/sub"}} {
+		cfg := &fakeConfig{files: []model.MCPServer{{Name: "web", Scope: "user"}},
+			shape: &model.MCPShape{Scopes: []string{"user", "project"}, Switch: true, UserSwitch: reach}}
+		var reached []string
+		svc := New("pig", cfg, func(_ string, affected func(string) bool) {
+			for _, f := range []string{"/p", "/p/sub", "/q"} {
+				if affected(f) {
+					reached = append(reached, f)
+				}
+			}
+		})
+		if err := svc.SetOn(context.Background(), "/p", "user", "web", false); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(reached, want) {
+			t.Errorf("%s: chats told = %q", reach, reached)
+		}
+	}
+}
+
+// A project server the agent doesn't load (the folder isn't trusted in
+// it) never takes the check's state of its name, even listed first: the
+// agent uses the other one.
+func TestAnUntrustedServerIsntTheOneUsed(t *testing.T) {
+	svc := New("pig", &fakeConfig{files: []model.MCPServer{{Name: "web", Scope: "project", Untrusted: true}, {Name: "web", Scope: "user"},
+		{Name: "only", Scope: "project", Untrusted: true}},
+		checked: []model.MCPServer{{Name: "web", State: "connected"}}}, nil)
+	got, _, _ := svc.List(context.Background(), "/f", true)
+	if got[0].State != "disabled" || got[1].State != "connected" || got[2].State != "disabled" {
+		t.Errorf("project %+v, user %+v, only %+v", got[0], got[1], got[2])
+	}
+}
+
+// An OAuth client's secret (PiG's oauth.clientSecret) is masked, and goes
+// back only into the same server.
+func TestAnOAuthSecretIsMaskedAndKept(t *testing.T) {
+	old := `{"url":"https://h.io/mcp","oauth":{"clientId":"c","clientSecret":"s1","callbackPort":8765}}`
+	shown := masked(old)
+	if want := `{"oauth":{"callbackPort":8765,"clientId":"c","clientSecret":"••••"},"url":"https://h.io/mcp"}`; shown != want {
+		t.Errorf("masked = %s, want %s", shown, want)
+	}
+	if got, err := unmasked(shown, old); err != nil || !reflect.DeepEqual(decoded(got), decoded(old)) {
+		t.Errorf("sent back as shown: %s, %v", got, err)
+	}
+	for _, edit := range []string{
+		`{"url":"https://evil.io/mcp","oauth":{"clientId":"c","clientSecret":"••••","callbackPort":8765}}`,
+		`{"url":"https://h.io/mcp","oauth":{"clientId":"other","clientSecret":"••••","callbackPort":8765}}`,
+	} {
+		if got, err := unmasked(edit, old); err == nil {
+			t.Errorf("changed, the secret kept: %s", got)
+		}
+	}
+	if _, err := unmasked(`{"url":"https://h.io/mcp","oauth":{"clientSecret":"••••"}}`, `{"url":"https://h.io/mcp"}`); err == nil {
+		t.Error("a secret that was never there: not refused")
+	}
+}
+
+// User only is yours alone and nothing else of Claude's model: a switch
+// or SSE on yours alone is more.
+func TestShapeSaysUserOnly(t *testing.T) {
+	for _, c := range []struct {
+		shape model.MCPShape
+		want  bool
+	}{
+		{model.MCPShape{Scopes: []string{"user"}}, true},
+		{model.MCPShape{Scopes: []string{"user", "project"}}, false},
+		{model.MCPShape{Scopes: []string{"user", "project", "local"}}, false},
+		{model.MCPShape{Scopes: []string{"user"}, Switch: true}, false},
+		{model.MCPShape{Scopes: []string{"user"}, SSE: true}, false},
+		{model.MCPShape{Scopes: []string{"project"}}, false},
+	} {
+		if got := New("x", shaped{c.shape}, nil).UserOnly(); got != c.want {
+			t.Errorf("%+v: user only %v", c.shape, got)
+		}
+	}
+}
+
+type shaped struct{ shape model.MCPShape }
+
+func (s shaped) Servers(string) ([]model.MCPServer, error)                 { return nil, nil }
+func (s shaped) Check(context.Context, string) ([]model.MCPServer, error)  { return nil, nil }
+func (s shaped) Add(context.Context, string, string, string, string) error { return nil }
+func (s shaped) Remove(context.Context, string, string, string) error      { return nil }
+func (s shaped) Project(f string) string                                   { return f }
+func (s shaped) SetOn(context.Context, string, string, string, bool) error { return nil }
+func (s shaped) Login(context.Context, string, string) error               { return nil }
+func (s shaped) Logout(context.Context, string, string) error              { return nil }
+func (s shaped) Shape() model.MCPShape                                     { return s.shape }
+func (s shaped) ChecksInFolder() bool                                      { return false }

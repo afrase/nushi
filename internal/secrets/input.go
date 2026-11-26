@@ -108,7 +108,7 @@ func (m *jsonMasker) token(tok json.Token) error {
 	if top != nil && !top.object && top.n > 0 {
 		m.out.WriteByte(',')
 	}
-	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key) && !countKey.MatchString(top.key))
+	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key) && !NotSecret(top.key))
 	if top != nil {
 		top.n++
 		top.keyed = false

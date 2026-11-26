@@ -338,7 +338,51 @@ type MCPServer struct {
 	OffBy string
 	// Approved says the project's local settings approve a project server.
 	Approved bool
+	// Untrusted says the agent doesn't load this project server because
+	// the folder isn't trusted in it (PiG's trust.json).
+	Untrusted bool
+	// Held is why its switch can't act here, in a few words for the
+	// switch's tooltip ("Set by this folder's .pig/mcp.json"); "" when it
+	// can.
+	Held string
 }
+
+// MCPShape is what an agent's MCP config has of Claude Code's model
+// (features/mcp's Config.Shape).
+type MCPShape struct {
+	// Scopes are where its servers are added and changed, in the order
+	// offered: Claude's user, project and local; Ante's user alone.
+	Scopes []string
+	// Switch says a server turns off and on (SetOn); UserSwitch says
+	// where it reaches for a server of yours.
+	Switch     bool
+	UserSwitch Reach
+	// Approval says a project's servers are approved one by one (Claude's
+	// .mcp.json); without it, they load with the folder's trust in the
+	// agent (PiG's), and one not loaded is Untrusted.
+	Approval bool
+	// SSE says the agent speaks the legacy SSE transport.
+	SSE bool
+	// Checked are the scopes only the agent's check fills, whose servers
+	// no file of its gives (Claude's plugins' and claude.ai's).
+	Checked []string
+	// ProjectShared says a project server's switch writes the project's
+	// own file, which everyone on the repository shares (PiG's
+	// .pig/mcp.json), not a file of yours alone (Claude's local settings).
+	ProjectShared bool
+}
+
+// Reach is where the switch on a server of yours turns it off and on.
+type Reach string
+
+const (
+	// SwitchProject is for the folder's project only (Claude's /mcp,
+	// recorded in ~/.claude.json).
+	SwitchProject Reach = "project"
+	// SwitchEverywhere is on or off everywhere, in your own file (PiG's
+	// "enabled" in its mcp.json).
+	SwitchEverywhere Reach = "everywhere"
+)
 
 // ShellEnv is how reading the login shell's environment, which agents
 // start with, went last (ADR 0048): the shell, when it ended, and why it

@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 156
+const Version = 157
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -178,6 +178,15 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceGetUsageProcedure: true,
 	// The phone has no find in a chat.
 	nushiv1connect.NushiServiceFindInChatProcedure: true,
+	// The phone has no MCP settings, and a change writes an agent's
+	// config (a repository's file too) for a server it then runs as you;
+	// a sign-in opens the Mac's browser. Listing stays open to a device.
+	nushiv1connect.NushiServiceAddMcpServerProcedure:    true,
+	nushiv1connect.NushiServiceEditMcpServerProcedure:   true,
+	nushiv1connect.NushiServiceRemoveMcpServerProcedure: true,
+	nushiv1connect.NushiServiceSetMcpServerOnProcedure:  true,
+	nushiv1connect.NushiServiceLoginMcpServerProcedure:  true,
+	nushiv1connect.NushiServiceLogoutMcpServerProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the

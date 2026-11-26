@@ -51,6 +51,59 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('an OAuth server with hidden parts says beside its URL that '
+      'they are changed in Edit as JSON; one without says nothing', (
+    tester,
+  ) async {
+    viewport(tester, const Size(900, 900));
+    final d = await FakeDaemon([]).connect(tester);
+    const note =
+        'Its OAuth settings have hidden parts: change them in Edit as JSON.';
+    for (final (oauth, shown) in [
+      ('{"authServerMetadataUrl":"https://login.example.com/••••/meta"}', true),
+      ('{"callbackPort":8765}', false),
+    ]) {
+      final server = McpServer(
+        name: 'wiki',
+        scope: 'user',
+        configJson:
+            '{"type":"http","url":"https://wiki.example.com/mcp",'
+            '"oauth":$oauth}',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => mcpForm(
+                context,
+                McpServers.of(d, '/x', agent: 'claude'),
+                server: server,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.text(note), shown ? findsOneWidget : findsNothing);
+      if (shown) {
+        // Right under the URL's field, before the headers.
+        final url = tester.getRect(find.byType(TextField).at(1));
+        final said = tester.getRect(find.text(note));
+        expect(said.top, greaterThanOrEqualTo(url.bottom));
+        expect(said.top, lessThan(tester.getRect(find.text('Headers')).top));
+        await tester.tap(find.text('Edit as JSON'));
+        await tester.pumpAndSettle();
+        expect(find.text(note), findsNothing);
+      }
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    }
+    d.dispose();
+  });
+
   // The empty form to look at (`make renders`): its hints a step fainter
   // than a typed value, so an example never reads as typed.
   for (final tokens in [Tokens.dark, Tokens.light]) {

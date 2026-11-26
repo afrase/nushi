@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 func decode(config string) (map[string]any, error) {
@@ -138,7 +140,8 @@ func (s *Service) stored(folder, scope, name string) (string, error) {
 
 // notify tells the chats the change reaches: every chat for user scope;
 // for project and local scope the chats in folder's project or below
-// folder (a .mcp.json counts for the folders under it).
+// folder (a .mcp.json counts for the folders under it), or in folder
+// alone for an agent that reads only its own (ownFolder).
 func (s *Service) notify(folder, scope string) {
 	if s.changed == nil {
 		return
@@ -147,14 +150,25 @@ func (s *Service) notify(folder, scope string) {
 		s.changed(s.agent, func(string) bool { return true })
 		return
 	}
+	if o, ok := s.config.(ownFolder); ok && o.OwnFolderOnly() {
+		s.changed(s.agent, func(f string) bool { return f == folder })
+		return
+	}
 	project := s.config.Project(folder)
 	s.changed(s.agent, func(f string) bool {
 		return f == folder || strings.HasPrefix(f, folder+"/") || s.config.Project(f) == project
 	})
 }
 
-// SetOn turns a server on or off for folder's project: a project server
-// (on approves it) or a user or local one. Any other scope is refused by
+// ownFolder is a Config whose project servers count in their folder
+// alone, not in the folders under it (PiG reads only the session's own
+// .pig/mcp.json, docs/facts/pig.md), so a change there tells only that
+// folder's chats.
+type ownFolder interface{ OwnFolderOnly() bool }
+
+// SetOn turns a server on or off: a project server for folder's project
+// (on approves it), a local one there, and one of yours where the shape's
+// UserSwitch says (for the project, or everywhere). Any other scope is refused by
 // target; the agent's Config refuses what it can't turn off. An empty
 // scope is project, as before scopes were asked.
 func (s *Service) SetOn(ctx context.Context, folder, scope, name string, on bool) error {
@@ -173,7 +187,11 @@ func (s *Service) SetOn(ctx context.Context, folder, scope, name string, on bool
 	if err := s.config.SetOn(ctx, folder, scope, name, on); err != nil {
 		return err
 	}
-	s.notify(folder, "project") // per project, whatever the scope
+	reach := "project" // per project, whatever the scope (Claude's /mcp)
+	if scope == "user" && s.config.Shape().UserSwitch == model.SwitchEverywhere {
+		reach = "user" // in your own file (PiG's): every chat
+	}
+	s.notify(folder, reach)
 	return nil
 }
 
@@ -196,7 +214,7 @@ func (s *Service) account(ctx context.Context, folder, name string, do func(cont
 		return fmt.Errorf("%q is not a server's name", name)
 	}
 	if err := do(ctx, folder, name); err != nil {
-		return err
+		return errors.New(maskText(err.Error())) // the agent's last line: the browser's or a server's words
 	}
 	s.notify(folder, "user")
 	return nil

@@ -31,6 +31,22 @@ List<Agent> readyAgents() => [
       path: '/bin/${a['name']}',
       ready: true,
       mcpUserOnly: a['mcpUserOnly']! as bool,
+      mcpShape: switch (a['mcpShape']) {
+        final Map<String, Object?> s => McpShape(
+          scopes: [for (final scope in s['scopes']! as List) scope as String],
+          offSwitch: s['offSwitch']! as bool,
+          approval: s['approval']! as bool,
+          sse: s['sse']! as bool,
+          userSwitch: McpUserSwitch.values.firstWhere(
+            (v) => v.name == s['userSwitch']! as String,
+          ),
+          checkedScopes: [
+            for (final scope in s['checkedScopes']! as List) scope as String,
+          ],
+          projectSwitchShared: s['projectSwitchShared']! as bool,
+        ),
+        _ => null,
+      },
       goAgentSwitch: a['goAgentSwitch']! as bool,
       signIn: a['signIn']! as String,
       expires: a['expires']! as String,

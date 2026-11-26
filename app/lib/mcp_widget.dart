@@ -13,9 +13,9 @@ import 'package:nushi/widgets.dart';
 /// The details panel's MCP widget: the servers the agent uses in the chat's
 /// folder, each with its state and its switch for the project (a change
 /// reaches the chat when it restarts, which the widget then offers);
-/// "Manage…" opens the MCP servers view. Claude's and Ante's (no switch:
-/// Ante can't turn one off); an agent whose MCP config Nushi doesn't read
-/// gets a note.
+/// "Manage…" opens the MCP servers view. Claude's, Ante's (no switch:
+/// Ante can't turn one off) and PiG's; an agent whose MCP config Nushi
+/// doesn't read gets a note.
 PanelWidget mcpWidget(ChatState chat, Daemon daemon) {
   if (knownAgents[chat.agent]?.mcp == false) {
     return PanelWidget(

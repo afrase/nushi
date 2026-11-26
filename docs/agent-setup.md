@@ -93,6 +93,7 @@ Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your log
 
 - **PiG has no permission prompts**: its tools run without asking.
 - A folder's `.pig` settings, extensions and MCP servers load only once you've trusted the folder in PiG (`/trust` in a terminal `pig`).
+- Settings › MCP servers lists and changes PiG's servers, yours and the folder's ([MCP servers and skills](mcp-and-skills.md)).
 - A PiG chat resumes in a terminal with `pig --session <session id>`. Delete moves its session file to the Trash, as PiG does.
 
 ## Setting up adapters

@@ -96,3 +96,61 @@ func TestEditsAtOnce(t *testing.T) {
 		t.Errorf("%d keys of 20, %v", len(got), err)
 	}
 }
+
+// A file in a folder (a repository's .pig/mcp.json) that is a link is
+// written as PiG writes it: one that stays in the folder is followed, its
+// target replaced with the target's mode and the link kept; one that
+// leads out is refused in plain words, nothing written anywhere.
+func TestEditInFollowsALinkInsideTheFolder(t *testing.T) {
+	set := func(m map[string]json.RawMessage) error { m["k"] = json.RawMessage(`2`); return nil }
+	for _, c := range []struct{ name, target string }{
+		{"relative", "../conf.json"},
+		{"absolute", ""}, // the folder's conf.json, by its whole path
+	} {
+		base, _ := filepath.EvalSymlinks(t.TempDir())
+		conf := filepath.Join(base, "conf.json")
+		if err := os.WriteFile(conf, []byte(`{"k": 1}`), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(base, ".pig"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		target := c.target
+		if target == "" {
+			target = conf
+		}
+		link := filepath.Join(base, ".pig", "mcp.json")
+		if err := os.Symlink(target, link); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := EditIn(base, filepath.Join(".pig", "mcp.json"), set); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		fi, err := os.Lstat(link)
+		if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+			t.Errorf("%s: the link went: %v %v", c.name, fi, err)
+		}
+		fi, _ = os.Stat(conf)
+		if b, _ := os.ReadFile(conf); string(b) != `{"k": 2}` || fi.Mode().Perm() != 0o600 {
+			t.Errorf("%s: the target is %q, %v", c.name, b, fi.Mode())
+		}
+	}
+	base, outside := t.TempDir(), t.TempDir()
+	victim := filepath.Join(outside, "victim.json")
+	if err := os.WriteFile(victim, []byte(`{"k": 1}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, ".pig"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(victim, filepath.Join(base, ".pig", "mcp.json")); err != nil {
+		t.Fatal(err)
+	}
+	_, err := EditIn(base, filepath.Join(".pig", "mcp.json"), set)
+	if err == nil || err.Error() != filepath.Join(base, ".pig", "mcp.json")+" is a link out of its folder: Nushi changes it only inside the folder" {
+		t.Errorf("a link out: %v", err)
+	}
+	if b, _ := os.ReadFile(victim); string(b) != `{"k": 1}` {
+		t.Errorf("the file outside became %q", b)
+	}
+}

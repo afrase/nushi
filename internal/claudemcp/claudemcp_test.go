@@ -161,6 +161,21 @@ func TestSetOnRefusesSymlinks(t *testing.T) {
 			t.Errorf("%s as a symlink: the target became %q", link, b)
 		}
 	}
+	// A link that stays in the repository is refused too, and both it and
+	// its target stay as they were.
+	repo := t.TempDir()
+	testcheck.Write(t, filepath.Join(repo, "conf.json"), "keep")
+	testcheck.NoErr(t, os.MkdirAll(filepath.Join(repo, ".claude"), 0o755))
+	testcheck.NoErr(t, os.Symlink("../conf.json", filepath.Join(repo, ".claude", "settings.local.json")))
+	if err := (Claude{}).SetOn(ctx, repo, "project", "web", true); err == nil {
+		t.Error("a link inside the repository: changed")
+	}
+	if fi, err := os.Lstat(filepath.Join(repo, ".claude", "settings.local.json")); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("a link inside the repository went: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(repo, "conf.json")); string(b) != "keep" {
+		t.Errorf("a link inside the repository: the target became %q", b)
+	}
 }
 
 // In a worktree Claude reads the main checkout's local settings, then the

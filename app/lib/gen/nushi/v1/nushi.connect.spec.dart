@@ -742,7 +742,10 @@ abstract final class NushiService {
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
   /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
   /// refused for it. Login and Logout are refused only when that Ante has no
-  /// sign-in for MCP servers (before 0.2.15).
+  /// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+  /// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+  /// until PiG trusts the folder), checked by `pig mcp list --json` in the
+  /// folder and signed in to by `pig mcp login`; McpShape says what it has.
   static const listMcpServers = connect.Spec(
     '/$name/ListMcpServers',
     connect.StreamType.unary,
@@ -782,9 +785,13 @@ abstract final class NushiService {
   /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
   /// project's .claude/settings.local.json). A user or local server: as the
   /// agent's own switch does, asked of the agent (Claude: /mcp in a
-  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-  /// any other scope (Claude's plugins' servers and claude.ai connectors)
-  /// and by an agent with no off switch.
+  /// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+  /// 157): "enabled" in the file that has the server, so one of yours is on
+  /// or off everywhere (McpShape.user_switch); refused, with
+  /// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+  /// it. Refused for any other scope (Claude's plugins' servers and
+  /// claude.ai connectors) and by an agent with no off switch. These
+  /// changes and the sign-ins are the Mac's app's alone (macOnly).
   static const setMcpServerOn = connect.Spec(
     '/$name/SetMcpServerOn',
     connect.StreamType.unary,

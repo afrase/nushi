@@ -47,6 +47,7 @@ func TestRedact(t *testing.T) {
 		"key sk-ant-api03-abcdefghijklmnopqrstuv end":     "key [redacted] end",
 		"FIREWORKS_API_KEY=abcd1234 next":                 "FIREWORKS_API_KEY=[redacted] next",
 		`{"apiKey": "abcd1234", "x": 1}`:                  `{"apiKey": "[redacted]", "x": 1}`,
+		"token = 'abcd1234'":                              "token = '[redacted]'",
 		"the token 0123456789abcdef0123 is ours":          "the token [redacted] is ours",
 		"session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok": "session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok",
 	} {

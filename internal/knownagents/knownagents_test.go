@@ -190,9 +190,17 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	}
 }
 
+// mcpShapes are what each agent's MCP config has, which the app offers by.
+var mcpShapes = map[string]model.MCPShape{
+	"claude": {Scopes: []string{"user", "project", "local"}, Switch: true, UserSwitch: model.SwitchProject, Approval: true, SSE: true,
+		Checked: []string{"plugin", "claudeai"}},
+	"ante": {Scopes: []string{"user"}},
+	"pig":  {Scopes: []string{"user", "project"}, Switch: true, UserSwitch: model.SwitchEverywhere, ProjectShared: true},
+}
+
 // What the app goes by instead of an agent's name is each agent's own:
-// Claude's built-in skills, plugins and links, and Ante's plain MCP
-// servers.
+// Claude's built-in skills, plugins and links, and each agent's MCP
+// config's shape.
 func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 	for _, a := range All("", nil) {
 		claudes := a.Agent.Name == "claude"
@@ -202,9 +210,12 @@ func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 		if builtIn != claudes || plugins != claudes || linker != claudes {
 			t.Errorf("%s: built in %v, plugins %v, links %v", a.Agent.Name, builtIn, plugins, linker)
 		}
+		if _, ok := mcpShapes[a.Agent.Name]; ok != (a.MCP != nil) {
+			t.Errorf("%s: MCP servers shown %v, want %v", a.Agent.Name, a.MCP != nil, ok)
+		}
 		if a.MCP != nil {
-			if got, want := a.MCP(nil).UserOnly(), a.Agent.Name == "ante"; got != want {
-				t.Errorf("%s: user only: %v", a.Agent.Name, got)
+			if got, want := a.MCP(nil).Shape(), mcpShapes[a.Agent.Name]; !reflect.DeepEqual(got, want) {
+				t.Errorf("%s: MCP shape %+v, want %+v", a.Agent.Name, got, want)
 			}
 		}
 	}

@@ -801,7 +801,10 @@ type NushiServiceClient interface {
 	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
 	// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
 	// refused for it. Login and Logout are refused only when that Ante has no
-	// sign-in for MCP servers (before 0.2.15).
+	// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+	// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+	// until PiG trusts the folder), checked by `pig mcp list --json` in the
+	// folder and signed in to by `pig mcp login`; McpShape says what it has.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
@@ -817,9 +820,13 @@ type NushiServiceClient interface {
 	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
 	// project's .claude/settings.local.json). A user or local server: as the
 	// agent's own switch does, asked of the agent (Claude: /mcp in a
-	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-	// any other scope (Claude's plugins' servers and claude.ai connectors)
-	// and by an agent with no off switch.
+	// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+	// 157): "enabled" in the file that has the server, so one of yours is on
+	// or off everywhere (McpShape.user_switch); refused, with
+	// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+	// it. Refused for any other scope (Claude's plugins' servers and
+	// claude.ai connectors) and by an agent with no off switch. These
+	// changes and the sign-ins are the Mac's app's alone (macOnly).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -3387,7 +3394,10 @@ type NushiServiceHandler interface {
 	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
 	// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
 	// refused for it. Login and Logout are refused only when that Ante has no
-	// sign-in for MCP servers (before 0.2.15).
+	// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+	// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+	// until PiG trusts the folder), checked by `pig mcp list --json` in the
+	// folder and signed in to by `pig mcp login`; McpShape says what it has.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
@@ -3403,9 +3413,13 @@ type NushiServiceHandler interface {
 	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
 	// project's .claude/settings.local.json). A user or local server: as the
 	// agent's own switch does, asked of the agent (Claude: /mcp in a
-	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-	// any other scope (Claude's plugins' servers and claude.ai connectors)
-	// and by an agent with no off switch.
+	// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+	// 157): "enabled" in the file that has the server, so one of yours is on
+	// or off everywhere (McpShape.user_switch); refused, with
+	// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+	// it. Refused for any other scope (Claude's plugins' servers and
+	// claude.ai connectors) and by an agent with no off switch. These
+	// changes and the sign-ins are the Mac's app's alone (macOnly).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few

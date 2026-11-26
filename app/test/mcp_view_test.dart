@@ -75,7 +75,7 @@ Future<(FakeDaemon, Daemon)> _view(
   Tokens tokens = Tokens.dark,
 }) async {
   final (fake, d) = await _daemon(tester);
-  viewport(tester, const Size(1000, 640), ratio: 3);
+  viewport(tester, const Size(1000, 720), ratio: 3);
   await tester.pumpWidget(
     themed(
       McpView(daemon: d, folder: folder),

@@ -16,9 +16,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Settings › MCP servers: a folder picker, then the servers of each agent
-/// the daemon says Nushi reads them for (Agent.mcp; Claude's by scope,
-/// Ante's yours only), each with its state, transport and command or URL
-/// (secrets masked). "Reading…" until the daemon has listed its agents.
+/// the daemon says Nushi reads them for (Agent.mcp), in the groups its
+/// McpShape offers (Claude's user, project and local; Ante's yours only;
+/// PiG's yours and the folder's own), each with its state, transport and
+/// command or URL (secrets masked). "Reading…" until the daemon has
+/// listed its agents.
 class McpView extends StatelessWidget {
   const new({required this.daemon, required this.folder, super.key});
 
@@ -124,15 +126,15 @@ class _Lists extends StatelessWidget {
             ),
             // The groups' own space is under them.
             const SizedBox(height: 20),
+            // Each agent's heading, even one alone: whose servers these are.
             for (final list in lists) ...[
-              if (lists.length > 1)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    agentTitle(list.agent),
-                    style: theme.ui(t.text, size: 14, weight: FontWeight.w600),
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  agentTitle(list.agent),
+                  style: theme.ui(t.text, size: 14, weight: FontWeight.w600),
                 ),
+              ),
               if (list.error.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -146,14 +148,19 @@ class _Lists extends StatelessWidget {
                   McpView.userOnlyAbout(agentTitle(list.agent)),
                 )
               else
-                for (final MapEntry(key: scope, value: (title, about))
-                    in scopes.entries)
-                  if (scope != 'other' ||
-                      list.servers.any((s) => s.scope == scope))
-                    _Group(list, scope, title, switch (scope) {
-                      'plugin' => _withPluginCommand(about, list.agent),
-                      _ => about,
-                    }),
+                for (final scope in scopes.keys)
+                  if (_shows(list, scope))
+                    switch (scopeOf(list.agent, scope)) {
+                      (final title, final about) => _Group(
+                        list,
+                        scope,
+                        title,
+                        switch (scope) {
+                          'plugin' => _withPluginCommand(about, list.agent),
+                          _ => about,
+                        },
+                      ),
+                    },
             ],
           ],
         );
@@ -161,6 +168,16 @@ class _Lists extends StatelessWidget {
     );
   }
 }
+
+/// Whether [list]'s page has a group for [scope]: each scope its agent's
+/// shape offers, one it lists servers in, and one only the check fills
+/// (McpShape.checked_scopes: Claude's plugins' servers and claude.ai
+/// connectors), which keeps its place while empty, not to move the page
+/// when the check ends.
+bool _shows(McpServers list, String scope) =>
+    list.shape.scopes.contains(scope) ||
+    list.servers.any((s) => s.scope == scope) ||
+    list.shape.checkedScopes.contains(scope);
 
 /// [about] with how [agent]'s plugins are added, in its own command's
 /// words ([agentWords]), as the Skills view's Plugins group says it.
@@ -182,11 +199,22 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Plugins' servers and connectors come with the check.
-    final later = scope == 'plugin' || scope == 'claudeai' || !list.loaded;
+    // A scope only the check fills (plugins' servers, connectors) is
+    // "Checking…" while it runs.
+    final later = list.shape.checkedScopes.contains(scope) || !list.loaded;
+    final theme = NushiTheme.of(context);
+    // Once for the project's group, not on each row (each keeps only its
+    // pill), by the daemon's word: also before the folder has a server.
+    final untrusted = scope == 'project' && list.folderTrusted == false;
     return SettingsGroup(
       title: title,
       about: about,
+      footer: untrusted
+          ? Text(
+              McpServers.untrustedNote(list.agent),
+              style: theme.ui(theme.t.textSecondary, size: 12),
+            )
+          : null,
       empty: later && list.checking ? 'Checking…' : 'None',
       children: [
         for (final s in list.servers)
@@ -200,12 +228,12 @@ class _Group extends StatelessWidget {
       ? null
       : list.used
             .where((u) => u.name == s.name)
-            .map((u) => scopes[u.scope]?.$1)
+            .map((u) => scopeOf(list.agent, u.scope).$1)
             .firstOrNull;
 }
 
-/// A server: its state, name, transport and command or URL, its masked
-/// env vars and headers, and why it failed.
+/// A server: its state, name, transport and command or URL, why it
+/// failed, and its masked env vars and headers.
 class _Row extends StatelessWidget {
   const new(this.list, this.server, {this.shadowedBy});
 
@@ -220,7 +248,8 @@ class _Row extends StatelessWidget {
     final c = config(server);
     final hidden = secrets(c);
     final shadowed = shadowedBy != null;
-    final off = server.off || server.state == 'disabled';
+    final untrusted = server.untrusted;
+    final off = !untrusted && (server.off || server.state == 'disabled');
     final failed = server.state == 'failed' && server.detail.isNotEmpty;
     final (word, _) = stateOf(server, t);
     return Padding(
@@ -274,22 +303,28 @@ class _Row extends StatelessWidget {
               McpActions(list, server),
             ],
           ),
-          if (hidden.isNotEmpty || shadowed || failed)
+          // Each on its own line: why it isn't used, why its switch can't
+          // act here (the daemon's words), why it failed (its own words,
+          // which can run to several lines), its masked env vars and
+          // headers.
+          for (final line in [
+            if (shadowed)
+              Text(
+                'Not used: the $shadowedBy one has the same name',
+                style: theme.ui(t.textMuted, size: 11.5),
+              ),
+            if (server.held.isNotEmpty)
+              Text(server.held, style: theme.ui(t.textMuted, size: 11.5)),
+            if (failed)
+              Text(server.detail, style: theme.ui(t.crashed, size: 11.5)),
+            if (hidden.isNotEmpty)
+              Text(hidden, style: theme.code(t.textMuted, size: 11)),
+          ])
             Opacity(
               opacity: shadowed || off ? 0.5 : 1,
               child: Padding(
                 padding: const EdgeInsets.only(left: 19, top: 3),
-                child: Text(
-                  [
-                    if (shadowed)
-                      'Not used: the $shadowedBy one has the same name',
-                    if (failed) server.detail,
-                    if (hidden.isNotEmpty) hidden,
-                  ].join('  ·  '),
-                  style: failed
-                      ? theme.ui(t.crashed, size: 11.5)
-                      : theme.code(t.textMuted, size: 11),
-                ),
+                child: line,
               ),
             ),
         ],
