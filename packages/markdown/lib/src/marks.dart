@@ -124,6 +124,12 @@ class _RenderMarks extends RenderProxyBox {
   Color? _background; // a code block's: its matches' text drawn in ink
   final _inked = <RenderParagraph, _Inked>{};
 
+  // The painted matches by paragraph, for the painted set they were
+  // grouped from, and flagged for the current match (`mark_ink.dart`).
+  (List<TextMark>, Map<RenderParagraph, List<(int, int, TextMark)>>)? _grouped;
+  (List<TextMark>, TextMark?, Map<RenderParagraph, List<(int, int, bool)>>)?
+  _flagged;
+
   // Under an [InkedSelection]: its selected text drawn in ink too.
   _Seen? _seen;
   final _selInked = <RenderParagraph, _Inked>{};

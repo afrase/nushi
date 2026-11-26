@@ -7,6 +7,28 @@ part of 'text_marks.dart';
 /// vanish, so the app moves them (Nushi: its code's contrast rule).
 typedef MarkInk = Color Function(Color color, Color fill, Color background);
 
+/// What drawing code in ink has cost since [afresh], for tests that count
+/// it rather than time it: the lines laid out for it and their
+/// characters, the ranges a recolouring read, and the times a block's
+/// matches were grouped by paragraph.
+@visibleForTesting
+abstract final class InkCost {
+  /// Lines laid out to draw them in ink.
+  static int lines = 0;
+
+  /// The characters of those lines.
+  static int chars = 0;
+
+  /// Ranges read by a recolouring.
+  static int ranges = 0;
+
+  /// Groupings of a block's painted matches by paragraph.
+  static int groupings = 0;
+
+  /// Counts from nothing again.
+  static void afresh() => lines = chars = ranges = groupings = 0;
+}
+
 /// A paragraph's text again, its matches' characters in their ink and the
 /// rest clear, laid out as the paragraph is: drawn over it, it recolours
 /// the matches without touching the paragraph's spans (a change there
@@ -23,18 +45,43 @@ final class _Inked {
 }
 
 extension on _RenderMarks {
-  /// Each paragraph's matches painted here: (start, end, current).
+  /// Each paragraph's matches painted here, in order: (start, end,
+  /// current). Grouped once for the painted set (a scan makes a new one)
+  /// and flagged once for the current match ([TextMarks.pick] sets it),
+  /// not at every paint.
   Map<RenderParagraph, List<(int, int, bool)>> _matchesByParagraph() {
     final current = _scope?._current;
-    final byParagraph = <RenderParagraph, List<(int, int, bool)>>{};
+    if (_flagged case (final p, final c, final flagged)
+        when identical(p, _painted) && identical(c, current)) {
+      return flagged;
+    }
+    final grouped = _groupedByParagraph();
+    final flagged = {
+      for (final MapEntry(key: p, value: ranges) in grouped.entries)
+        p: [for (final (a, b, m) in ranges) (a, b, identical(m, current))],
+    };
+    _flagged = (_painted, current, flagged);
+    return flagged;
+  }
+
+  /// Each paragraph's matches painted here, in order: (start, end, match),
+  /// once for the painted set.
+  Map<RenderParagraph, List<(int, int, TextMark)>> _groupedByParagraph() {
+    if (_grouped case (final p, final grouped) when identical(p, _painted)) {
+      return grouped;
+    }
+    InkCost.groupings++;
+    final grouped = <RenderParagraph, List<(int, int, TextMark)>>{};
     for (final m in _painted) {
-      if (!m._here) continue;
-      final now = identical(m, current);
       for (final p in m._parts) {
-        (byParagraph[p.paragraph] ??= []).add((p.start, p.end, now));
+        (grouped[p.paragraph] ??= []).add((p.start, p.end, m));
       }
     }
-    return byParagraph;
+    for (final ranges in grouped.values) {
+      ranges.sort((x, y) => x.$1.compareTo(y.$1));
+    }
+    _grouped = (_painted, grouped);
+    return grouped;
   }
 
   /// Draws the matches' text in ink over the paragraphs this paints marks
@@ -52,7 +99,7 @@ extension on _RenderMarks {
     final canvas = context.canvas;
     for (final MapEntry(key: p, value: ranges)
         in _matchesByParagraph().entries) {
-      if (!p.hasSize) continue;
+      if (!p.attached || !p.hasSize) continue;
       final inked = _inkedOf(
         _inked,
         p,
@@ -122,6 +169,10 @@ extension on _RenderMarks {
       textHeightBehavior: p.textHeightBehavior,
     );
     final wraps = p.softWrap || p.overflow == TextOverflow.ellipsis;
+    if (_texts[p.text] case (final plain, _)) {
+      InkCost.lines += '\n'.allMatches(plain).length + 1;
+      InkCost.chars += plain.length;
+    }
     painter.layout(
       minWidth: c.minWidth,
       maxWidth: wraps ? c.maxWidth : double.infinity,
@@ -148,6 +199,20 @@ TextSpan? _recoloured(
   var at = 0;
   var any = false;
   var widget = false;
+  // One walk: the ranges in order and a cursor carried along, each range
+  // read once, when the cursor comes to it.
+  var next = 0;
+  var (a, b, now) = (-1, -1, false);
+  void take() {
+    if (next < ranges.length) {
+      InkCost.ranges++;
+      (a, b, now) = ranges[next];
+    } else {
+      (a, b) = (-1, -1);
+    }
+  }
+
+  take();
   InlineSpan walk(InlineSpan s, Color inherited) {
     if (s is! TextSpan) {
       widget = true;
@@ -160,12 +225,17 @@ TextSpan? _recoloured(
       final end = at + text.length;
       var from = at;
       while (from < end) {
+        while (b >= 0 && b <= from) {
+          next++;
+          take();
+        }
         var to = end;
         Color? drawn;
-        for (final (a, b, now) in ranges) {
-          if (a > from && a < to) to = a;
-          if (b > from && b < to) to = b;
-          if (a <= from && b > from) drawn = ink(color, now: now);
+        if (b >= 0 && a <= from) {
+          drawn = ink(color, now: now);
+          if (b < to) to = b;
+        } else if (b >= 0 && a < to) {
+          to = a;
         }
         drawn ??= rest?.call(color);
         var shown = _clear;
