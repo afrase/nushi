@@ -215,6 +215,16 @@ class _FormState extends State<_Form> {
     }
   }
 
+  /// [child] when [shown]; else only its room: unseen, out of reach of a
+  /// pointer, the focus and a screen reader, its fields kept as typed.
+  Widget _shown(bool shown, Widget child) => Visibility(
+    visible: shown,
+    maintainState: true,
+    maintainAnimation: true,
+    maintainSize: true,
+    child: child,
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -244,6 +254,108 @@ class _FormState extends State<_Form> {
     Widget label(String text) => Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Text(text, style: theme.ui(t.textSecondary, size: 12)),
+    );
+    // The form's own fields, below the name and scope both views show.
+    final fields = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        label('Transport'),
+        Row(
+          children: [
+            Segmented(
+              value: _transport,
+              onCard: true,
+              segments: [
+                ('stdio', 'stdio'),
+                ('http', 'HTTP'),
+                if (shape.sse || _transport == 'sse') ('sse', 'SSE'),
+              ],
+              onChanged: (v) => setState(() => _transport = v),
+            ),
+          ],
+        ),
+        if (stdio) ...[
+          label('Command'),
+          TextField(
+            controller: _command,
+            style: mono,
+            decoration: const InputDecoration(hintText: 'npx'),
+          ),
+          label('Arguments, one per line'),
+          TextField(
+            controller: _args,
+            minLines: 1,
+            maxLines: 6,
+            style: mono,
+            // An example, as the command's; its line holds the
+            // field at a regular control's height (ADR 0122).
+            decoration: const InputDecoration(
+              hintText: '@playwright/mcp@latest',
+            ),
+          ),
+          label('Environment variables'),
+          PairRows(_env, 'NAME', () => setState(() {})),
+        ] else ...[
+          label('URL'),
+          TextField(
+            controller: _url,
+            style: mono,
+            decoration: const InputDecoration(
+              hintText: 'https://example.com/mcp',
+            ),
+          ),
+          // The form doesn't show oauth (kept as it is): where the
+          // daemon masked part of it, an edit here is refused unless
+          // that part is typed again, which only the JSON can.
+          if (_oauthHidden)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Its OAuth settings have hidden parts: change them in '
+                'Edit as JSON.',
+                style: muted,
+              ),
+            ),
+          label('Headers'),
+          PairRows(_headers, 'Header', () => setState(() {})),
+        ],
+        if (_editing)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Values shown as •••• stay only if nothing else '
+              'changes; else type them again.',
+              style: muted,
+            ),
+          ),
+      ],
+    );
+    // The JSON's box fills the room the form's fields take, and 8 lines
+    // at least, which the unseen box under it ([least]) holds: its text
+    // never changes the dialog's height.
+    final json = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        label('Config'),
+        Expanded(
+          child: TextField(
+            controller: _json,
+            expands: true,
+            maxLines: null,
+            textAlignVertical: TextAlignVertical.top,
+            style: mono,
+          ),
+        ),
+      ],
+    );
+    final least = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        label('Config'),
+        TextField(minLines: 8, maxLines: 8, style: mono),
+      ],
     );
     return nushiDialog(
       // Named for the agent: with several, the scopes read alike.
@@ -283,85 +395,17 @@ class _FormState extends State<_Form> {
             ),
             const SizedBox(height: 4),
             Text(where, style: muted),
-            if (_asJson) ...[
-              label('Config'),
-              TextField(
-                controller: _json,
-                minLines: 8,
-                maxLines: 16,
-                style: mono,
-              ),
-            ] else ...[
-              label('Transport'),
-              Row(
-                children: [
-                  Segmented(
-                    value: _transport,
-                    onCard: true,
-                    segments: [
-                      ('stdio', 'stdio'),
-                      ('http', 'HTTP'),
-                      if (shape.sse || _transport == 'sse') ('sse', 'SSE'),
-                    ],
-                    onChanged: (v) => setState(() => _transport = v),
-                  ),
-                ],
-              ),
-              if (stdio) ...[
-                label('Command'),
-                TextField(
-                  controller: _command,
-                  style: mono,
-                  decoration: const InputDecoration(hintText: 'npx'),
-                ),
-                label('Arguments, one per line'),
-                TextField(
-                  controller: _args,
-                  minLines: 1,
-                  maxLines: 6,
-                  style: mono,
-                  // An example, as the command's; its line holds the
-                  // field at a regular control's height (ADR 0122).
-                  decoration: const InputDecoration(
-                    hintText: '@playwright/mcp@latest',
-                  ),
-                ),
-                label('Environment variables'),
-                PairRows(_env, 'NAME', () => setState(() {})),
-              ] else ...[
-                label('URL'),
-                TextField(
-                  controller: _url,
-                  style: mono,
-                  decoration: const InputDecoration(
-                    hintText: 'https://example.com/mcp',
-                  ),
-                ),
-                // The form doesn't show oauth (kept as it is): where the
-                // daemon masked part of it, an edit here is refused unless
-                // that part is typed again, which only the JSON can.
-                if (_oauthHidden)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      'Its OAuth settings have hidden parts: change them in '
-                      'Edit as JSON.',
-                      style: muted,
-                    ),
-                  ),
-                label('Headers'),
-                PairRows(_headers, 'Header', () => setState(() {})),
+            // Both views are laid out and one shown, so the dialog is as
+            // tall as the taller in either and Edit as JSON, Cancel and Add
+            // stay put as it's pressed.
+            Stack(
+              fit: StackFit.passthrough,
+              children: [
+                _shown(!_asJson, fields),
+                _shown(false, least),
+                Positioned.fill(child: _shown(_asJson, json)),
               ],
-              if (_editing)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Values shown as •••• stay only if nothing else '
-                    'changes; else type them again.',
-                    style: muted,
-                  ),
-                ),
-            ],
+            ),
             if (_error.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
