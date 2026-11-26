@@ -122,16 +122,30 @@ var authorization = regexp.MustCompile(`(?i)\bauthorization(['"]?)[ \t]*[:=][ \t
 // or of its value (Authorization: "token x"), or else to the line's end.
 // No word of it shows after the mask.
 func maskAuthorization(s string) string {
+	out, _ := maskAuthorizationIn(s)
+	return out
+}
+
+// maskAuthorizationIn is maskAuthorization, and how many bytes its
+// searches for a line's end and a closing quote read: at most twice
+// len(s). A line's end is looked for once, for its first header, and
+// a closing quote only up to it, from past what the last mask took.
+func maskAuthorizationIn(s string) (out string, read int) {
 	var b strings.Builder
-	last := 0
+	last, lineEnd := 0, -1
 	for _, m := range authorization.FindAllStringSubmatchIndex(s, -1) {
 		if m[0] < last {
 			continue
 		}
-		start, end := m[1], len(s)
-		if nl := strings.IndexByte(s[start:], '\n'); nl >= 0 {
-			end = start + nl
+		start := m[1]
+		if lineEnd < start {
+			lineEnd = len(s)
+			if nl := strings.IndexByte(s[start:], '\n'); nl >= 0 {
+				lineEnd = start + nl
+			}
+			read += lineEnd - start
 		}
+		end := lineEnd
 		quote := byte(0)
 		switch {
 		case start < end && (s[start] == '"' || s[start] == '\''):
@@ -140,9 +154,11 @@ func maskAuthorization(s string) string {
 			quote = s[m[0]-1]
 		}
 		if quote != 0 {
-			if q := strings.IndexByte(s[start:end], quote); q >= 0 {
+			q := strings.IndexByte(s[start:end], quote)
+			if q >= 0 {
 				end = start + q
 			}
+			read += end - start
 		}
 		value := strings.TrimRight(s[start:end], " \t\r")
 		if value == "" || value == Mask {
@@ -153,7 +169,7 @@ func maskAuthorization(s string) string {
 		last = start + len(value)
 	}
 	b.WriteString(s[last:])
-	return b.String()
+	return b.String(), read
 }
 
 var (

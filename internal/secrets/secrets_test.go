@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -41,7 +42,7 @@ func TestMask(t *testing.T) {
 		{"sk-short", "sk-short"},
 		{"", ""},
 	} {
-		if got := Mask(tc.in, "**", name); got != tc.want {
+		if got := Mask(tc.in, "**", NameRule{name}); got != tc.want {
 			t.Errorf("Mask(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
@@ -59,11 +60,90 @@ func TestNames(t *testing.T) {
 		{`{ headers: { 'X-Api-Key': 'FAKEtrace0005abc' } }`, `{ headers: { 'X-Api-Key': '**' } }`},
 		{`"password": "FAKEpw0021"`, `"password": "**"`},
 		{`apiKey: FAKEkey0020`, `apiKey: **`},
-		{`KeyError: 'GITHUB_PERSONAL_ACCESS_TOKEN'`, `KeyError: 'GITHUB_PERSONAL_ACCESS_TOKEN'`},                                       // an error's name
-		{`token_count=1234 keyPath=server.tools "tokenizer": "cl100k"`, `token_count=1234 keyPath=server.tools "tokenizer": "cl100k"`}, // not secrets
+		{`KeyError: 'GITHUB_PERSONAL_ACCESS_TOKEN'`, `KeyError: 'GITHUB_PERSONAL_ACCESS_TOKEN'`}, // an error's name
 	} {
 		if got := Mask(tc.in, "**", Names); got != tc.want {
 			t.Errorf("Mask(%q) = %q, want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+// stillSecret are names that hold a name NotSecret knows but aren't it:
+// the review's three, then each known name as a prefix, a suffix and a
+// part of a secret's name, in each separator style and case.
+var stillSecret = []string{
+	"PRIVATE_KEY_PATH_PASSWORD", "my_tokenizer_api_key", "REFRESH_TOKEN_LIMIT_KEY",
+	"max_tokens_api_key", "API_KEY_MAX_TOKENS", "github-max-tokens-secret", "maxTokensSecret", "secret.max_tokens",
+	"token_count_secret", "SECRET_TOKEN_COUNT", "tokenCountPassword", "api.token_limit", "token-limit-token",
+	"tokenizer_token", "openai-tokenizer-api-key", "secretTokenizer", "tokenizer.secret", "HF_TOKENIZER_TOKEN",
+	"key_path_password", "SSH_KEY_PATH_TOKEN", "deploy-key-path-secret", "privateKeyPathPassword", "signing.key_path.secret",
+	"input_tokens_secret", "secret_tokens_used", "x-token-budget-key",
+	"KeyErrorToken", "API_KEY_ERROR", "secret_error", "token-exception", "AuthTokenError", "KEYERROR_TOKEN",
+	"tokenizers_token", "key_paths_secret",
+}
+
+// plainNames' spellings: their values show where NotSecret is asked (a
+// JSON key, a flag, a variable).
+var plain = []string{
+	"max_tokens", "MAX_TOKENS", "maxTokens", "max-tokens", "--max-tokens", "max_output_tokens", "budget_tokens",
+	"input_tokens", "output_tokens", "cache_read_input_tokens", "total_tokens",
+	"token_count", "tokenCount", "token_limit", "--token-limit", "token_budget", "tokens_used",
+	"tokenizer", "Tokenizer", "--tokenizer", "key_path", "keyPath", "KEYPATH",
+}
+
+// A name is not a secret's only when it is a known plain name whole, case
+// and _ or - aside: one that holds such a name is still a secret's.
+func TestNotSecret(t *testing.T) {
+	for _, n := range stillSecret {
+		if NotSecret(n) {
+			t.Errorf("NotSecret(%q): its value would show", n)
+		}
+		for _, line := range []string{n + "=FAKEvalue0001", n + ": FAKEvalue0001", `"` + n + `": "FAKEvalue0001"`} {
+			if got := Mask(line, "**", Names); strings.Contains(got, "FAKEvalue0001") {
+				t.Errorf("Mask(%q) = %q", line, got)
+			}
+		}
+		if got := MaskJSONIn(`{"`+n+`": "FAKEvalue0001"}`, "**"); strings.Contains(got, "FAKEvalue0001") {
+			t.Errorf("MaskJSONIn: %q", got)
+		}
+	}
+	for _, n := range plain {
+		if !NotSecret(n) {
+			t.Errorf("NotSecret(%q) = false", n)
+		}
+	}
+}
+
+// The log's rule for names takes every name, a plain one too, as it did
+// before NotSecret; Python's KeyError: 'NAME', whose quoted value is a
+// missing key's name, alone shows, as it always did, and only in that
+// exact form.
+func TestNamesInText(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"max_tokens=4096 token_count: 1234", "max_tokens=** token_count: **"},
+		{`"tokenizer": "cl100k" keyPath=server.tools`, `"tokenizer": "**" keyPath=**`},
+		{"KeyError: 'GITHUB_TOKEN'", "KeyError: 'GITHUB_TOKEN'"},
+		{"KeyError: GITHUB_TOKEN", "KeyError: **"},
+		{`KeyError: "GITHUB_TOKEN"`, `KeyError: "**"`},
+		{"x.KeyError: 'GITHUB_TOKEN'", "x.KeyError: '**'"},
+		{"keyerror: 'GITHUB_TOKEN'", "keyerror: '**'"},
+		{"TokenError: 'abcd1234'", "TokenError: '**'"},
+		{"KeyError: 'GITHUB_TOKEN' token=abcd1234", "KeyError: 'GITHUB_TOKEN' token=**"}, // only the name passes
+		{"KeyError: 'API_KEY=abcd1234'", "KeyError: '**'"},                               // a NAME=value, not a name
+		{"'KeyError': 'Zq9vAl8eXy'", "'KeyError': '**'"},                                 // not Python's form
+		{"KeyError:'GITHUB_TOKEN'", "KeyError:'**'"},
+		{"KeyError: 'GITHUB_TOKEN", "KeyError: '**"}, // no closing quote
+	} {
+		if got := Mask(tc.in, "**", Names); got != tc.want {
+			t.Errorf("Mask(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// NotSecret shares one Replacer: a call allocates no more than the
+// lowered name and the name without its separators.
+func TestNotSecretSharesItsReplacer(t *testing.T) {
+	if n := testing.AllocsPerRun(100, func() { NotSecret("MAX_OUTPUT_TOKENS") }); n > 2 {
+		t.Errorf("%.0f allocations a call", n)
 	}
 }

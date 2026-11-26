@@ -16,14 +16,11 @@ const InputMask = "••••"
 var (
 	// secretKey is a JSON key whose string value is a secret.
 	secretKey = regexp.MustCompile(`(?i)token|secret|passw(?:or)?d|api[_-]?key|authorization|cookie|private[_-]?key|credential`)
-	// countKey is a key about how many tokens (a model's max_tokens, a
-	// usage's input_tokens), not a token: its value shows.
-	countKey = regexp.MustCompile(`(?i)(max|min|input|output|total|cached|reasoning|thinking)[_-]?tokens?|tokens?[_-]?(count|limit|budget|used|usage)`)
 	// secretName is a NAME=value pair whose name says secret, masked after
 	// the shapes every secret mask knows. Narrower than
 	// the log's rule: a tool call's input holds code ("key: value" in it is
 	// rarely a secret).
-	secretName = regexp.MustCompile(`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`)
+	secretName = NameRule{regexp.MustCompile(`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`)}
 )
 
 // MaskInput masks what looks secret in a tool call's input, as JSON (its

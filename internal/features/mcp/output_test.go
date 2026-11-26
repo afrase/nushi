@@ -83,7 +83,16 @@ var printed = []struct {
 	{"curl --user", "curl --user 'admin:FAKEcurl0011abc' https://h.io", []string{"FAKEcurl0011abc"}, []string{"curl --user 'admin:", "' https://h.io"}},
 	{"curl --user=", "curl --user=admin:FAKEcurl0012abc", []string{"FAKEcurl0012abc"}, []string{"curl --user=admin:"}},
 	{"mysql -p", "mysql -uroot -pFAKEmy0020abc -h db", []string{"FAKEmy0020abc"}, []string{"mysql -uroot -p", " -h db"}},
+	// JSON pasted unescaped inside a JSON string (the fourth review's
+	// three): an array, a value with spaces, a short value.
+	{"pasted array", `{"x": "a {"password": ["FAKEarr0044", 98765]}`, []string{"FAKEarr0044", "98765"}, []string{`{"x": "a {"password": [`}},
+	{"pasted spaces", `{"error": "invalid", "detail": "body was {"password": "fake horse battery staple"}"}`, []string{"horse", "battery", "staple"}, []string{`"detail": "body was {"password": `}},
+	{"pasted short", `{"a": "unterminated {"token": "abc"}`, []string{`"abc"`}, []string{`{"a": "unterminated {"token": `}},
 	{"json in a line", `HTTP 401: {"error": {"code": 401, "password": 98765432}} retrying`, []string{"98765432"}, []string{`HTTP 401: {"error": {"code": 401, "password": `, `}} retrying`}},
+	// A plain name (secrets.NotSecret) in NAME=value or "key": "value" is
+	// masked as the log masks it: the log's rule takes every name.
+	{"key path", "loaded keyPath=server.tools", []string{"server.tools"}, []string{"loaded keyPath="}},
+	{"tokenizer in json", `{"tokenizer":"cl100k"} loaded`, []string{"cl100k"}, []string{`{"tokenizer":"`, `"} loaded`}},
 }
 
 // readable is what a server prints that holds no secret: it reads as
@@ -96,8 +105,7 @@ var readable = []string{
 	"npx srv -p 8080 -u alice: EADDRINUSE",
 	"cc -pthread -pedantic -o srv srv.c",
 	"docker run -u 1000:1000 srv",
-	"loaded token_count=12 keyPath=server.tools --token-limit 4096",
-	`{"tokenizer":"cl100k"} loaded`,
+	"loaded token_count=12 --token-limit 4096 --tokenizer cl100k",
 }
 
 // Nothing a server prints leaves the daemon unmasked: a failed server's
