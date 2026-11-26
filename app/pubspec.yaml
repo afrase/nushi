@@ -14,7 +14,7 @@ dependencies:
     path: ../packages/daemon_transport
   dbus: ^0.7.15
   desktop_drop: ^0.8.4
-  diff_view: ^0.3.0
+  diff_view: ^0.4.0
   file_selector: ^1.1.0
   fixnum: ^1.1.1
   flutter:

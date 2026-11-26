@@ -344,6 +344,18 @@ class SyntaxLines implements DiffLineSource {
   void removeListener(void Function() listener) => _listeners.remove(listener);
 }
 
+/// The floor of the contrast code keeps on a diff's changed line or
+/// changed word, in every theme (ADR 0086's amendment). A theme's syntax
+/// colours are published for its plain background; on a change's tint the
+/// dimmest of them can all but vanish (Tokyo Night's comment on its
+/// changed-word teal read about 1.1:1). On a tint a run keeps the contrast
+/// it has on the plain background, up to this floor, by its lightness
+/// alone (`diff_view`'s `minTextContrast`): a comment there reads as the
+/// theme's comments read everywhere, and a colour keeps its hue. 3:1 is
+/// WCAG's floor for large text and for what must be seen; 4.5 would
+/// recolour most of a light set's code even where it reads.
+const double codeOnTintContrast = 3;
+
 /// The diff theme for [t]: its diff colors, with the transcript's code
 /// colors. A removed line in one column is red, the way an inserted one is
 /// green: side by side its grey sits across from its replacement, but one
@@ -414,6 +426,7 @@ DiffThemeData diffTheme(Tokens t, {Color? surface, String? family}) {
     // (DiffCommentButton); the package's, over the numbers only, would
     // show beside it.
     hoverAffordance: d.hoverAffordance.withValues(alpha: 0),
+    minTextContrast: codeOnTintContrast,
     syntax: {
       for (final MapEntry(key: c, value: ink) in t.syntax.entries)
         c.name: SyntaxStyle(ink.color, italic: ink.italic, bold: ink.bold),
