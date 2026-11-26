@@ -56,7 +56,8 @@ type Local struct{ Harness }
 
 // Info is what Harness is.
 func (Harness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume", OtherSuffix: "_other", OtherNotes: model.NotesOnAll} // the bridge's "Other" after a question, its answer's note (pauses.go)
+	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume", CacheInInput: true,
+		OtherSuffix: "_other", OtherNotes: model.NotesOnAll} // the bridge's "Other" after a question, its answer's note (pauses.go)
 }
 
 // Start starts the bridge, as claude.Harness does Claude's Go agent: this

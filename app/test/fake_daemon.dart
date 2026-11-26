@@ -129,6 +129,12 @@ class FakeDaemon with Refusals implements Transport {
   /// tracked, unchanged one does. [answer] goes first.
   final fileDiffs = <String, Object>{};
 
+  /// What GetBlame answers (issue #78), by the file's absolute path
+  /// (folder and path joined): its answer, an exception to throw, or a
+  /// Future of either, to answer later. Any other file is in no
+  /// repository. [answer] goes first.
+  final blames = <String, Object>{};
+
   /// The folders GetDiff's names (the Files tree's dots, API 123) answers
   /// for: each [fileDiffs] change under one, unskipped and not deleted,
   /// by its path in the folder, whatever the base. Any other folder
@@ -183,6 +189,14 @@ class FakeDaemon with Refusals implements Transport {
     }
     _served.clear();
   }
+
+  /// [blames]' answer, [found] by a file's path.
+  static Future<Object> _blame(Object? found) async =>
+      switch (found is Future ? await found : found) {
+        final GetBlameResponse r => r,
+        final Exception e => throw e,
+        _ => GetBlameResponse(noneReason: 'not a repository'),
+      };
 
   /// How to drop each open stream the fake serves besides Events.
   final _served = <void Function()>{};
@@ -461,6 +475,9 @@ class FakeDaemon with Refusals implements Transport {
               final Exception e => throw e,
               _ => GetDiffResponse(),
             },
+          GetBlameRequest(:final folder, :final path) => await _blame(
+            blames['$folder/$path'],
+          ),
           // A chat it has, so the app can show it.
           StartChatRequest() => StartChatResponse(chatId: chats.first.id),
           ListAgentSessionsRequest() =>

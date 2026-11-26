@@ -100,6 +100,50 @@ func TestAnAgentWithoutCostIsMetered(t *testing.T) {
 	}
 }
 
+// An agent whose input takes in the cache's tokens (Ante) is metered,
+// and shown in its chat, with them taken out; an input that couldn't hold
+// its cache is left; and an agent that doesn't say so is kept as it
+// reports.
+func TestInputIsMeteredWithoutTheCacheItTookIn(t *testing.T) {
+	whole := func() *acp.Usage {
+		return &acp.Usage{InputTokens: 1050, OutputTokens: 20, CachedReadTokens: new(uint64(900)), CachedWriteTokens: new(uint64(50)), TotalTokens: 1070}
+	}
+	svc, agent, c, m := meteredChat(t, model.HarnessInfo{Name: "ante", CacheInInput: true}, `{"sessionId":"s1"}`)
+	shown := func() model.Usage {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.usage
+	}
+	first := whole()
+	agent.usage = first
+	turn(t, svc, c, "hi")
+	// The chat shows the same figures as the meter is told, and the
+	// answer's own aren't changed: only what's read from them.
+	if u := shown(); u.Input != 100 || u.Output != 20 || u.CachedRead != 900 || u.CachedWrite != 50 {
+		t.Errorf("the chat's first turn %+v", u)
+	}
+	if first.InputTokens != 1050 {
+		t.Errorf("the agent's own answer was changed: input %d", first.InputTokens)
+	}
+	agent.usage = &acp.Usage{InputTokens: 5, OutputTokens: 1, CachedReadTokens: new(uint64(9))}
+	turn(t, svc, c, "again")
+	got := m.told()
+	if len(got) != 2 || got[0].Input != 100 || got[0].Output != 20 || got[0].CacheRead != 900 || got[0].CacheWrite != 50 ||
+		got[1].Input != 5 || got[1].CacheRead != 9 {
+		t.Errorf("ante's turns %s", testcheck.JSON(t, got))
+	}
+	if u := shown(); u.Input != 5 || u.CachedRead != 9 {
+		t.Errorf("the chat's last turn %+v", u)
+	}
+
+	svc, agent, c, m = meteredChat(t, model.HarnessInfo{Name: "codex"}, `{"sessionId":"s1"}`)
+	agent.usage = whole()
+	turn(t, svc, c, "hi")
+	if got := m.told(); len(got) != 1 || got[0].Input != 1050 || got[0].CacheRead != 900 || got[0].CacheWrite != 50 {
+		t.Errorf("codex's turn %s", testcheck.JSON(t, got))
+	}
+}
+
 // A turn that leaves a subagent in the background is metered once, at
 // the prompt's answer: its cost and its tokens together.
 func TestATurnWithABackgroundSubagentIsMeteredOnce(t *testing.T) {

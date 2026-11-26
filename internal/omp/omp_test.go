@@ -18,4 +18,12 @@ func TestACommandsTitle(t *testing.T) {
 	}
 }
 
+// omp's "Other" text takes the place of a one-choice question's pick
+// (docs/facts/omp.md).
+func TestOtherReplacesAPick(t *testing.T) {
+	if got := harness.Info(); got.OtherSuffix != "__other" || got.OtherNotes != model.ReplacesOnOne {
+		t.Errorf("got %+v", got)
+	}
+}
+
 var harness Harness

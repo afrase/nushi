@@ -12,6 +12,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/plain_text.dart';
@@ -140,8 +141,16 @@ class _ChangesViewState extends State<ChangesView> {
     _stale = false;
   }
 
-  /// Takes the file the chat asks to show (see ChatState.showFile).
+  /// Takes the file the chat asks to show (see ChatState.showFile), or
+  /// the commit to pick (ChatState.showCommit).
   bool _take() {
+    if (chat.openCommit case final commit?) {
+      chat.openCommit = null;
+      chat.related.pick(null); // the chat's own commits
+      _first = commit;
+      _last = null;
+      return true;
+    }
     final path = chat.openPath;
     if (path == null) return false;
     chat.openPath = null;
@@ -377,6 +386,20 @@ class _ChangesViewState extends State<ChangesView> {
     if (mounted && asked == _plainAsked) setState(() => _plain = file);
   }
 
+  /// A changed file's right-click menu: Blame opens it in the Files pane
+  /// with its Blame on (issue #78), for a file of the chat's own folder
+  /// that's there, from a daemon that blames.
+  List<MenuEntry> _fileMenu(FileChange file) => [
+    if (daemon.daemonApi >= blameApi &&
+        _span?.worktree == null &&
+        file.status != 'deleted')
+      MenuEntry(
+        'Blame',
+        icon: Icons.history,
+        onPick: () => chat.blameInFiles(file.path),
+      ),
+  ];
+
   /// Reads the files of the commits picked.
   Future<void> _diff() async {
     final asked = ++_asked;
@@ -531,6 +554,7 @@ class _ChangesViewState extends State<ChangesView> {
                                   }),
                                   marks: _marks(),
                                   onStage: staging ? _stage : null,
+                                  menu: _fileMenu,
                                 ),
                               ),
                             ),

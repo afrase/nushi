@@ -134,6 +134,25 @@ func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFile
 	return connect.NewResponse(&nushiv1.GetFileResponse{File: fileChangeProto(c)}), nil
 }
 
+func (s *server) GetBlame(ctx context.Context, req *connect.Request[nushiv1.GetBlameRequest]) (*connect.Response[nushiv1.GetBlameResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	if !filepath.IsLocal(req.Msg.Path) {
+		return nil, invalid(fmt.Errorf("%q is not a path inside the folder", req.Msg.Path))
+	}
+	b, err := git.Blame(ctx, req.Msg.Folder, req.Msg.Path)
+	if err != nil {
+		return nil, refused(err)
+	}
+	resp := &nushiv1.GetBlameResponse{NoneReason: b.None}
+	for _, r := range b.Runs {
+		resp.Runs = append(resp.Runs, &nushiv1.BlameRun{Start: int32(r.Start), Count: int32(r.Count), Commit: r.Commit,
+			Author: r.Author, AuthorUnixSeconds: r.Time, Subject: r.Subject})
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 	return &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
 		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed), Staged: c.Staged}

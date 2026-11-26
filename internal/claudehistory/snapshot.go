@@ -28,11 +28,13 @@ type snapshot struct {
 type snapshotPhase struct{ Title, Detail string }
 
 // snapshotAgent is a workflow_agent row of the snapshot's workflowProgress.
+// Cached says a resume served its result from an earlier launch's.
 type snapshotAgent struct {
 	ID, Label, Phase, State, Model, Prompt, Result string
 	Started                                        time.Time
 	Duration                                       time.Duration
 	Tokens, ToolCalls                              int
+	Cached                                         bool
 }
 
 // readSnapshot reads a snapshot's JSON; an error only when it isn't a JSON
@@ -68,7 +70,7 @@ func readSnapshot(data []byte) (snapshot, error) {
 		s.Agents = append(s.Agents, snapshotAgent{ID: str(p["agentId"]), Label: str(p["label"]), Phase: str(p["phaseTitle"]),
 			State: str(p["state"]), Model: str(p["model"]), Prompt: str(p["promptPreview"]), Result: str(p["resultPreview"]),
 			Started: ms(p["startedAt"]), Duration: time.Duration(num(p["durationMs"])) * time.Millisecond,
-			Tokens: int(num(p["tokens"])), ToolCalls: int(num(p["toolCalls"]))})
+			Tokens: int(num(p["tokens"])), ToolCalls: int(num(p["toolCalls"])), Cached: string(p["cached"]) == "true"})
 	}
 	return s, nil
 }

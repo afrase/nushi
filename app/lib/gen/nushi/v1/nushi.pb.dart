@@ -1733,6 +1733,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ChatQueue? queue,
     $core.int? older,
     $core.Iterable<Item>? running,
+    $core.Iterable<$core.String>? olderWritten,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -1745,6 +1746,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (queue != null) result.queue = queue;
     if (older != null) result.older = older;
     if (running != null) result.running.addAll(running);
+    if (olderWritten != null) result.olderWritten.addAll(olderWritten);
     return result;
   }
 
@@ -1779,6 +1781,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ..aI(9, _omitFieldNames ? '' : 'older')
     ..pPM<Item>(10, _omitFieldNames ? '' : 'running',
         subBuilder: Item.$_createMessage)
+    ..pPS(11, _omitFieldNames ? '' : 'olderWritten')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1884,6 +1887,15 @@ class GetChatResponse extends $pb.GeneratedMessage {
   /// before their page is loaded. Their events say where they are.
   @$pb.TagNumber(10)
   $pb.PbList<Item> get running => $_getList(9);
+
+  /// With `recent`: every file the items before `items` wrote or edited (a
+  /// subagent's too), each once by the name the items give it, the one
+  /// changed last first, 1000 at most (the ones changed last); a file a
+  /// later call deleted is left out. A client goes over the items it has
+  /// after these, as they load and as they come, for the chat's whole list
+  /// (issue #62). API 154.
+  @$pb.TagNumber(11)
+  $pb.PbList<$core.String> get olderWritten => $_getList(10);
 }
 
 class GetChatItemsRequest extends $pb.GeneratedMessage {
@@ -14854,6 +14866,271 @@ class GetFileRequest extends $pb.GeneratedMessage {
   void clearPath() => $_clearField(2);
 }
 
+class GetBlameRequest extends $pb.GeneratedMessage {
+  factory GetBlameRequest({
+    $core.String? folder,
+    $core.String? path,
+  }) {
+    final result = GetBlameRequest._();
+    if (folder != null) result.folder = folder;
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  GetBlameRequest._();
+
+  factory GetBlameRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBlameRequest()..mergeFromBuffer(data, registry);
+  factory GetBlameRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBlameRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetBlameRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetBlameRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBlameRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBlameRequest copyWith(void Function(GetBlameRequest) updates) =>
+      super.copyWith((message) => updates(message as GetBlameRequest))
+          as GetBlameRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetBlameRequest() / GetBlameRequest.new instead')
+  static GetBlameRequest create() => GetBlameRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetBlameRequest._();
+  @$core.override
+  GetBlameRequest createEmptyInstance() => GetBlameRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetBlameRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetBlameRequest>(
+          GetBlameRequest.$_createMessage);
+  static GetBlameRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// Relative to folder.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+}
+
+class GetBlameResponse extends $pb.GeneratedMessage {
+  factory GetBlameResponse({
+    $core.Iterable<BlameRun>? runs,
+    $core.String? noneReason,
+  }) {
+    final result = GetBlameResponse._();
+    if (runs != null) result.runs.addAll(runs);
+    if (noneReason != null) result.noneReason = noneReason;
+    return result;
+  }
+
+  GetBlameResponse._();
+
+  factory GetBlameResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBlameResponse()..mergeFromBuffer(data, registry);
+  factory GetBlameResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBlameResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetBlameResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetBlameResponse.$_createMessage)
+    ..pPM<BlameRun>(1, _omitFieldNames ? '' : 'runs',
+        subBuilder: BlameRun.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'noneReason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBlameResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBlameResponse copyWith(void Function(GetBlameResponse) updates) =>
+      super.copyWith((message) => updates(message as GetBlameResponse))
+          as GetBlameResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetBlameResponse() / GetBlameResponse.new instead')
+  static GetBlameResponse create() => GetBlameResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetBlameResponse._();
+  @$core.override
+  GetBlameResponse createEmptyInstance() => GetBlameResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetBlameResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetBlameResponse>(
+          GetBlameResponse.$_createMessage);
+  static GetBlameResponse? _defaultInstance;
+
+  /// Every line's run in order, from line 1; none for an empty file, or
+  /// with none_reason.
+  @$pb.TagNumber(1)
+  $pb.PbList<BlameRun> get runs => $_getList(0);
+
+  /// Why there is no blame: "not a repository", "ignored", "untracked"
+  /// (not tracked, not ignored), "new" (staged, not in HEAD yet, or no
+  /// commit yet), "a link", "binary", "too large" (over 1 MiB), "too many
+  /// lines" (over 10,000). Empty when there is.
+  @$pb.TagNumber(2)
+  $core.String get noneReason => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set noneReason($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasNoneReason() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearNoneReason() => $_clearField(2);
+}
+
+/// Lines in a row that one commit last changed. Names and subjects are text
+/// anyone who made a commit chose: plain (no control or format
+/// characters), to be shown as text, never as Markdown. No email address.
+class BlameRun extends $pb.GeneratedMessage {
+  factory BlameRun({
+    $core.int? start,
+    $core.int? count,
+    $core.String? commit,
+    $core.String? author,
+    $fixnum.Int64? authorUnixSeconds,
+    $core.String? subject,
+  }) {
+    final result = BlameRun._();
+    if (start != null) result.start = start;
+    if (count != null) result.count = count;
+    if (commit != null) result.commit = commit;
+    if (author != null) result.author = author;
+    if (authorUnixSeconds != null) result.authorUnixSeconds = authorUnixSeconds;
+    if (subject != null) result.subject = subject;
+    return result;
+  }
+
+  BlameRun._();
+
+  factory BlameRun.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BlameRun()..mergeFromBuffer(data, registry);
+  factory BlameRun.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BlameRun()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'BlameRun',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: BlameRun.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'start')
+    ..aI(2, _omitFieldNames ? '' : 'count')
+    ..aOS(3, _omitFieldNames ? '' : 'commit')
+    ..aOS(4, _omitFieldNames ? '' : 'author')
+    ..aInt64(5, _omitFieldNames ? '' : 'authorUnixSeconds')
+    ..aOS(6, _omitFieldNames ? '' : 'subject')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BlameRun clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BlameRun copyWith(void Function(BlameRun) updates) =>
+      super.copyWith((message) => updates(message as BlameRun)) as BlameRun;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use BlameRun() / BlameRun.new instead')
+  static BlameRun create() => BlameRun._();
+  static $pb.GeneratedMessage $_createMessage() => BlameRun._();
+  @$core.override
+  BlameRun createEmptyInstance() => BlameRun._();
+  @$core.pragma('dart2js:noInline')
+  static BlameRun getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<BlameRun>(BlameRun.$_createMessage);
+  static BlameRun? _defaultInstance;
+
+  /// The run's first line, from 1.
+  @$pb.TagNumber(1)
+  $core.int get start => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set start($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasStart() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearStart() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get count => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set count($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCount() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCount() => $_clearField(2);
+
+  /// The commit's whole id; empty for lines not committed yet, which have
+  /// nothing else.
+  @$pb.TagNumber(3)
+  $core.String get commit => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set commit($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCommit() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCommit() => $_clearField(3);
+
+  /// The author's name, 256 bytes at most.
+  @$pb.TagNumber(4)
+  $core.String get author => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set author($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAuthor() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAuthor() => $_clearField(4);
+
+  /// When the author made it.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get authorUnixSeconds => $_getI64(4);
+  @$pb.TagNumber(5)
+  set authorUnixSeconds($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAuthorUnixSeconds() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAuthorUnixSeconds() => $_clearField(5);
+
+  /// The first line of the commit's message, 1 KiB at most.
+  @$pb.TagNumber(6)
+  $core.String get subject => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set subject($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSubject() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSubject() => $_clearField(6);
+}
+
 class WatchChatFileRequest extends $pb.GeneratedMessage {
   factory WatchChatFileRequest({
     $core.String? chatId,
@@ -19471,6 +19748,7 @@ class Field extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? values,
     $core.String? otherFor,
     $core.bool? note,
+    $core.bool? replaces,
   }) {
     final result = Field._();
     if (id != null) result.id = id;
@@ -19482,6 +19760,7 @@ class Field extends $pb.GeneratedMessage {
     if (values != null) result.values.addAll(values);
     if (otherFor != null) result.otherFor = otherFor;
     if (note != null) result.note = note;
+    if (replaces != null) result.replaces = replaces;
     return result;
   }
 
@@ -19509,6 +19788,7 @@ class Field extends $pb.GeneratedMessage {
     ..pPS(7, _omitFieldNames ? '' : 'values')
     ..aOS(8, _omitFieldNames ? '' : 'otherFor')
     ..aOB(9, _omitFieldNames ? '' : 'note')
+    ..aOB(10, _omitFieldNames ? '' : 'replaces')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -19606,6 +19886,19 @@ class Field extends $pb.GeneratedMessage {
   $core.bool hasNote() => $_has(8);
   @$pb.TagNumber(9)
   void clearNote() => $_clearField(9);
+
+  /// For an "Other" field: the agent takes its text, when not blank, in
+  /// place of a pick of the field it is for, and drops the pick, so an
+  /// answer is one or the other (the harness's OtherNotes: OpenCode's and
+  /// oh-my-pi's with one choice). API 153.
+  @$pb.TagNumber(10)
+  $core.bool get replaces => $_getBF(9);
+  @$pb.TagNumber(10)
+  set replaces($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasReplaces() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearReplaces() => $_clearField(10);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {
@@ -37390,6 +37683,18 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetFileRequest request) =>
       _client.invoke<GetFileResponse>(
           ctx, 'NushiService', 'GetFile', request, GetFileResponse());
+
+  /// Who last changed each line of one of a folder's files, as it is on
+  /// disk now (lines not committed yet marked so), for the file viewer's
+  /// Blame: git blame of the text read, with the repository's own filters,
+  /// textconv drivers and commits to skip off, in 30 seconds at most. Only a
+  /// regular file inside the folder: no "..", no link out. A file git has
+  /// no history for, a link, a binary one, one over 1 MiB or over 10,000
+  /// lines has no blame and says why. The Mac's only. (API 155)
+  $async.Future<GetBlameResponse> getBlame(
+          $pb.ClientContext? ctx, GetBlameRequest request) =>
+      _client.invoke<GetBlameResponse>(
+          ctx, 'NushiService', 'GetBlame', request, GetBlameResponse());
 
   /// Reads a file of a chat's (in its folder or its worktree) and sends it
   /// again each time it changes, until the call ends: the preview of what

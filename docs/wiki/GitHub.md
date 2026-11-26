@@ -108,7 +108,7 @@ By default, review cards tell the agent not to reply on GitHub, and failed-check
 
 ## React to a comment
 
-Reactions show under the description and each comment, as on GitHub: an emoji and how many people used it. Yours are filled in blue with a ring.
+Reactions show under a pull request's description and each comment, and under each comment on an issue, as on GitHub: an emoji and how many people used it. Yours are filled in blue with a ring.
 
 1. Click the smiley under the comment.
 2. Pick one of the eight emoji. It's added on GitHub.

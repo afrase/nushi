@@ -20,23 +20,31 @@ import (
 )
 
 // Local is claude.Harness with what reads Claude's files and processes on
-// this Mac, its projects folder being Projects. It lives here as this
+// this Mac, in its projects folder (projects). It lives here as this
 // package needs claude, for its config folder. Tests use claude.Harness alone.
 type Local struct {
 	claude.Harness
+	// Projects is the projects folder a test reads; "" reads Claude's
+	// (in claude.ConfigDir) each time, from the daemon's environment as
+	// it is then.
 	Projects string
 	// Workflows keeps what was read of the workflows being followed; nil
 	// reads each whole every time.
 	Workflows *Runs
 }
 
-// Projects returns Claude's projects folder, in its config folder
-// (claude.ConfigDir); an error when there's no home folder.
-func Projects() (string, error) {
-	if _, err := os.UserHomeDir(); err != nil {
-		return "", err
+// projects is the projects folder l reads: Projects, else Claude's as
+// the daemon's environment has it now, not as it had it at start. The
+// login shell's environment is applied to the daemon's again whenever
+// Settings › Agents reads it (cmd/nushid's setEnviron), so a
+// CLAUDE_CONFIG_DIR exported after the daemon started is where the
+// Claude chats started since then keep their history, and where their
+// skills, trust and MCP servers are already read (claude.ConfigDir).
+func (l Local) projects() string {
+	if l.Projects != "" {
+		return l.Projects
 	}
-	return filepath.Join(claude.ConfigDir(), "projects"), nil
+	return filepath.Join(claude.ConfigDir(), "projects")
 }
 
 // transcriptPath returns where session id's transcript is in folder's
@@ -56,10 +64,11 @@ func transcriptPath(projects, id, folder string) (string, error) {
 // read says nothing: another CLAUDE_CONFIG_DIR, or a folder whose name
 // Claude spells otherwise (see sessions.Store.ProjectDir).
 func (l Local) HistoryGone(id, folder string) bool {
-	if _, err := transcriptPath(l.Projects, id, folder); err != nil {
+	projects := l.projects()
+	if _, err := transcriptPath(projects, id, folder); err != nil {
 		return false
 	}
-	dir := historyDir(l.Projects, folder)
+	dir := historyDir(projects, folder)
 	f, err := os.Open(dir)
 	if err != nil {
 		return false
@@ -72,7 +81,7 @@ func (l Local) HistoryGone(id, folder string) bool {
 		return false
 	}
 	_, err = os.Lstat(filepath.Join(dir, id+".jsonl"))
-	return errors.Is(err, fs.ErrNotExist) && !l.elsewhere(id, dir)
+	return errors.Is(err, fs.ErrNotExist) && !elsewhere(projects, id, dir)
 }
 
 // elsewhere says a history folder other than home holds session id's
@@ -81,14 +90,15 @@ func (l Local) HistoryGone(id, folder string) bool {
 // the history folder of a worktree the session enters (its EnterWorktree
 // tool) and back when it leaves (docs/facts/claude.md), so the folder a
 // chat started in lacks it while the session lives. Asked only once home
-// lacks the transcript: a look at each history folder, reading none.
-func (l Local) elsewhere(id, home string) bool {
-	entries, err := os.ReadDir(l.Projects)
+// lacks the transcript: a look at each history folder of projects,
+// reading none.
+func elsewhere(projects, id, home string) bool {
+	entries, err := os.ReadDir(projects)
 	if err != nil {
 		return true
 	}
 	for _, e := range entries {
-		dir := filepath.Join(l.Projects, e.Name())
+		dir := filepath.Join(projects, e.Name())
 		if !e.IsDir() || dir == home {
 			continue
 		}

@@ -297,6 +297,14 @@ func chunk(thought bool, text string, id acp.MessageID) acp.SessionUpdate {
 // usageLocked adds a model call's tokens to the turn's, and reports how
 // full the context is when Ante says (not for a subagent's call, whose
 // tokens it counts in the parent's without a context).
+//
+// The figures go on as Ante gives them: its input is the whole prompt,
+// the cache's tokens in it (docs/facts/ante.md), which the harness says
+// of itself (HarnessInfo.CacheInInput) and the daemon takes out. Not
+// here: this bridge is started by whichever daemon runs, an older one
+// too between an update and its restart, and what that one keeps must
+// stay as Ante reports it for the database's one repair of those rows to
+// be exact.
 func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 	var p struct {
 		Usage struct {

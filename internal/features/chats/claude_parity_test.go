@@ -63,7 +63,7 @@ func TestClaudeParity(t *testing.T) {
 			workflowsEnded(t, dir, want)
 			answeredAtResult(t, recorded)
 			switch filepath.Base(dir) {
-			case "workflow", "workflow-stop":
+			case "workflow", "workflow-stop", "workflow-resume", "workflow-resume-load":
 				launchedARun(t, want)
 			case "refusal": // claude answered on its fallback model, which the option shows
 				if m := want[0].Model; m != "claude-opus-4-8" {
@@ -248,24 +248,34 @@ func recordedCommandEnds(t *testing.T, dir string) (ends map[string]model.Backgr
 	return ends, named > 0 && mine == named
 }
 
-// launchedARun checks the recorded Workflow call became a workflow's item
+// launchedARun checks each recorded Workflow call became a workflow's item
 // (ADR 0127): the run's and task's ids, read from the call's _meta as
-// Claude sends it. The comparison above can't tell: both sides go through
-// the same reading.
+// Claude sends it; a resume's call has the run's id and a task of its own.
+// The comparison above can't tell: both sides go through the same
+// reading.
 func launchedARun(t *testing.T, views []parity) {
 	t.Helper()
+	tasks := map[string]string{} // the calls' tasks, by task: their runs
+	runs := map[string]bool{}
 	for _, v := range views {
 		for _, it := range v.Items {
-			if it.Tool != "Workflow" {
+			if it.Tool != "Workflow" || it.Parent != "" {
 				continue
 			}
-			if w := it.Workflow; w == nil || !strings.HasPrefix(w.RunID, "wf_") || w.TaskID == "" || it.TaskID != w.TaskID {
+			w := it.Workflow
+			if w == nil || !strings.HasPrefix(w.RunID, "wf_") || w.TaskID == "" || it.TaskID != w.TaskID || tasks[w.TaskID] != "" {
 				t.Errorf("the Workflow call's run: %+v", w)
+				continue
 			}
-			return
+			tasks[w.TaskID], runs[w.RunID] = w.RunID, true
 		}
 	}
-	t.Error("no Workflow call")
+	if len(tasks) == 0 {
+		t.Error("no Workflow call")
+	}
+	if len(runs) != 1 {
+		t.Errorf("the calls' runs: %v", tasks)
+	}
 }
 
 // differences says where the Go agent's chats (got) differ from the

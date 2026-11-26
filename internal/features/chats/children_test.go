@@ -288,3 +288,41 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 		}
 	}
 }
+
+// A fresh reopen of a Claude chat, with no copy of its transcript (a
+// session started elsewhere, or copies off), shows a background subagent
+// that left no report as stopped, not still running: Claude's replay
+// ends the subagent's own session with no reason (its process went),
+// which is a stop (saidOf). None of the chat's subagents is left running.
+func TestABackgroundSubagentWithNoReportStopsOnAFreshReopen(t *testing.T) {
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	sessions := &memSessions{}
+	kinds := []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}
+	svc := newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir()})
+	c := startChat(t, svc, t.TempDir())
+	c.mu.Lock()
+	c.saveLocked(func(s *model.ChatRecord) { s.HasMessages, s.Updated = true, time.Now() })
+	c.mu.Unlock()
+
+	// The daemon is killed with counter D still running, and the next has
+	// no copy of the transcript: all it shows is what Claude replays.
+	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
+	testcheck.NoErr(t, err)
+	sessions.stored = []model.ChatRecord{sessions.saved[len(sessions.saved)-1]}
+	agent.replay = recorded(t, "restart_load.jsonl")
+	svc = newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir(), Copies: store, CopiesOn: func() bool { return true }})
+	_, err = svc.Get(c.id)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, svc.Reopen(c.id))
+	c = svc.chats[c.id]
+	eventually(t, c, func() bool { return c.agent != nil && !c.sessionOpLocked() })
+	if sa := subagentOf(t, c, counterD); sa.State != model.RunStopped || sa.Session == "" {
+		t.Errorf("counter D: %+v, want stopped, from its own session", sa)
+	}
+	for _, call := range []string{countSlowly, countSlowlyV2, counterA, counterB, counterC} {
+		if sa := subagentOf(t, c, call); sa.State == model.RunRunning {
+			t.Errorf("%s still running: %+v", call, sa)
+		}
+	}
+}

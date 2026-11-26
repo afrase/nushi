@@ -108,7 +108,7 @@ class UsageLimitRow extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${agentTitle(limit.agent)} · ${limitName(limit.kind)}',
+                  '${agentTitle(limit.agent)} ${limitName(limit.kind)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(t.text),
@@ -134,28 +134,24 @@ class UsageLimitRow extends StatelessWidget {
             ],
           ),
           if (used != null) ShareBar(used, color: ink),
-          Text.rich(
-            TextSpan(
-              children: [
-                if (resetWords(limit.resetsAt.toInt(), now) case final r
-                    when r.isNotEmpty)
-                  TextSpan(text: '$r · '),
-                if (seen == 0)
-                  const TextSpan(text: 'when seen unknown')
-                else
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.baseline,
-                    baseline: TextBaseline.alphabetic,
-                    child: tooltip(
-                      context,
-                      fullTime(DateTime.fromMillisecondsSinceEpoch(seen)),
-                      Text('as of ${agoAt(seen, now)}', style: muted),
-                    ),
-                  ),
-              ],
-            ),
-            maxLines: 2,
-            style: muted,
+          // When it resets, then when it was seen on a line of its own:
+          // a date's own commas aren't run into.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 2,
+            children: [
+              if (resetWords(limit.resetsAt.toInt(), now) case final r
+                  when r.isNotEmpty)
+                Text(r, style: muted),
+              if (seen == 0)
+                Text('when seen unknown', style: muted)
+              else
+                tooltip(
+                  context,
+                  fullTime(DateTime.fromMillisecondsSinceEpoch(seen)),
+                  Text('as of ${agoAt(seen, now)}', style: muted),
+                ),
+            ],
           ),
         ],
       ),

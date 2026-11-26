@@ -4,6 +4,7 @@ import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jump_chip.dart';
+import 'package:nushi/logo.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -21,17 +22,23 @@ Item _ask({String status = 'pending'}) => Item(
   options: [Option(id: 'y', name: 'Allow once')],
 );
 
-/// The waiting card's ring: its spread, or null without one.
-/// Whether the Jump chip's words are in the amber of what needs you.
+/// Whether the Jump chip's arrow is in the amber of what needs you (its
+/// words too, when it has them).
 bool _amber(WidgetTester tester) {
+  final arrow = find.descendant(
+    of: find.byType(JumpChip),
+    matching: find.byIcon(Icons.arrow_downward),
+  );
+  final t = NushiTheme.of(tester.element(arrow)).t;
   final words = find.descendant(
     of: find.byType(JumpChip),
     matching: find.byType(Text),
   );
-  final t = NushiTheme.of(tester.element(words)).t;
-  return tester.widget<Text>(words).style?.color == t.needs;
+  return tester.widget<Icon>(arrow).color == t.needs &&
+      tester.widgetList<Text>(words).every((w) => w.style?.color == t.needs);
 }
 
+/// The waiting card's ring: its spread, or null without one.
 double? _ring(WidgetTester tester) {
   final box = tester
       .widgetList<Container>(
@@ -124,8 +131,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 400));
     await tester.pumpAndSettle();
-    expect(find.text('Jump to latest'), findsOneWidget);
-    expect(_amber(tester), isFalse);
+    // Working, it's Nushi's mark (#51); needing you wins over it.
+    expect(
+      find.descendant(of: find.byType(JumpChip), matching: find.byType(Logo)),
+      findsOneWidget,
+    );
 
     chat
       ..waiting = true

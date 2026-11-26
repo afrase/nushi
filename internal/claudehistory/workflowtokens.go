@@ -90,11 +90,13 @@ func (r *run) readTokens(root *os.Root, dir string) {
 	}
 }
 
-// tokensSum is the tokens of the run's agents read so far.
-func (r *run) tokensSum() int64 {
+// tokensSum is the tokens of the agents of rows read so far.
+func (r *run) tokensSum(rows []journalRow) int64 {
 	var n int64
-	for _, a := range r.tokens {
-		n += a.tokens
+	for _, row := range rows {
+		if a := r.tokens[row.AgentID]; a != nil {
+			n += a.tokens
+		}
 	}
 	return n
 }

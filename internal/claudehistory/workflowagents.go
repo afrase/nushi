@@ -39,7 +39,7 @@ func (r *run) agents(ended bool) []model.WorkflowAgent {
 		}
 		return out
 	}
-	for _, row := range r.j.rows {
+	for _, row := range r.rows(ended) {
 		state := model.RunState(row.State)
 		if (r.snap != nil || ended) && state == model.RunRunning {
 			state = model.RunStopped // the run ended without it
@@ -62,7 +62,7 @@ func (l Local) WorkflowAgentItems(sid, folder string, w model.Workflow, id strin
 	earlier := 0
 	err := l.readRun(sid, folder, w, func(r *run, root *os.Root) error {
 		listed := false
-		for _, a := range r.agents(false) {
+		for _, a := range r.agents(w.State.Ended()) {
 			listed = listed || a.ID == id && id != ""
 		}
 		if !listed || !agentID.MatchString(id) || root == nil {

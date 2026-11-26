@@ -149,14 +149,11 @@ func run() error {
 	logs.Mask(token)
 	slog.Info("nushid started", "version", version(), "build", api.Build(), "api", api.Version, "data", dir, "pid", os.Getpid(),
 		"log_level", logs.Level.Level())
-	shellEnv, projects, err := fromLoginShell(loginShell()) // before anything reads the environment, and before the socket answers
-	if err != nil {
-		return err
-	}
+	shellEnv := fromLoginShell(loginShell()) // before anything reads the environment, and before the socket answers
 
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
-	d, err := daemon.Start(context.Background(), dir, token, &leaves{dir: dir, home: home, projects: projects,
+	d, err := daemon.Start(context.Background(), dir, token, &leaves{dir: dir, home: home,
 		dev: dev, errorLog: errorLog, shellEnv: shellEnv})
 	if err != nil {
 		return err

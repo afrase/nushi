@@ -17,16 +17,26 @@ import 'package:nushi/tool_calls.dart';
 /// The artifacts ([isArtifact]) [items] wrote, edited or showed (a
 /// subagent's calls too), or with [any] every file they wrote or edited
 /// (one only shown wasn't written), each once, the one changed last
-/// first; a file deleted since is left out. Each by one name, however the
-/// agent named it ([relativeIn] the chat's [folder]): relative to it when
-/// inside it, as the daemon names a written file.
+/// first; a file deleted since is left out. [before] is what items before
+/// them wrote, the one changed last first (GetChatResponse.older_written):
+/// [items] go over it, so going over items it already counts changes
+/// nothing. Each by one name, however the agent named it ([relativeIn] the
+/// chat's [folder]): relative to it when inside it, as the daemon names a
+/// written file.
 List<String> chatFiles(
   Iterable<Item> items, {
   String folder = '',
   bool any = false,
+  Iterable<String> before = const [],
 }) {
   String name(String p) => relativeIn(folder, p);
   final files = <String>{}; // in the order last changed
+  for (final p in before.toList().reversed.map(name)) {
+    if (!any && !isArtifact(p)) continue;
+    files
+      ..remove(p)
+      ..add(p);
+  }
   for (final it in items) {
     if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status == 'failed') {
       continue;
@@ -56,7 +66,9 @@ List<String> chatFiles(
 
 /// [chatFiles] of a chat's items, all of them and those of its last turn
 /// (from the last message of the user's on), and every file it wrote, as
-/// of its items' revision and its folder (a chat can move).
+/// of its items' revision and its folder (a chat can move); all and every
+/// file reach past the loaded items to what the older ones wrote (issue
+/// #62).
 typedef _Written = ({
   int revision,
   String folder,
@@ -77,12 +89,16 @@ _Written _writtenBy(ChatState chat) {
   final turn = items.lastIndexWhere(
     (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && it.parent.isEmpty,
   );
+  // What the items not loaded wrote, as the daemon said and trimmed items
+  // left it (ChatState.olderWritten); none from a daemon before
+  // olderWrittenApi, whose chat lists only what's loaded.
+  final before = chat.olderWritten ?? const <String>[];
   return _written[chat] = (
     revision: chat.revision,
     folder: folder,
-    all: chatFiles(items, folder: folder),
+    all: chatFiles(items, folder: folder, before: before),
     last: chatFiles(items.skip(turn + 1), folder: folder).toSet(),
-    any: chatFiles(items, folder: folder, any: true).toSet(),
+    any: chatFiles(items, folder: folder, any: true, before: before).toSet(),
   );
 }
 

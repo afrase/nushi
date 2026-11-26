@@ -1,0 +1,81 @@
+{
+ "timeout": "120s",
+ "steps": [
+  {
+   "initialize": {}
+  },
+  {
+   "new": "s1",
+   "meta": {
+    "claudeCode": {
+     "options": {
+      "settings": {
+       "permissions": {
+        "allow": [
+         "Workflow"
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "prompt": "run the workflow",
+   "session": "s1"
+  },
+  {
+   "waitFor": {
+    "method": "session/update",
+    "params": {
+     "update": {
+      "sessionUpdate": "tool_call_update",
+      "_meta": {
+       "claudeCode": {
+        "task": {
+         "status": "running",
+         "type": "local_workflow"
+        }
+       }
+      }
+     }
+    }
+   },
+   "capture": {
+    "task": "params.update._meta.claudeCode.task.id"
+   }
+  },
+  {
+   "pause": "5s"
+  },
+  {
+   "request": "_session/stopTask",
+   "params": {
+    "sessionId": "$s1",
+    "taskId": "$task"
+   }
+  },
+  {
+   "pause": "2s"
+  },
+  {
+   "prompt": "resume the workflow",
+   "session": "s1"
+  },
+  {
+   "waitFor": {
+    "method": "session/update",
+    "params": {
+     "update": {
+      "sessionUpdate": "usage_update",
+      "_meta": {
+       "_claude/origin": {
+        "kind": "task-notification"
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}

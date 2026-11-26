@@ -164,6 +164,15 @@ With **Enter starts a new line** on, **⌘⏎** queues and **⇧⌘⏎** stops a
 
 Press **Esc**, or click the round red **Stop** button at the end of the box's row. Queued messages wait until you send again.
 
+## Get back to the latest
+
+Scrolled up, a small round button at the bottom middle of the chat takes you back down. Click it and the chat follows the agent again. Its tooltip says **Jump to latest**.
+
+- **Idle**, it shows a down arrow.
+- **While the agent works**, the same button shows Nushi's mark in the colour of a working chat's dot, its rings turning. Point at it and it shows the arrow. With Reduce Motion the mark stands still.
+- **When something below needs you**, it turns amber and says **Needs you**, whatever the agent is doing.
+- **On the phone** it's at the bottom right, where your thumb is: a round down arrow, or the mark while the agent works.
+
 ## See how long a step took
 
 Each step the agent takes (a tool call) has a row that ends with how long it ran, such as **12s**. While the step runs, the time counts up. A folded group of calls, such as **Ran 3 commands**, ends with the time from its first call's start to its last call's end.
@@ -238,7 +247,15 @@ Claude, Codex and Ante let you pick an option and add a note to it, such as **PD
 1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**, and **Note:** stays in front of what you type.
 2. Pick the option. A single question is sent as soon as you pick, so type the note first.
 
-The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own. With OpenCode and oh-my-pi, text in the box takes the place of a pick on a question with one answer: the agent never sees the pick, so pick or type, not both.
+The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own.
+
+### Pick or type, with OpenCode and oh-my-pi
+
+On a question with one answer, OpenCode and oh-my-pi take text in the box in place of a pick, so Nushi sends one or the other.
+
+- Typing in the box unmarks the option you picked. The box says **Type your own answer in place of your pick…** while an option is picked.
+- Picking an option keeps what you typed, greyed, with **Not sent:** in front of it. Type in the box again to send your text instead; deleting text keeps your pick.
+- The answered card shows only what was sent.
 
 ### See every option of an answered question
 
@@ -319,16 +336,17 @@ Settings has a Usage page (today's spend at the bottom of the sidebar opens it):
 
 1. Open **Settings**, then **Usage**.
 2. Pick **7 days**, **30 days**, **90 days** or **All**. Nushi remembers your pick.
-3. Point at a day in the chart for its spend, tokens and turns.
+3. Point at a day in the chart for its spend, tokens, cached tokens and turns.
 4. Click a chat under **Costliest chats** to open it.
 
-Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as a commit message it drafts or a workflow's agents, aren't counted. The phone doesn't have this page.
+Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. Tokens are what was sent and received fresh. **Cached** is what the agent read back from its cache, apart from the tokens: it's often many times the tokens, and much cheaper. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as a commit message it drafts or a workflow's agents, aren't counted. The phone doesn't have this page.
 
 ## Good to know
 
 - **Chats belong to your agent.** Each is the agent's own session, so its own resume command, run in the chat's folder, picks it up in a terminal.
 - **Quitting Nushi doesn't stop your agents.** A background helper (the daemon) keeps them and the chat's terminals running. More on terminals in [Previews and terminals](Previews-and-terminals).
 - **The card at the bottom of the sidebar** shows what today's turns cost and how much memory Nushi uses. Click the spend to open **Settings › Usage**. Click the memory to see each awake chat's share, with **Sleep** beside it. The spend counts from midnight and doesn't show on a day with no cost, such as when your agents report none.
+- **Two dots mean work goes on in the background.** When a turn has ended but its subagents or commands still run, the chat's dot in the sidebar and on the phone is two dots side by side in the working colour; every few seconds they spin like two droplets, merge into one and split again. Hover over them to see how many tasks run; they're listed in the chat's **Background tasks**.
 - **Idle chats sleep** after 30 minutes: the agent stops, and your next message wakes it. A sleeping chat's row in the sidebar has no dot and is faint and in italics (unless a turn it finished is still unseen); its header says **Asleep**. Change it in **Settings › General › Sleep idle chats**.
 - **Wake a chat without sending anything**: open its **⋯** (or right-click it in the sidebar) and choose **Wake**, where **Sleep** is while it's awake. The chat shows it's opening, as after a restart; if it can't, it says why and offers what helps: **Try again**, **Move…** when its folder is gone, or **Set up…** when its agent isn't ready.
 - **Old chats stay asleep after Nushi restarts.** Looking at one doesn't start its agent. Your next message does, or **Wake**. A chat you used in the hour before the restart wakes when you open it.

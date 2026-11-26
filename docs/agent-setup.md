@@ -10,7 +10,7 @@ Settings › Agents shows each agent as Nushi finds it on your login shell's `PA
 
 Agents start with your login shell's environment, as a new terminal has it, however the daemon was started ([ADR 0048](adr/0048-agents-start-with-the-login-shells-environment.md)).
 
-- The daemon runs your shell (fish, zsh, bash…) as a login, interactive shell and reads what it exports, fish's universal variables included. The daemon takes it as its own too, so what it runs itself (`claude mcp`, `gh`) finds the same programs and folders as the agents.
+- The daemon runs your shell (fish, zsh, bash…) as a login, interactive shell and reads what it exports, fish's universal variables included. The daemon takes it as its own too, so what it runs itself (`claude mcp`, `gh`) finds the same programs and folders as the agents. Agents' own folders (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `ANTE_HOME`, `OPENCODE_CONFIG_DIR`, `PI_CODING_AGENT_DIR` and the like) are looked up in it each time Nushi reads their history, skills, trust or MCP servers, never kept from the start.
 - It reads it again when you open Settings › Agents (if it's over a minute old) or press Reload there. A variable you add reaches the agents started after that, with no restart; a chat whose agent runs keeps what it started with.
 - The last line of Settings › Agents says when it was read, or why it couldn't be ("Couldn't read your shell's environment: fish took over 5s"). Agents then get the last one read, else what your shell exports as a plain login shell (`-l -c`, without `.zshrc` or fish's interactive blocks), else what the daemon was started with.
 - While it's read, `NUSHI_RESOLVING_ENVIRONMENT=1` is set, so your config can skip what only a terminal wants: `if not set -q NUSHI_RESOLVING_ENVIRONMENT; …`.

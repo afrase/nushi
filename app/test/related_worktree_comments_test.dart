@@ -168,7 +168,7 @@ void main() {
     expect(find.byType(Checkbox), findsNothing);
     expect(_inDiff("The chat's"), findsNothing);
     expect(find.text("The chat's"), findsOne, reason: 'above the list');
-    expect(find.text('Uncommitted · same.go · Line 1'), findsOne);
+    expect(find.text('Uncommitted, same.go, Line 1'), findsOne);
 
     // Written on line 1, as in the chat's own.
     await _clickLine(tester, 0);
@@ -217,7 +217,7 @@ void main() {
     await pick(tester, "Chat's folder");
     expect(_inDiff("The chat's"), findsOne);
     expect(_inDiff('Edited'), findsNothing);
-    expect(find.text('a · Uncommitted · same.go · Line 1'), findsOne);
+    expect(find.text('a, Uncommitted, same.go, Line 1'), findsOne);
     expect(find.byType(CommitBox), findsOne);
     await closeView(tester, daemon);
   });
@@ -324,11 +324,11 @@ void main() {
     expect(worktreeOf(where), odd);
     expect(scopeOf(where), 'commits:${'1' * 8}:${'1' * 8}');
     expect(worktreeOf('branch'), isNull);
-    expect(whereLabel(where), 'a b:c · Commit 1111111');
-    expect(whereLabel(where, [_worktree()]), 'a b:c · Commit 1111111');
+    expect(whereLabel(where), 'a b:c, Commit 1111111');
+    expect(whereLabel(where, [_worktree()]), 'a b:c, Commit 1111111');
     expect(
       whereLabel(whereIn('branch', worktree: _tree), [_worktree()]),
-      'a · Branch',
+      'a, Branch',
     );
   });
 

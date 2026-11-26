@@ -155,7 +155,8 @@ func TestAnAnteSubagent(t *testing.T) {
 	}
 }
 
-// An omp chat: its question's Other is omp's, and Delete can't take omp's
+// An omp chat: its question's Other is omp's, its text in place of the
+// pick (docs/facts/omp.md), and Delete can't take omp's
 // history (omp has no session/delete).
 func TestAnOmpChat(t *testing.T) {
 	ctx := context.Background()
@@ -164,7 +165,7 @@ func TestAnOmpChat(t *testing.T) {
 	id := a.start(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()})
 	a.send(id, "a question")
 	q := a.waitFor("the question", questionPending).GetItem().Item
-	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" {
+	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" || q.Fields[1].Note || !q.Fields[1].Replaces {
 		t.Errorf("question fields %v", q.Fields)
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,

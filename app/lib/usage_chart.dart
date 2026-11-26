@@ -227,8 +227,10 @@ class _UsageDayChartState extends State<UsageDayChart> {
 
 /// A day's figures on the card that follows the pointer over
 /// [UsageDayChart]: the day ("Tue, Oct 27"), then its spend (when any
-/// was reported), tokens and turns, a line each, or that nothing was
-/// used.
+/// was reported), tokens, what was read from the cache (when any) and
+/// turns, a line each, or that nothing was used. Cached is on the card
+/// only, never stacked on the bars: it's often many times the tokens and
+/// would flatten them.
 class UsageDayCard extends StatelessWidget {
   const new({required this.day, required this.totals, super.key});
 
@@ -276,6 +278,8 @@ class UsageDayCard extends StatelessWidget {
           else ...[
             if (spent.isNotEmpty) line('Spend', spent),
             line('Tokens', tokens(tokensOf(u))),
+            if (u.cacheReadTokens > 0)
+              line('Cached', tokens(u.cacheReadTokens.toInt())),
             line('Turns', '${u.turns.toInt()}'),
           ],
         ],

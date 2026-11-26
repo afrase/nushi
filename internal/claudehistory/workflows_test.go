@@ -20,7 +20,14 @@ import (
 // Local, the session's id and folder, and the session's own folder.
 func recorded(t *testing.T, scenario string) (Local, string, string, string) {
 	t.Helper()
-	end := filepath.Join("..", "features", "chats", "testdata", "claude-parity", scenario, "history", "end")
+	return recordedAt(t, scenario, "end")
+}
+
+// recordedAt is recorded with the scenario's history at a point of its
+// run: "end", or "1" and on, before each load.
+func recordedAt(t *testing.T, scenario, at string) (Local, string, string, string) {
+	t.Helper()
+	end := filepath.Join("..", "features", "chats", "testdata", "claude-parity", scenario, "history", at)
 	transcripts, err := filepath.Glob(filepath.Join(end, "*.jsonl"))
 	if err != nil || len(transcripts) != 1 {
 		t.Fatalf("the recording's session: %v, %v", transcripts, err)

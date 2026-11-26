@@ -1165,6 +1165,30 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Who last changed each line of one of a folder's files, as it is on
+  /// disk now (lines not committed yet marked so), for the file viewer's
+  /// Blame: git blame of the text read, with the repository's own filters,
+  /// textconv drivers and commits to skip off, in 30 seconds at most. Only a
+  /// regular file inside the folder: no "..", no link out. A file git has
+  /// no history for, a link, a binary one, one over 1 MiB or over 10,000
+  /// lines has no blame and says why. The Mac's only. (API 155)
+  Future<nushiv1nushi.GetBlameResponse> getBlame(
+    nushiv1nushi.GetBlameRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getBlame,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reads a file of a chat's (in its folder or its worktree) and sends it
   /// again each time it changes, until the call ends: the preview of what
   /// the agent wrote. A path that leads outside them, through a link too,

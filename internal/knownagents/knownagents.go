@@ -72,8 +72,9 @@ type Agent struct {
 }
 
 // All is every agent, in the order they're listed, the default (Claude)
-// first. projects is Claude's projects folder (claudehistory.Projects),
-// which its Local reads. Claude runs through Nushi's Go agent (ADR 0066):
+// first. projects is the Claude projects folder its Local reads; ""
+// reads Claude's own (in claude.ConfigDir) each time, as the daemon's
+// environment has it then. Claude runs through Nushi's Go agent (ADR 0066):
 // no adapter, Node, set-up or pinned versions. goAgent is the user's
 // setting, by agent name, that runs an agent with a Go agent of Nushi's
 // (Codex's, ADR 0142) through it instead of its adapter, asked each time

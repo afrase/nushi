@@ -5,6 +5,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/blame_gutter.dart' show BlameShown;
 import 'package:nushi/chat_images.dart' show bytesOf;
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -364,6 +365,7 @@ class PreviewBody extends StatelessWidget {
     this.pastEnd = false,
     this.base,
     this.menu,
+    this.blame,
   });
 
   final FileWatch watch;
@@ -399,6 +401,9 @@ class PreviewBody extends StatelessWidget {
 
   /// A source's right-click menu (the Mac's Files pane's); null: none.
   final SourceActions? menu;
+
+  /// A source's Blame, while on (the Mac's Files pane, issue #78).
+  final BlameShown? blame;
 
   @override
   Widget build(BuildContext context) {
@@ -487,6 +492,7 @@ class PreviewBody extends StatelessWidget {
                 pastEnd: pastEnd,
                 base: base,
                 menu: menu,
+                blame: blame,
               );
               final why = readOnly?.call();
               if (why == null || why.isEmpty) return view;

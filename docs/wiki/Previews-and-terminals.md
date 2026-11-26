@@ -12,7 +12,7 @@ When the agent writes a document, page, image or diagram, its row in the chat ha
 
 Other ways to open a file:
 
-- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made. Click one to open it.
+- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made, in a long chat the early ones too. Click one to open it.
 - **Open file** (⌘P): type part of a name to open any file in the chat's folder, code included.
 - **Files** (⇧⌘E, or the folder button in the header): the open files on the left and a tree of the chat's folder on the right, as in Claude's desktop app. With nothing open it says **Open files appear here**. Files with changes have a dot (see below). Opening a file never moves the tree. To find a file anywhere in the folder, type in **Search files…** above the tree.
 
@@ -57,6 +57,22 @@ Rendered views (Markdown, CSV, HTML) can't show marks: click the pill (**3 chang
 In the tree, a green dot marks every file with changes (the ones that open with marks or **New file**), whoever made them: the agent, a command, or you. Folders that hold such a file have the dot too, even when closed. A file the chat changed and then put back as it was has no dot. Opened, it says **No changes since main**. In a folder that isn't a git repository there's nothing to compare with, so the dot marks the files the chat wrote instead.
 
 A file with a dot and no marks always says why next to its path: **Not in a git repository**, **Ignored by git**, a link, not text, too large or over 10,000 lines, or **Couldn’t compare with git** (click it for git's words). A file outside the chat's folder is marked against its own last commit.
+
+## See who last changed each line
+
+Blame shows, beside each line number, who last changed that line and when, as git has it.
+
+1. In the Files pane, open the file and click **Show blame** (the clock with an arrow, in the row with the file's path).
+2. Each run of lines shows its author's name and how long ago (**3h**, **5w**, **1y**) on its first line. Lines you or the agent haven't committed say **Not committed**. In a narrow pane only how long ago shows (**new** for lines not committed); point at it for the name.
+3. Point at a name to see the commit's subject, the full name, the date and the short id.
+4. Click a name to open that commit in the **Changes** tab's **Commits**. A commit Commits doesn't list (older than the branch's commits, or from another repository) has its id copied instead, and Nushi says so.
+5. Click **Hide blame** to turn it off.
+
+From the **Changes** tab, right-click a file and pick **Blame** to open it in the Files pane with Blame on.
+
+Blame is per tab: it's off when a file opens, and stays on for that tab until you close it or quit. It keeps up as the file changes and after each commit; lines you've typed and not saved say **Not committed**.
+
+While it's asked, the path's row says **Blaming…**. A file git has no history for says why instead: **Not in a git repository**, **Ignored by git**, **Not committed yet** (git doesn't track it) or **New file: not committed yet** (staged, not committed). A link, a file that isn't text, one over 1 MB or over 10,000 lines has no blame either, and says so. **Couldn’t blame** shows git's words when you click it.
 
 ## Work with several files
 

@@ -87,6 +87,8 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `workflow` | a Workflow call (two phases, four agents, one with a schema) that ends; claude's turn on its own after | the call's `toolResponse`, the run's files, the prompt answered while the run goes |
 | `workflow-stop` | a running workflow stopped by `TaskStop` with its task id | the `killed` snapshot |
 | `workflow-stoptask` | a running workflow stopped by `_session/stopTask`, a prompt after, the stop again | a workflow's task frames; the `killed` snapshot |
+| `workflow-resume` | a two-step workflow stopped by `_session/stopTask` while its second helper waits, then resumed by the model (`scriptPath`, `resumeFromRunId`, other `args`) and run to its end | the first helper from cache; no journal line for the resume; the resume's snapshot replaces the killed one |
+| `workflow-resume-load` | the same, with the session closed and loaded between the stop and the resume | the killed snapshot (`history/1`); the resume from the loaded claude |
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |

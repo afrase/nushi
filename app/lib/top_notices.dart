@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/paint_shift.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/toast.dart';
 
@@ -290,8 +291,8 @@ class _Bar extends RenderProxyBox {
 /// the transforms they paint with (a pane sliding in, the view gliding, the
 /// card's own lift), so the card goes at once where it will stay rather
 /// than a frame behind each step. Null while it's offstage (under a pane
-/// expanded over all).
-Rect? _resting(RenderBox box) {
+/// expanded over all). `ClearOfPanes` places Jump to latest by it too.
+Rect? restingRect(RenderBox box) {
   var at = Offset.zero;
   RenderObject node = box;
   for (var up = node.parent; up != null; up = node.parent) {
@@ -323,39 +324,30 @@ class CardLift extends SingleChildRenderObjectWidget {
 
   @override
   void updateRenderObject(BuildContext context, RenderObject renderObject) =>
-      (renderObject as _Lifted).follow(floor);
+      (renderObject as _Lifted).floor = floor;
 }
 
-class _Lifted extends RenderProxyBox {
-  new(this._floor);
-
-  CardFloor? _floor;
-
-  void follow(CardFloor? floor) {
-    if (floor == _floor) return;
-    if (attached) _floor?.removeListener(_moved);
-    _floor = floor;
-    if (attached) _floor?.addListener(_moved);
-    _moved();
-  }
+class _Lifted extends PaintShift {
+  new(super.floor);
 
   /// How far it rises: until it's [TopNotices.cardInset] above each bar
   /// of its floor that it's across from (but for the bar's bare ends,
   /// [UnderCard.clear]), not wholly above and not hidden
   /// (offstage, or a view's bar under the panes lying over it).
-  double get _lift {
-    final floor = _floor;
-    if (floor == null || !attached || !hasSize) return 0;
-    final card = _resting(this);
-    if (card == null) return 0;
+  @override
+  Offset get shift {
+    final floor = this.floor;
+    if (floor == null || !attached || !hasSize) return Offset.zero;
+    final card = restingRect(this);
+    if (card == null) return Offset.zero;
     final cut = switch ((floor.cut, parent)) {
-      (final at?, final RenderBox box) => (_resting(box)?.left ?? 0) + at,
+      (final at?, final RenderBox box) => (restingRect(box)?.left ?? 0) + at,
       _ => null,
     };
     var lift = 0.0;
     for (final bar in floor._bars) {
       if (!bar.attached || !bar.hasSize) continue;
-      final whole = _resting(bar);
+      final whole = restingRect(bar);
       if (whole == null) continue;
       // Its bare ends aside: the card may stand across from them.
       final r = Rect.fromLTRB(
@@ -369,46 +361,6 @@ class _Lifted extends RenderProxyBox {
       if (across <= 0.5 || r.bottom <= card.top) continue;
       lift = max(lift, card.bottom + TopNotices.cardInset - r.top);
     }
-    return lift;
+    return Offset(0, -lift);
   }
-
-  void _moved() {
-    markNeedsPaint();
-    markNeedsSemanticsUpdate();
-  }
-
-  @override
-  void attach(PipelineOwner owner) {
-    super.attach(owner);
-    _floor?.addListener(_moved);
-  }
-
-  @override
-  void detach() {
-    _floor?.removeListener(_moved);
-    super.detach();
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) =>
-      super.paint(context, offset.translate(0, -_lift));
-
-  // No check of its own box: drawn higher, the card is out of it, and a
-  // lifted card's box is out of its parent's (one is in another).
-  @override
-  bool hitTest(BoxHitTestResult result, {required Offset position}) {
-    final card = child;
-    if (card == null) return false;
-    final hit = result.addWithPaintOffset(
-      offset: Offset(0, -_lift),
-      position: position,
-      hitTest: (result, p) => card.hitTest(result, position: p),
-    );
-    if (hit) result.add(BoxHitTestEntry(this, position));
-    return hit;
-  }
-
-  @override
-  void applyPaintTransform(RenderObject child, Matrix4 transform) =>
-      transform.translateByDouble(0, -_lift, 0, 1);
 }

@@ -31,11 +31,13 @@ type journalRow struct {
 
 // journal reads a workflow's journal incrementally (lines). Rows are in start order, found
 // by their key (a failed line has an empty agentId). The journal is one
-// for every run of the same id, as Claude's own reader takes it: a resume
-// appends a resumed line (a launched one only for a hidden script's), keeps
-// the results it has, and starts again only what had none. So each resumed
-// or launched line ends the rows still running, stopped with the run
-// before; one started again runs again.
+// for every launch of the same run id, as Claude's own reader takes it: a
+// resume keeps the results it has and starts again only what had none.
+// Claude 2.1.325 was read to append a resumed line (a launched one only
+// for a hidden script's), which ends the rows still running, stopped with
+// the launch before; 2.1.331 was seen to mark nothing of a plain resume
+// (the workflow-resume recordings), so the launches are told apart by
+// their snapshots instead (run.rows). One started again runs again.
 type journal struct {
 	lines
 	rows  []journalRow

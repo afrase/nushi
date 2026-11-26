@@ -25,6 +25,11 @@ type HarnessInfo struct {
 	// "Claude Code deletes sessions after 30 days by default"; "" if
 	// nothing does.
 	Expires string
+	// CacheInInput says the input tokens it reports take in the cache's
+	// (what was read from it and written to it): Ante's, whose input is
+	// the whole prompt (docs/facts/ante.md). A turn's input is kept
+	// without them, as the others report theirs (ADR 0136).
+	CacheInInput bool
 	// NamesSessions says the agent titles a session itself, soon after its
 	// first prompt (Claude, with a model call of its own that may end after
 	// a short first turn): a worktree's branch waits for that title, a
@@ -59,22 +64,23 @@ type HarnessInfo struct {
 	// with no choices of its own ("_custom": Claude's `color_custom`). ""
 	// when its forms have none.
 	OtherSuffix string
-	// OtherNotes says for which questions the agent takes that "Other"
-	// field's text, beside a pick, as a note on the pick rather than an
-	// answer of its own (docs/facts): none, those taking one choice, or
-	// all of them.
+	// OtherNotes says how the agent reads that "Other" field's text beside
+	// a pick (docs/facts): as an answer of its own, as a note on the pick
+	// (on questions taking one choice, or on all of them), or in place of
+	// a one-choice question's pick.
 	OtherNotes OtherNotes
 }
 
-// OtherNotes is which questions' "Other" text an agent reads, beside a
-// pick, as a note on the pick (HarnessInfo.OtherNotes).
+// OtherNotes is how an agent reads a question's "Other" text beside a
+// pick (HarnessInfo.OtherNotes).
 type OtherNotes int
 
-// Which questions' "Other" text is a note on their pick.
+// How a question's "Other" text is read beside a pick.
 const (
-	NotesOnNone OtherNotes = iota // an answer of its own, or in place of the pick
-	NotesOnOne                    // a question taking one choice; with several, one more answer
-	NotesOnAll                    // any question with choices
+	NotesOnNone   OtherNotes = iota // an answer of its own
+	NotesOnOne                      // a note on a one-choice question's pick; with several, one more answer
+	NotesOnAll                      // a note on the pick of any question with choices
+	ReplacesOnOne                   // in place of a one-choice question's pick, which is dropped; with several, one more answer
 )
 
 // On says whether the "Other" text of a question of type t is a note on
@@ -85,9 +91,15 @@ func (n OtherNotes) On(t FieldType) bool {
 		return t == Choice
 	case NotesOnAll:
 		return t == Choice || t == Choices
-	case NotesOnNone:
+	case NotesOnNone, ReplacesOnOne:
 	}
 	return false
+}
+
+// Replaces says whether the "Other" text of a question of type t, when
+// not blank, takes the place of its pick.
+func (n OtherNotes) Replaces(t FieldType) bool {
+	return n == ReplacesOnOne && t == Choice
 }
 
 // Info is i itself, so a HarnessInfo is a harness.

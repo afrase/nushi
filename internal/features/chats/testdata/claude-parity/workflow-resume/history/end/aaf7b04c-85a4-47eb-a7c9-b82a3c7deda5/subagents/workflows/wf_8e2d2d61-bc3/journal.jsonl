@@ -1,0 +1,6 @@
+{"type":"launched"}
+{"type":"started","key":"v2:7b7ab0223f23a29e211b7b53d3a16bb4dd85143b165bfbcdd8475d153e336f59","agentId":"af6a8659bf4a41c39","label":"first","phase":"First"}
+{"type":"result","key":"v2:7b7ab0223f23a29e211b7b53d3a16bb4dd85143b165bfbcdd8475d153e336f59","agentId":"af6a8659bf4a41c39","result":"alpha","remoteControlDeviceReport":false,"sessionId":"aaf7b04c-85a4-47eb-a7c9-b82a3c7deda5"}
+{"type":"started","key":"v2:3d96ceec6a55f9861a8e290f807d0b58c8b0c4ba28f866e922726f5e1c54c0c9","agentId":"aa5789aaa284e6202","label":"second","phase":"Second"}
+{"type":"started","key":"v2:18d9f701adce9d6b985ede108e444a083164ac631a4d23a8a7eea478660d0dab","agentId":"a0759a443235bd6bd","label":"second","phase":"Second"}
+{"type":"result","key":"v2:18d9f701adce9d6b985ede108e444a083164ac631a4d23a8a7eea478660d0dab","agentId":"a0759a443235bd6bd","result":"go","remoteControlDeviceReport":false,"sessionId":"aaf7b04c-85a4-47eb-a7c9-b82a3c7deda5"}

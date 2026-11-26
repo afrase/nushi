@@ -64,7 +64,7 @@ func TestAnOpencodeChat(t *testing.T) {
 
 	a.send(id, "a question")
 	q := a.waitFor("the question", questionPending).GetItem().Item
-	if len(q.Fields) != 2 || q.Fields[0].Id != "q0" || len(q.Fields[0].Options) != 2 || q.Fields[1].Id != "q0_custom" || q.Fields[1].OtherFor != "q0" || q.Fields[1].Note {
+	if len(q.Fields) != 2 || q.Fields[0].Id != "q0" || len(q.Fields[0].Options) != 2 || q.Fields[1].Id != "q0_custom" || q.Fields[1].OtherFor != "q0" || q.Fields[1].Note || !q.Fields[1].Replaces {
 		t.Fatalf("question fields %v", q.Fields)
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,

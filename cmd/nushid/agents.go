@@ -10,7 +10,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/knownagents"
@@ -40,14 +39,15 @@ func newShellEnv(shell string) *shellenv.Env {
 
 // fromLoginShell reads the login shell's environment and applies it to
 // the daemon (newShellEnv), with the umask and open-files limit the shell
-// had (applyLimits), then reads what that environment decides: Claude's
-// projects folder (CLAUDE_CONFIG_DIR, which a profile or rc may export),
-// so the daemon reads Claude's history where its agents write it.
-func fromLoginShell(shell string) (shellEnv *shellenv.Env, projects string, err error) {
-	shellEnv = newShellEnv(shell)
+// had (applyLimits). What that environment decides, such as agents'
+// folders (CLAUDE_CONFIG_DIR, CODEX_HOME, which a profile or rc may
+// export), is read from the daemon's own environment when it's needed,
+// never kept from start: so the daemon reads each agent's files where its
+// agents use them, also after Settings › Agents reads the shell again.
+func fromLoginShell(shell string) *shellenv.Env {
+	shellEnv := newShellEnv(shell)
 	applyLimits(shellEnv.Limits())
-	projects, err = claudehistory.Projects()
-	return shellEnv, projects, err
+	return shellEnv
 }
 
 // setEnviron applies each environment it's given to the daemon's own,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/commit_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/plain_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -107,7 +108,8 @@ List<ChangeRow> changeRows(
 /// The changed files as a tree or a flat list ([changesFlat]): ↑/↓ move
 /// between files, and the selected one stays in view. Rows are as wide as
 /// their names, never cut: the list scrolls sideways, as JetBrains' tree
-/// does, when the widest is wider than the pane.
+/// does, when the widest is wider than the pane. With [menu] a file's
+/// right-click opens its rows (Blame, issue #78).
 class FileList extends StatefulWidget {
   const new({
     required this.files,
@@ -116,6 +118,7 @@ class FileList extends StatefulWidget {
     super.key,
     this.marks = const {},
     this.onStage,
+    this.menu,
   });
 
   final List<FileChange> files;
@@ -125,6 +128,9 @@ class FileList extends StatefulWidget {
 
   /// Staging from a checkbox on each row; none in a view of what's committed.
   final void Function(List<FileChange>, {required bool on})? onStage;
+
+  /// A file's right-click menu's rows; none: no menu.
+  final List<MenuEntry> Function(FileChange file)? menu;
 
   @override
   State<FileList> createState() => _FileListState();
@@ -260,8 +266,13 @@ class _FileListState extends State<FileList> {
     itemCount: _rows.length,
     itemBuilder: (context, i) {
       final row = _rows[i];
-      return _Row(
+      final entries = switch ((row.file, widget.menu)) {
+        (final file?, final menu?) => menu(file),
+        _ => const <MenuEntry>[],
+      };
+      Widget built(GestureTapUpCallback? onMenu) => _Row(
         row,
+        onMenu: onMenu,
         flat: flat,
         selected: row.file != null && row.path == widget.selected,
         open: !_collapsed.contains(row.path),
@@ -277,6 +288,12 @@ class _FileListState extends State<FileList> {
             widget.onSelect(row.path);
           }
         },
+      );
+      if (entries.isEmpty) return built(null);
+      return Menu(
+        filter: false,
+        entries: entries,
+        builder: (context, open) => built((d) => open(d.localPosition)),
       );
     },
   );
@@ -337,6 +354,7 @@ class _Row extends StatelessWidget {
     required this.comments,
     required this.onTap,
     this.onStage,
+    this.onMenu,
   });
 
   final ChangeRow row;
@@ -346,6 +364,9 @@ class _Row extends StatelessWidget {
   final int comments;
   final VoidCallback onTap;
   final void Function(List<FileChange>, {required bool on})? onStage;
+
+  /// A right-click, which opens its menu; none without one.
+  final GestureTapUpCallback? onMenu;
 
   /// Before the text: the indent, then the chevron or status letter's
   /// column; after it, the end's padding.
@@ -370,6 +391,7 @@ class _Row extends StatelessWidget {
         : ' · $comments review comment${comments == 1 ? '' : 's'}';
     return Tap(
       onTap: onTap,
+      onSecondaryTapUp: onMenu,
       selected: selected,
       fill: selected ? t.accentSoft : null,
       tooltip: file == null

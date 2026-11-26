@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/blame.dart';
 import 'package:nushi/chat.dart' show relativeIn;
 import 'package:nushi/chat_files.dart' show chatWrote;
 import 'package:nushi/controls.dart';
@@ -95,7 +96,9 @@ MarksWord? marksWord(
 
 /// The shown file's [marksWord] as a [NotePill], kept current; a quiet
 /// "Comparing…" while the first answer takes more than a moment; a
-/// failure's pill shows the daemon's words.
+/// failure's pill shows the daemon's words. While its Blame is on, what
+/// Blame has to say comes first, the same way: "Blaming…", or why there
+/// is no blame (issue #78).
 class MarksNote extends StatelessWidget {
   const new({required this.shown, super.key});
 
@@ -105,6 +108,7 @@ class MarksNote extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([
       shown.lines,
+      shown.blame,
       shown.source,
       shown.watch,
       shown.chat.editsChanged,
@@ -114,6 +118,10 @@ class MarksNote extends StatelessWidget {
       // A picture or a PDF shows no text, so has no gutter to explain.
       if (shown.kind == PreviewKind.image || shown.kind == PreviewKind.pdf) {
         return const SizedBox.shrink();
+      }
+      if (_blame(context, shown.blame, reformatted: shown.reformatted)
+          case final note?) {
+        return note;
       }
       final chat = shown.chat;
       // The chat wrote it, or the tree dots it: either way the path row
@@ -152,4 +160,37 @@ class MarksNote extends StatelessWidget {
       );
     },
   );
+
+  /// What Blame says while it's on: "Blaming…" while its first answer
+  /// takes a moment, or why there's none; null to say nothing.
+  static Widget? _blame(
+    BuildContext context,
+    FileBlame blame, {
+    required bool reformatted,
+  }) {
+    if (blame.on && reformatted) {
+      return NotePill(NoBlame.reformatted.label, tip: NoBlame.reformatted.tip);
+    }
+    if (blame.slow) {
+      final theme = NushiTheme.of(context);
+      return Text(
+        'Blaming…',
+        maxLines: 1,
+        style: theme.ui(theme.t.textMuted, size: 12),
+      );
+    }
+    final none = blame.none;
+    if (none == null) return null;
+    final failed = none == NoBlame.failed;
+    return NotePill(
+      none.label,
+      tone: failed ? NoteTone.crashed : NoteTone.quiet,
+      tip: failed
+          ? (blame.error.isEmpty ? 'Click for the error' : blame.error)
+          : none.tip,
+      onTap: failed && blame.error.isNotEmpty
+          ? () => showError(context, blame.error)
+          : null,
+    );
+  }
 }

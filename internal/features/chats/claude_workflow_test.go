@@ -7,15 +7,16 @@ import (
 
 // A chat reopened after a workflow's run ended ends the run on the end
 // the Go agent replays from claude's history (ADR 0127): the recordings
-// of a run that ended by itself, one the model stopped (TaskStop) and one
-// stopped by stop_task, each loaded after its recording as
-// TestClaudeMerge loads it. Live, TestClaudeParity's workflowsEnded holds
+// of a run that ended by itself, one the model stopped (TaskStop), one
+// stopped by stop_task, and one stopped by stop_task and resumed (two
+// launches of one run, each its own call and task, each reopened as its
+// own item), each loaded after its recording as TestClaudeMerge loads it. Live, TestClaudeParity's workflowsEnded holds
 // the same ends. No file of the run is read (noWorkflowFiles), and the
 // reopened run has no agent of this daemon's as its owner: without the
 // replayed end it would run on until its files were still for
 // workflowQuiet.
 func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
-	for _, name := range []string{"workflow", "workflow-stop", "workflow-stoptask"} {
+	for _, name := range []string{"workflow", "workflow-stop", "workflow-stoptask", "workflow-resume"} {
 		t.Run(name, func(t *testing.T) {
 			dir := filepath.Join("testdata", "claude-parity", name)
 			skipUnrecorded(t, dir)
@@ -23,23 +24,31 @@ func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
 			sid, more := loadAfter(t, dir, rec, sent)
 			c := reopenedOn(t, loadOf(runGoAgent(t, dir, sent, more), sid), sid)
 			ended := recordedWorkflowEnds(t, dir)
-			if len(ended) != 1 {
-				t.Fatalf("the recording's workflows: %+v", ended)
+			if len(ended) == 0 {
+				t.Fatal("the recording has no workflow")
 			}
 			eventually(t, c, func() bool { return len(c.following) == 0 })
 			c.mu.Lock()
 			defer c.mu.Unlock()
-			n := 0
+			seen := map[string]bool{}
 			for _, it := range c.items {
 				if w := it.Workflow; w != nil {
-					n++
+					if seen[w.TaskID] {
+						t.Errorf("workflow %s reopened twice", w.TaskID)
+					}
+					seen[w.TaskID] = true
 					if end := ended[w.TaskID]; w.State != end.State || w.End != end.End {
 						t.Errorf("workflow %s reopened %q (%q), claude's recording %q (%q)", w.TaskID, w.State, w.End, end.State, end.End)
 					}
 				}
 			}
-			if n != 1 {
-				t.Errorf("%d workflows reopened", n)
+			for task := range ended {
+				if !seen[task] {
+					t.Errorf("claude's workflow %s has no item", task)
+				}
+			}
+			if len(seen) != len(ended) {
+				t.Errorf("workflows reopened %v, the recording's %v", seen, ended)
 			}
 		})
 	}

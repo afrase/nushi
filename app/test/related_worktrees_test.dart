@@ -12,6 +12,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktrees_widget.dart';
 
 import 'fake_daemon.dart';
@@ -401,7 +402,7 @@ void main() {
       chatState.related.take([_worktree('a', state: 'removed')]);
       await showChanges(tester);
       fake.calls.clear();
-      await pickFromMenu(tester, 'removed', detail: true);
+      await pickFromMenu(tester, 'Removed', detail: true);
       final diff = _calls<GetDiffRequest>(fake).single;
       expect(diff.folder, '/x');
       expect(diff.after, _base);
@@ -426,13 +427,61 @@ void main() {
       chatState.related.take([a]);
       await showChanges(tester);
       fake.calls.clear();
-      await pickFromMenu(tester, 'removed', detail: true);
+      await pickFromMenu(tester, 'Removed', detail: true);
       expect(
         find.text("This worktree's commits are gone: git no longer has them."),
         findsOne,
       );
       expect(find.text('No changes'), findsNothing);
       expect(_calls<GetDiffRequest>(fake), isEmpty);
+      await closeView(tester, daemon);
+    });
+
+    testWidgets("a gone one is muted in the menu, as the widget's row is, "
+        'and picked the bar says how it went', (tester) async {
+      await setUpChat(tester);
+      chatState.related.take([
+        _worktree('live'),
+        _worktree('gone', state: 'removed', merged: true),
+      ]);
+      await showChanges(tester);
+      final t = NushiTheme.of(tester.element(find.byType(MenuField))).t;
+      // The ink of [label]'s span in the open menu's row.
+      Color? inMenu(String label) {
+        Color? ink;
+        final row = find.textContaining(label, findRichText: true).last;
+        tester.widget<RichText>(row).text.visitChildren((s) {
+          if (s is TextSpan && s.text == label) ink = s.style?.color;
+          return true;
+        });
+        return ink;
+      }
+
+      await tester.tap(find.byType(MenuField));
+      await tester.pumpAndSettle();
+      expect(inMenu('live'), t.text);
+      expect(inMenu('gone'), t.textMuted);
+      await tester.tap(find.textContaining('gone', findRichText: true).last);
+      await tester.pumpAndSettle();
+      final spans = [
+        for (final e
+            in find
+                .descendant(
+                  of: find.byType(MenuField),
+                  matching: find.byType(Text),
+                )
+                .evaluate())
+          ((e.widget as Text).data, (e.widget as Text).style?.color),
+      ];
+      expect(spans, [('gone', t.textMuted), ('Merged, removed', t.textMuted)]);
+      await pickFromMenu(tester, 'live', detail: true);
+      expect(
+        find.descendant(
+          of: find.byType(MenuField),
+          matching: find.text('Removed', findRichText: true),
+        ),
+        findsNothing,
+      );
       await closeView(tester, daemon);
     });
 
@@ -506,16 +555,19 @@ void main() {
         findsNothing,
       );
       expect(
-        find.text('+12 −3 · 4 files · 2 ahead', findRichText: true),
+        find.text('+12 −3, 4 files, 2 ahead', findRichText: true),
         findsOne,
       );
-      // How each ended: nothing while it's there.
+      // How each ended: nothing while it's there; the gone one folded.
+      expect(find.text('b'), findsNothing);
+      await tester.tap(find.text('1 removed'));
+      await tester.pump();
       expect(
-        find.descendant(of: row('b'), matching: find.text('removed')),
+        find.descendant(of: row('b'), matching: find.text('Removed')),
         findsOne,
       );
       expect(
-        find.descendant(of: row('a'), matching: find.text('removed')),
+        find.descendant(of: row('a'), matching: find.text('Removed')),
         findsNothing,
       );
       await tester.tap(find.text('a'));
@@ -525,7 +577,7 @@ void main() {
     });
 
     testWidgets('merged is what git shows, or what GitHub does of a squash '
-        '(issue 83); one neither shows reads as removed', (tester) async {
+        '(issue 83); one neither shows reads as removed only', (tester) async {
       await setUpChat(tester);
       chatState.related.take([
         _worktree('kept'),
@@ -534,9 +586,12 @@ void main() {
         _worktree('merged', state: 'removed', merged: true),
       ]);
       await showWidget(tester);
-      // The branch and the ends.
-      expect(find.text('merged'), findsNWidgets(3));
-      expect(find.text('removed'), findsOne);
+      await tester.tap(find.text('3 removed, 2 merged'));
+      await tester.pump();
+      // The ends.
+      expect(find.text('Merged, removed'), findsNWidgets(2));
+      expect(find.text('Removed'), findsOne);
+      expect(find.text('Merged'), findsNothing);
       await closeView(tester, daemon);
     });
 

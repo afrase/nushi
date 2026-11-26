@@ -31,7 +31,7 @@ extension DaemonOpen on Daemon {
       );
       if (load == chat.loads) {
         chat
-          ..load(snapshot)
+          ..load(snapshot, written: daemonApi >= olderWrittenApi)
           // Taken back once: a later reload asks only for what then shows.
           ..keptItems = 0;
       }

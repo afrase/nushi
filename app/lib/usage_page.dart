@@ -210,7 +210,12 @@ class _UsageSectionState extends State<UsageSection> {
         _projects(r.folders, measure),
         _chats(r.chats, measure),
       ],
-      UsageFootnote(earliest, costs: measure.costs),
+      UsageFootnote(
+        earliest,
+        costs: measure.costs,
+        cached:
+            used && r.totals.cacheReadTokens + r.totals.cacheWriteTokens > 0,
+      ),
     ];
   }
 
@@ -223,17 +228,21 @@ class _UsageSectionState extends State<UsageSection> {
         : week;
   }
 
-  /// A breakdown's group: a row for each of [groups], the most first.
+  /// A breakdown's group: a row for each of [groups], the most first by
+  /// [outer], the page's measure; a Cached column if one of them read
+  /// from the cache.
   Widget _breakdown(
     String title,
     List<UsageGroup> groups,
-    UsageMeasure measure, {
+    UsageMeasure outer, {
     required String Function(String key) label,
     Widget Function(String key)? lead,
     String Function(String key)? tip,
+    String Function(String key)? after,
     bool Function(String key)? muted,
   }) {
-    final sorted = _ranked(groups, measure);
+    final sorted = _ranked(groups, outer);
+    final measure = outer.forRows([for (final g in groups) g.totals]);
     final top = sorted.isEmpty ? 0.0 : measure.of(sorted.first.totals);
     return SettingsGroup(
       title: title,
@@ -247,6 +256,7 @@ class _UsageSectionState extends State<UsageSection> {
             top: top,
             lead: lead?.call(g.key),
             tip: tip?.call(g.key) ?? '',
+            after: after?.call(g.key) ?? '',
             muted: muted?.call(g.key) ?? false,
           ),
       ],
@@ -254,19 +264,16 @@ class _UsageSectionState extends State<UsageSection> {
   }
 
   /// By project: each folder by the name the sidebar gives it, its
-  /// parent's after it where two share a name, its path under the
-  /// pointer.
+  /// parent's after it, muted, where two share a name, its path under
+  /// the pointer.
   Widget _projects(List<UsageGroup> folders, UsageMeasure measure) {
     final twins = twinParents([for (final f in folders) f.key]);
     return _breakdown(
       'By project',
       folders,
       measure,
-      label: (f) => switch ((f, twins[f])) {
-        ('', _) => 'No folder',
-        (_, final twin?) => '${folderParts(f).$1} · $twin',
-        _ => folderParts(f).$1,
-      },
+      label: (f) => f.isEmpty ? 'No folder' : folderParts(f).$1,
+      after: (f) => twins[f] ?? '',
       tip: (f) => f.isEmpty ? '' : tildePath(f),
       muted: (f) => f.isEmpty,
     );
@@ -274,19 +281,23 @@ class _UsageSectionState extends State<UsageSection> {
 
   /// The costliest chats, as the daemon ranked them; one that's still
   /// here opens on a click, leaving Settings.
-  Widget _chats(List<UsageChat> chats, UsageMeasure measure) => SettingsGroup(
-    title: measure.costs ? 'Costliest chats' : 'Chats that used the most',
-    children: [
-      for (final c in chats)
-        UsageChatRow(
-          c,
-          measure: measure,
-          onOpen: daemon.chats.containsKey(c.chatId)
-              ? () => daemon.select(c.chatId)
-              : null,
-        ),
-    ],
-  );
+  Widget _chats(List<UsageChat> chats, UsageMeasure outer) {
+    final measure = outer.forRows([for (final c in chats) c.totals]);
+    return SettingsGroup(
+      title: measure.costs ? 'Costliest chats' : 'Chats that used the most',
+      actions: [UsageColumnsHead(measure)],
+      children: [
+        for (final c in chats)
+          UsageChatRow(
+            c,
+            measure: measure,
+            onOpen: daemon.chats.containsKey(c.chatId)
+                ? () => daemon.select(c.chatId)
+                : null,
+          ),
+      ],
+    );
+  }
 }
 
 /// [groups] by [measure], the most first, then by tokens.

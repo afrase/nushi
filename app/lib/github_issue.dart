@@ -16,7 +16,7 @@ import 'package:nushi/widgets.dart';
 
 /// An issue's details: its state, title, author (marked when outside the
 /// repository), labels and assignees, Start work and its chats, its text
-/// and comments, and a box for a comment.
+/// and comments with their reactions, and a box for a comment.
 class GitHubIssuePane extends StatefulWidget {
   const new({required this.daemon, required this.ref, super.key});
 
@@ -165,7 +165,17 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
           ),
           if (i.body.isEmpty)
             Text('No description', style: theme.ui(t.textMuted, size: 12)),
-          for (final c in i.conversation) CommentEntry(c),
+          // Reacting as on a pull request's: GitHub's addReaction takes
+          // an issue's comment's node id as well.
+          for (final c in i.conversation)
+            CommentEntry(
+              c,
+              reacting: (
+                daemon: widget.daemon,
+                host: it.ref.host,
+                onChanged: _load,
+              ),
+            ),
           const SizedBox(height: 16),
           CommentBox(
             draft: githubDraft(it.ref, 'comment'),

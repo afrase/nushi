@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/background_mark.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
@@ -64,47 +65,17 @@ class RunningDot extends StatelessWidget {
   );
 }
 
-/// A ring of [color], its line fading in and out slowly ([pulsing]) every
-/// 2.4 seconds: work runs in the background, no turn.
-class _Ring extends CustomPainter {
-  new(this.color, {required this.pulsing, Listenable? repaint})
-    : super(repaint: pulsing ? repaint : null);
-
-  final Color color;
-  final bool pulsing;
-
-  // design: a loop's beat, on pulseClock
-  static const period = Duration(milliseconds: 2400);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final v = pulsing ? loopPhase(period) : 0.0;
-    // 1 → 0.35 → 1, eased.
-    final alpha = 1 - 0.65 * Curves.easeInOut.transform(1 - (2 * v - 1).abs());
-    canvas.drawCircle(
-      size.center(Offset.zero),
-      size.shortestSide / 2 * 0.55,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = color.withValues(alpha: alpha),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_Ring old) => old.color != color || old.pulsing != pulsing;
-}
-
 /// A chat's status dot: amber, a size up, with a soft ring while it waits
 /// on the user (it hops once when that starts), a ring growing out of it
 /// while the agent works, a ring when idle (a check draws itself there for
 /// a moment when a turn is done), solid green while a turn's end is unseen
-/// (the check settles into it); a ring that pulses slowly while subagents
-/// or commands run in the background after the turn; nothing asleep (an
-/// empty slot of the same size, so titles stay in line: a sleeping chat
-/// recedes, its title muted where it's listed, rather than wear a mark
-/// that reads like the idle ring), a quiet clock when its agent deleted
-/// its session, an error mark when it couldn't start.
+/// (the check settles into it); two dots side by side that now and then
+/// spin as droplets, merge and split ([BackgroundMark]) while subagents
+/// or commands run in the background after the turn; nothing
+/// asleep (an empty slot of the same size, so titles stay in line: a
+/// sleeping chat recedes, its title muted where it's listed, rather than
+/// wear a mark that reads like the idle ring), a quiet clock when its
+/// agent deleted its session, an error mark when it couldn't start.
 /// With [sparks], a turn you watched end (after [Sparks.after] or more,
 /// Nushi in front) sends sparks out of its check.
 class ChatDot extends StatefulWidget {
@@ -216,7 +187,11 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
           context,
           backgroundWords(chat.background),
           _mark(
-            _Ring(t.running, pulsing: !still, repaint: loopRepaintOf(context)),
+            BackgroundMark(
+              t.running,
+              t: still ? 0 : null,
+              repaint: still ? null : BackgroundMark.repaintOf(context),
+            ),
           ),
         );
       case .archived || .waiting || .done || .fresh || .idle:
@@ -374,13 +349,7 @@ class PhaseDot extends StatelessWidget {
           repaint: loopRepaintOf(context),
         ),
       ),
-      .background => _mark(
-        _Ring(
-          color,
-          pulsing: !reduceMotion(context),
-          repaint: loopRepaintOf(context),
-        ),
-      ),
+      .background => _mark(BackgroundMark(color, t: 0)),
       .waiting => _waitingDot(t),
       _ => _dot(fill: color),
     });

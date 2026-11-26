@@ -16,14 +16,17 @@ type RecentPart struct {
 	Chat    model.Chat   // its Items are the recent part
 	Older   int          // how many items come before them
 	Running []model.Item // those before them whose subagent or background command runs, or that ask the user
+	Written []string     // every file the items before them wrote (writtenBy)
 }
 
 // Recent returns a snapshot of a chat with only its last n items, reaching
 // back as a page does (pageStart), with the items before them still
 // running or asking: a chat's background tasks show (and stop) before their
 // page is loaded, and so does a permission prompt or question a background
-// subagent asked long ago, which the chat waits on. Only those items are
-// copied (ADR 0026).
+// subagent asked long ago, which the chat waits on; and the files the items
+// before them wrote (not those a show call only showed), so the chat's
+// artifacts reach past them (issue #62). Only those items are copied
+// (ADR 0026).
 func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 	c, err := s.open(chatID)
 	if err != nil {
@@ -35,7 +38,8 @@ func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 		return c.recentInCopyLocked(n)
 	}
 	start := pageStart(c.items, len(c.items), n)
-	return RecentPart{Chat: c.snapshotLocked(slices.Clone(c.items[start:])), Older: start, Running: runningIn(c.items[:start])}, nil
+	return RecentPart{Chat: c.snapshotLocked(slices.Clone(c.items[start:])), Older: start, Running: runningIn(c.items[:start]),
+		Written: writtenBy(c.items[:start])}, nil
 }
 
 // recentInCopyLocked is Recent for a chat whose items were let go: only
@@ -51,7 +55,8 @@ func (c *chat) recentInCopyLocked(n int) (RecentPart, error) {
 	if err != nil {
 		return RecentPart{}, err
 	}
-	return RecentPart{Chat: c.snapshotLocked(items), Older: start}, nil
+	// The heads carry what writtenBy reads (transcripts' itemHead).
+	return RecentPart{Chat: c.snapshotLocked(items), Older: start, Written: writtenBy(heads[:start])}, nil
 }
 
 // runningIn is those of items whose subagent or background command runs,

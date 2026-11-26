@@ -26,7 +26,8 @@ type Local struct{ Harness }
 // Info is what Harness is.
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "omp", Title: "oh-my-pi", Resume: "omp --resume", OneWriter: true,
-		OtherSuffix: "__other"} // "Other (type your own)" after a question
+		OtherSuffix: "__other",           // "Other (type your own)" after a question
+		OtherNotes:  model.ReplacesOnOne} // its text drops a one-choice question's pick (docs/facts/omp.md)
 }
 
 // Start starts the user's omp (r's CLI) in its ACP mode, in dir (the

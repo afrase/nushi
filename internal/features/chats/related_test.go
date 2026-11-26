@@ -25,9 +25,10 @@ import (
 
 // These tests answer from fakeCheckouts, a repository canned as git
 // would list it: what git itself answers is internal/git's to test.
-// TestRelatedRefusesAForgedList is the one deliberate exception: it runs
-// the real git, since what it holds is what git lists from a gitdir an
-// agent rewrote, which no fake would show.
+// TestRelatedRefusesAForgedList is a deliberate exception: it runs the
+// real git, since what it holds is what git lists from a gitdir an agent
+// rewrote, which no fake would show. related_gone_test.go's are the others,
+// for what git lists once a worktree is gone.
 
 // subagentWorktrees is the capability, for a test's harness.
 type subagentWorktrees func(sid, folder string) map[string]string

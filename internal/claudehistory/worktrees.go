@@ -11,7 +11,7 @@ import (
 // as the subagents' sidecars say (docs/facts/claude.md). A subagent whose
 // worktree went, or that made its own, has none there.
 func (l Local) SubagentWorktrees(id, folder string) map[string]string {
-	agents, err := sessions.Store{ConfigDir: filepath.Dir(l.Projects)}.Subagents(id, folder)
+	agents, err := sessions.Store{ConfigDir: filepath.Dir(l.projects())}.Subagents(id, folder)
 	if err != nil {
 		return nil
 	}

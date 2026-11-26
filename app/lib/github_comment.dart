@@ -5,6 +5,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/pull_reactions.dart';
 import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -20,6 +21,8 @@ export 'package:nushi/github_text.dart';
 ///
 /// In a chat's tab it can be sent to the agent ([SendToAgent]), unless
 /// it's part of a thread ([sendable] false: the thread is sent whole).
+/// Given [reacting], its reactions show under it as a pull request's
+/// comments' do ([Reactions]; an issue's comments, #88).
 class CommentEntry extends StatefulWidget {
   const new(
     this.comment, {
@@ -27,9 +30,13 @@ class CommentEntry extends StatefulWidget {
     this.sendable = true,
     this.mark = true,
     this.updated = false,
+    this.reacting,
   });
 
   final GitHubComment comment;
+
+  /// Where its reactions go; null shows none.
+  final Reacting? reacting;
   final bool sendable;
 
   /// Its time is when its issue last changed, not when it was written
@@ -126,6 +133,11 @@ class _CommentEntryState extends State<CommentEntry> {
             ),
           if (long)
             Padding(padding: const EdgeInsets.only(top: 4), child: toggle),
+          if (widget.reacting case final r? when !folds || _open)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Reactions(c.id, c.reactions, reacting: r),
+            ),
         ],
       ),
     );

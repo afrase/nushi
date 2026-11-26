@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/app_actions.dart' show findKey;
+import 'package:nushi/blame.dart';
+import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart' show MarksAgainst;
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
@@ -40,6 +42,7 @@ final class ShownFile {
     source.value = chat.files.sources.contains(path);
     watch.addListener(_fileCame);
     lines = LineBase(daemon, chat, watch);
+    blame = FileBlame(daemon, chat, watch, path);
   }
 
   final ChatState chat;
@@ -51,6 +54,23 @@ final class ShownFile {
   /// Its text before the chat's work, its source's change marks drawn
   /// against, and what its path row says of them (ADR 0131).
   late final LineBase lines;
+
+  /// Who last changed each of its lines, while its Blame is on (issue
+  /// #78).
+  late final FileBlame blame;
+
+  /// [blame]'s answer for a view, its press opening a line's commit;
+  /// null while Blame is off, and for a source shown [reformatted], whose
+  /// lines aren't git's (the path row says so, and no gutter is kept).
+  BlameShown? blameShown(BuildContext context) => switch (blame.value) {
+    _ when reformatted => null,
+    final blamed? => BlameShown(
+      blamed,
+      onOpen: (commit) =>
+          openBlamedCommit(context, daemon, chat, commit).ignore(),
+    ),
+    null => null,
+  };
 
   (String, bool)? _pretty; // whether a version, by its sha, is reformatted
 
@@ -149,10 +169,12 @@ final class ShownFile {
     return pretty;
   }
 
-  /// Shows its Source, or its rendering again.
+  /// Shows its Source, or its rendering again, which has no lines to
+  /// blame, so its Blame turns off too (turning Blame on shows the Source).
   void showSource({required bool on}) {
     source.value = on;
     chat.files.showSource(path, on: on);
+    if (!on && switches && blame.on) blame.turn(on: false);
   }
 
   /// A page's actions: Reload (in the app's own web view, ADR 0104) and
@@ -174,6 +196,7 @@ final class ShownFile {
 
   void dispose() {
     lines.dispose();
+    blame.dispose();
     watch
       ..removeListener(_fileCame)
       ..dispose();
@@ -217,6 +240,7 @@ class _FileViewState extends State<FileView> {
       padding: const EdgeInsets.fromLTRB(28, 22, 28, 28),
       base: _shown.lines,
       menu: _shown.menu,
+      blame: _shown.blameShown(context),
     ),
     null => null,
   };
@@ -299,6 +323,7 @@ class _FileViewState extends State<FileView> {
                     indentGuides,
                     scrollPastEnd,
                     shown.lines,
+                    shown.blame,
                   ]),
                   builder: (context, _) => MarksAgainst.of(
                     shown.lines,
@@ -311,6 +336,7 @@ class _FileViewState extends State<FileView> {
                         guides: indentGuides.value,
                         pastEnd: scrollPastEnd.value,
                         base: shown.lines.value,
+                        blame: shown.blameShown(context),
                         onReveal: shown.reveal,
                         menu: shown.menu,
                         editor: _editor,
