@@ -67,9 +67,14 @@ class _CommentEntryState extends State<CommentEntry> {
           : _open
           ? 'Show less'
           : 'Show the whole comment',
+      // A bot's Show and Hide take the same room, so the link stays put
+      // as it's pressed.
+      roomFor: folds ? const ['Show', 'Hide'] : const [],
       size: 12,
       onTap: () => setState(() => _open = !_open),
     );
+    // Its time sits after the author, folded or open; a folded bot's
+    // summary follows it, so nothing in the row moves as Show is pressed.
     final head = Row(
       children: [
         if (c.bot && widget.mark) ...[
@@ -82,6 +87,11 @@ class _CommentEntryState extends State<CommentEntry> {
         ),
         if (c.bot) Text('  bot', style: theme.ui(t.textMuted, size: 11.5)),
         if (c.outside && !c.bot) const OutsideMark(),
+        Text(
+          '  ${widget.updated ? 'updated ' : ''}'
+          '${agoAt(c.createdMs.toInt(), clock())}',
+          style: theme.ui(t.textMuted, size: 11.5),
+        ),
         if (folds && !_open)
           Expanded(
             child: Padding(
@@ -93,13 +103,9 @@ class _CommentEntryState extends State<CommentEntry> {
                 style: theme.ui(t.textSecondary, size: 12),
               ),
             ),
-          ),
-        Text(
-          '  ${widget.updated ? 'updated ' : ''}'
-          '${agoAt(c.createdMs.toInt(), clock())}',
-          style: theme.ui(t.textMuted, size: 11.5),
-        ),
-        if (!folds || _open) const Spacer(),
+          )
+        else
+          const Spacer(),
         if (folds) ...[const SizedBox(width: 10), toggle],
         if (widget.sendable && c.body.isNotEmpty)
           SendIcon(
