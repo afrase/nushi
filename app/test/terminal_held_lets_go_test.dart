@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/terminals.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:xterm2/xterm.dart';
 
 import 'harness.dart';

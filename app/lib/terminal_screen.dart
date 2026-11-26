@@ -10,6 +10,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_select.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:nushi/terminal_tabs.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';

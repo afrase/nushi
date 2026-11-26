@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/terminals.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:xterm2/xterm.dart';
 
 import 'terminal_select_fixture.dart';
@@ -9,8 +9,9 @@ import 'terminal_select_fixture.dart';
 // the end up by the dropped lines so it stays on its text. The held scroll
 // steps from there, so the text moves only the way the pointer asks.
 //
-// The terminal keeps 10,000 lines (terminals.dart sets it, and the fixture
-// has no way to make it fewer), so a full scrollback is a replay of more.
+// The terminal keeps 10,000 lines (terminal_session.dart sets it, and the
+// fixture has no way to make it fewer), so a full scrollback is a replay of
+// more.
 
 /// What a frame of a held drag shows.
 typedef _Frame = ({

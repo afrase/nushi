@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:nushi/terminals.dart';
 import 'package:xterm2/xterm.dart';
 

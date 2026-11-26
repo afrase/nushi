@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/terminals.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/web_page.dart' show openLinkOrSay;
