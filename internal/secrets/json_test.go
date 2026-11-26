@@ -90,7 +90,7 @@ func hostile(size int) map[string]string {
 // for the braces inside failed tries' strings.
 func TestMaskJSONInIsLinear(t *testing.T) {
 	for name, s := range hostile(200 << 10) {
-		_, read := maskJSONIn(s, "**")
+		_, read := jsonRuns(s)
 		if read > 5*len(s) {
 			t.Errorf("%s: read %d bytes of %d (%.1f times)", name, read, len(s), float64(read)/float64(len(s)))
 		}

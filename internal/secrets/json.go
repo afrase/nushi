@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"container/heap"
 	"encoding/json"
 	"slices"
 	"strings"
@@ -24,12 +25,23 @@ const maxJSONDepth = 64
 // line or of several ("HTTP 401: {…}"). Every other byte is kept; a
 // brace that starts no JSON object is left as it is.
 func MaskJSONIn(s, with string) string {
-	out, _ := maskJSONIn(s, with)
+	return Replace(s, JSONSpans(s, with))
+}
+
+// JSONSpans are what MaskJSONIn replaces in s: each value under a secret
+// key, a string with its quotes, which a quoted with stands in for (a
+// value stays a JSON string).
+func JSONSpans(s, with string) []Span {
+	runs, _ := jsonRuns(s)
+	out := make([]Span, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, Span{r[0], r[1], `"` + with + `"`})
+	}
 	return out
 }
 
-// maskJSONIn is MaskJSONIn, and how many bytes it read: at most five
-// times len(s), whatever s holds. Each brace not inside an object already
+// jsonRuns are JSONSpans' runs of s, and how many bytes it read: at
+// most five times len(s), whatever s holds. Each brace not inside an object already
 // read starts a try, and a failed try is never tried again from inside
 // the bytes it read: the next starts at the byte it failed on, and only
 // the whole objects it read inside (a cut-off object's complete members)
@@ -38,11 +50,11 @@ func MaskJSONIn(s, with string) string {
 // string: "body was {"password": …}") starts a try too, out of a budget
 // of twice len(s) more bytes for all of them, each cut short where its
 // share runs out.
-func maskJSONIn(s, with string) (out string, read int) {
+func jsonRuns(s string) (runs [][2]int, read int) {
 	if !strings.Contains(s, "{") {
-		return s, 0
+		return nil, 0
 	}
-	f := jsonFinder{s: s, extra: 2 * len(s), tried: map[int]bool{}}
+	f := jsonFinder{s: s, extra: 2 * len(s)}
 	for i := 0; i < len(s); {
 		at := strings.IndexByte(s[i:], '{')
 		if at < 0 {
@@ -55,16 +67,15 @@ func maskJSONIn(s, with string) (out string, read int) {
 		f.retry(braces)
 		i = pos // past at: its brace was read
 	}
-	return masked(s, `"`+with+`"`, f.spans), f.read
+	return f.spans, f.read
 }
 
 // jsonFinder finds the JSON objects in s and the values in them to mask.
 type jsonFinder struct {
 	s     string
-	spans [][2]int     // the values to mask, those that overlap as one
-	read  int          // the bytes read
-	extra int          // what tries from braces inside strings may still read
-	tried map[int]bool // the braces inside strings tried
+	spans [][2]int // the values to mask
+	read  int      // the bytes read
+	extra int      // what tries from braces inside strings may still read
 }
 
 // try reads an object of s[:end] from at, keeping the values to mask in
@@ -88,24 +99,55 @@ func (f *jsonFinder) try(at, end int) (pos int, braces []int) {
 	return t.pos, t.braces
 }
 
-// retry tries the braces inside a failed try's strings, first to last,
-// and those inside theirs that fail too, while the budget lasts: each
-// reads at most what is left of it.
+// retry tries the braces inside a failed try's strings, and those inside
+// theirs that fail too, first to last while the budget lasts: each reads
+// at most what is left of it. Each try's braces come in order and lie
+// past the brace it started at, so the next brace is the least head of
+// the lists still open (braceLists), and one already tried is at or
+// before the last tried: a forward index, no record of each brace.
 func (f *jsonFinder) retry(braces []int) {
-	slices.Reverse(braces)
-	for len(braces) > 0 && f.extra >= 2 {
-		b := braces[len(braces)-1]
-		braces = braces[:len(braces)-1]
-		if f.tried[b] {
+	if len(braces) == 0 {
+		return
+	}
+	lists := braceLists{braces}
+	tried := -1
+	for len(lists) > 0 && f.extra >= 2 {
+		b := lists[0][0]
+		if lists[0] = lists[0][1:]; len(lists[0]) == 0 {
+			heap.Pop(&lists)
+		} else {
+			heap.Fix(&lists, 0)
+		}
+		if b <= tried {
 			continue
 		}
-		f.tried[b] = true
+		tried = b
 		before := f.read
 		_, more := f.try(b, min(len(f.s), b+f.extra/2))
 		f.extra -= f.read - before
-		slices.Reverse(more)
-		braces = append(braces, more...)
+		if len(more) > 0 {
+			heap.Push(&lists, more)
+		}
 	}
+}
+
+// braceLists are lists of braces, each in order and none empty, kept as a
+// heap by their first brace.
+type braceLists [][]int
+
+func (h *braceLists) Len() int           { return len(*h) }
+func (h *braceLists) Less(i, j int) bool { return (*h)[i][0] < (*h)[j][0] }
+func (h *braceLists) Swap(i, j int)      { (*h)[i], (*h)[j] = (*h)[j], (*h)[i] }
+
+// Push adds a list (heap.Push's).
+func (h *braceLists) Push(x any) { *h = append(*h, x.([]int)) } //nolint:forcetypeassert // heap.Push passes what it was given
+
+// Pop takes the last list (heap.Pop's).
+func (h *braceLists) Pop() any {
+	old := *h
+	x := old[len(old)-1]
+	*h = old[:len(old)-1]
+	return x
 }
 
 // jsonScan reads one JSON value of s from pos, never going back: pos is

@@ -3,12 +3,14 @@ package mcp
 import (
 	"context"
 	"errors"
+	"math/rand/v2"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/secrets"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -88,7 +90,9 @@ var printed = []struct {
 	{"pasted array", `{"x": "a {"password": ["FAKEarr0044", 98765]}`, []string{"FAKEarr0044", "98765"}, []string{`{"x": "a {"password": [`}},
 	{"pasted spaces", `{"error": "invalid", "detail": "body was {"password": "fake horse battery staple"}"}`, []string{"horse", "battery", "staple"}, []string{`"detail": "body was {"password": `}},
 	{"pasted short", `{"a": "unterminated {"token": "abc"}`, []string{`"abc"`}, []string{`{"a": "unterminated {"token": `}},
-	{"json in a line", `HTTP 401: {"error": {"code": 401, "password": 98765432}} retrying`, []string{"98765432"}, []string{`HTTP 401: {"error": {"code": 401, "password": `, `}} retrying`}},
+	// The log's rule for names takes a bare value to the next space, so
+	// the braces after it go too, here as in the log.
+	{"json in a line", `HTTP 401: {"error": {"code": 401, "password": 98765432}} retrying`, []string{"98765432"}, []string{`HTTP 401: {"error": {"code": 401, "password": `, ` retrying`}},
 	// A plain name (secrets.NotSecret) in NAME=value or "key": "value" is
 	// masked as the log masks it: the log's rule takes every name.
 	{"key path", "loaded keyPath=server.tools", []string{"server.tools"}, []string{"loaded keyPath="}},
@@ -159,12 +163,15 @@ var word = regexp.MustCompile(`[A-Za-z0-9_.+/=-]{4,}`)
 
 // The log never hides more than the app is sent: each line above, put
 // through the log's redactor and through the mask the app's text takes,
-// and every word the log hides is hidden from the app too.
+// and every word the log hides is hidden from the app too. The last is
+// the third pass's verifier's: a JSON value glued to what follows it,
+// which the log's rule for names takes in with the value.
 func TestTheAppIsSentNoMoreThanTheLogShows(t *testing.T) {
 	lines := append([]string(nil), readable...)
 	for _, c := range printed {
 		lines = append(lines, c.said)
 	}
+	lines = append(lines, `{"password": 12345}FAKEglued0001`, `{"token": "x"}rk_" + "test_FAKEfakeFAKEfake0002_FAKEglued0002=`)
 	for _, l := range lines {
 		logged, sent := logs.Redact(l), maskText(l)
 		for _, w := range word.FindAllString(l, -1) {
@@ -216,5 +223,72 @@ func TestTheRefusalNamesTheHiddenValues(t *testing.T) {
 	}
 	if _, err := unmasked(testcheck.JSON(t, shown), old); err != nil {
 		t.Errorf("sent back as shown: %v", err)
+	}
+}
+
+// pageLine is a made-up line a server could print: JSON objects with
+// secret keys glued to what follows, secret-ish names and separators,
+// Authorization headers, tokens of known shapes, URLs and values.
+func pageLine(r *rand.Rand) string {
+	pick := func(of ...string) string { return of[r.IntN(len(of))] }
+	value := func(n int) string {
+		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		b := make([]byte, n)
+		for i := range b {
+			b[i] = chars[r.IntN(len(chars))]
+		}
+		return string(b)
+	}
+	var b strings.Builder
+	for range 3 + r.IntN(8) {
+		switch r.IntN(9) {
+		case 0, 1:
+			b.WriteString(pick(`{"password": `+value(5)+`}`, `{"token": "`+value(6)+`"}`, `{"a": {"api_key": [`+value(4)+`, "x"]}}`, `{"secret": true}`, `{"x": "a {"password": "`+value(6)+`"}`))
+		case 2:
+			b.WriteString(pick("token", "api_key", "password", "secret", "x-api-key", "credentials", "keyPath", "user", "Authorization"))
+		case 3:
+			b.WriteString(pick("=", ": ", " = ", ":", `"`, "'", " ", ", ", "\n", "}", "{"))
+		case 4:
+			b.WriteString(pick("hf_", "npm_", "glpat-", "GOCSPX-", "sk_"+"live_", "ghp_", "sk-ant-") + value(32))
+		case 5:
+			b.WriteString(pick("https://u:", "://", "@h.io/x", "-u admin:", "Bearer ", "-H 'Authorization: token "))
+		default:
+			b.WriteString(value(1 + r.IntN(12)))
+		}
+	}
+	return b.String()
+}
+
+// The app is sent none of what the log hides, on a few thousand made-up
+// lines: no run of five bytes the log replaced (by its spans, which
+// write what it writes) shows in the app's text unless the log shows it
+// too.
+func TestTheAppIsSentNoMoreThanTheLogShowsAnyLine(t *testing.T) {
+	r := rand.New(rand.NewPCG(3, 5)) //nolint:gosec // seeded test lines, not a secret
+	for range 3000 {
+		l := pageLine(r)
+		logged, sent := logs.Redact(l), maskText(l)
+		spans := secrets.Spans(l, "[redacted]", secrets.Names)
+		if got := secrets.Replace(l, spans); got != logged {
+			t.Fatalf("%q: the spans write %q, the log %q", l, got, logged)
+		}
+		hidden := make([]bool, len(l))
+		for _, sp := range spans {
+			for i := sp.From; i < sp.To; i++ {
+				hidden[i] = true
+			}
+		}
+	runs:
+		for i := 0; i+5 <= len(l); i++ {
+			for j := i; j < i+5; j++ {
+				if !hidden[j] || !strings.ContainsRune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.+/=-", rune(l[j])) {
+					continue runs
+				}
+			}
+			if part := l[i : i+5]; !strings.Contains(logged, part) && strings.Contains(sent, part) {
+				t.Errorf("%q: the log hides %q (%q), the app is sent %q", l, part, logged, sent)
+				break
+			}
+		}
 	}
 }

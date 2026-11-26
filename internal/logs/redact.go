@@ -23,12 +23,17 @@ func Mask(secret string) {
 	maskMu.Unlock()
 }
 
-// Redact replaces what looks like a secret in s with [redacted].
+// Redacted stands in for a secret in the log.
+const Redacted = "[redacted]"
+
+// Redact replaces what looks like a secret in s with Redacted: the exact
+// secrets Mask was given, then, on what that leaves, the shapes and the
+// rule for names (secrets.Names), as origin/main did.
 func Redact(s string) string {
 	maskMu.RLock()
 	for _, m := range masked {
-		s = strings.ReplaceAll(s, m, "[redacted]")
+		s = strings.ReplaceAll(s, m, Redacted)
 	}
 	maskMu.RUnlock()
-	return secrets.Mask(s, "[redacted]", secrets.Names)
+	return secrets.Mask(s, Redacted, secrets.Names)
 }

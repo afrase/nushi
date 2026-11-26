@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/secrets"
 )
 
@@ -72,12 +73,20 @@ var field = regexp.MustCompile(`\S+`)
 // maskText masks what a program printed (a server's stderr in its
 // detail, the check's error, a sign-in's): the values under secret keys
 // of any JSON object in it, secrets' shapes and the log's NAME: value
-// rule (secrets.Names) anywhere, an Authorization header's value
-// (maskAuthorization), then each line's words as maskArgs masks
+// rule (secrets.Names) with its floor, and an Authorization header's
+// value (authorizationSpans), each read on the text as printed and their
+// spans masked as one union, then each line's words as maskArgs masks
 // arguments, the lines and the space between words kept. It hides at
-// least what the log's redactor does.
+// least what the log's redactor does: the log's spans are among its own,
+// found as the log finds them (with the log's stand-in, which a rule for
+// names reads after main's shapes), and masking more never shows a byte.
 func maskText(s string) string {
-	s = maskAuthorization(secrets.Mask(secrets.MaskJSONIn(s, Mask), Mask, secrets.Names))
+	spans := secrets.JSONSpans(s, Mask)
+	for _, sp := range secrets.Spans(s, logs.Redacted, secrets.Names) {
+		spans = append(spans, secrets.Span{From: sp.From, To: sp.To, With: Mask})
+	}
+	auth, _ := authorizationSpans(s)
+	s = secrets.Replace(s, append(spans, auth...))
 	lines := strings.Split(s, "\n")
 	for i, l := range lines {
 		at := field.FindAllStringIndex(l, -1)
@@ -122,16 +131,15 @@ var authorization = regexp.MustCompile(`(?i)\bauthorization(['"]?)[ \t]*[:=][ \t
 // or of its value (Authorization: "token x"), or else to the line's end.
 // No word of it shows after the mask.
 func maskAuthorization(s string) string {
-	out, _ := maskAuthorizationIn(s)
-	return out
+	spans, _ := authorizationSpans(s)
+	return secrets.Replace(s, spans)
 }
 
-// maskAuthorizationIn is maskAuthorization, and how many bytes its
-// searches for a line's end and a closing quote read: at most twice
-// len(s). A line's end is looked for once, for its first header, and
-// a closing quote only up to it, from past what the last mask took.
-func maskAuthorizationIn(s string) (out string, read int) {
-	var b strings.Builder
+// authorizationSpans are what maskAuthorization masks in s, and how many
+// bytes its searches for a line's end and a closing quote read: at most
+// twice len(s). A line's end is looked for once, for its first header,
+// and a closing quote only up to it, from past what the last mask took.
+func authorizationSpans(s string) (spans []secrets.Span, read int) {
 	last, lineEnd := 0, -1
 	for _, m := range authorization.FindAllStringSubmatchIndex(s, -1) {
 		if m[0] < last {
@@ -164,12 +172,10 @@ func maskAuthorizationIn(s string) (out string, read int) {
 		if value == "" || value == Mask {
 			continue
 		}
-		b.WriteString(s[last:start])
-		b.WriteString(Mask)
+		spans = append(spans, secrets.Span{From: start, To: start + len(value), With: Mask})
 		last = start + len(value)
 	}
-	b.WriteString(s[last:])
-	return b.String(), read
+	return spans, read
 }
 
 var (

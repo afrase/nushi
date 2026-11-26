@@ -42,7 +42,7 @@ func TestMask(t *testing.T) {
 		{"sk-short", "sk-short"},
 		{"", ""},
 	} {
-		if got := Mask(tc.in, "**", NameRule{name}); got != tc.want {
+		if got := Mask(tc.in, "**", &NameRule{patterns: []*regexp.Regexp{name}}); got != tc.want {
 			t.Errorf("Mask(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
@@ -140,10 +140,77 @@ func TestNamesInText(t *testing.T) {
 	}
 }
 
+// A tool call's text masks NAME=value whose name ends in a word that
+// says secret, whole (the name split at . _ - and where lower case turns
+// upper): password=, MY_TOKEN=, apiKey=. A name that only starts with
+// such a word (secretary=, tokenizer=, credentialsFile=) shows, as does
+// code's == and a name with no = after it; what origin/main's rule
+// masked (any name holding the word after another character:
+// my_secretary=, max_tokens=) stays masked, its floor.
+func TestMaskText(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"MY_TOKEN=FAKEtext0001 make", "MY_TOKEN=•••• make"},
+		{"password=FAKEtext0002 make", "password=•••• make"},
+		{"token=FAKEtext0003", "token=••••"},
+		{"secret=FAKEtext0004 && run", "secret=•••• && run"},
+		{"api_key=FAKEtext0005", "api_key=••••"},
+		{"curl -d 'apikey=FAKEtext0006'", "curl -d 'apikey=••••'"},
+		{"Credential=FAKEtext0007", "Credential=••••"},
+		{"passwd=FAKEtext0008 TokenError=FAKEtext0009", "passwd=•••• TokenError=FAKEtext0009"},
+		{"apiKey=FAKEtext0012 db.password=FAKEtext0013", "apiKey=•••• db.password=••••"},
+		{"AUTH_TOKEN=FAKEtext0014 x-api-key=FAKEtext0015", "AUTH_TOKEN=•••• x-api-key=••••"},
+		{"--password=FAKEtext0016 credentials=FAKEtext0017", "--password=•••• credentials=••••"},
+		{"x == token; password: FAKEtext0010", "x == token; password: FAKEtext0010"},
+		{"tokens=abc keyed=FAKEtext0011", "tokens=abc keyed=FAKEtext0011"},
+		// A key after secret or private is one; a key alone isn't, nor an id.
+		{"SECRET_KEY=FAKEtext0020 run", "SECRET_KEY=•••• run"},
+		{"secret_key=FAKEtext0021 secretKey=FAKEtext0022", "secret_key=•••• secretKey=••••"},
+		{"private_key=FAKEtext0023 SECRET_ACCESS_KEY=FAKEtext0024", "private_key=•••• SECRET_ACCESS_KEY=••••"},
+		{"primary_key=users_id1 KEY=FAKEtext0025", "primary_key=users_id1 KEY=FAKEtext0025"},
+		{"monkey=banana12 token_id=FAKEtext0026", "monkey=banana12 token_id=FAKEtext0026"},
+		// Names that only start with the word: no secret.
+		{"secretary=alice1234", "secretary=alice1234"},
+		{"tokenizer=cl100k_base", "tokenizer=cl100k_base"},
+		{"tokens=1234567", "tokens=1234567"},
+		{"passwordless=true", "passwordless=true"},
+		{"secretsmanager=aws1", "secretsmanager=aws1"},
+		{"credentialsFile=/x/y.json", "credentialsFile=/x/y.json"},
+		{"tokenUrl=https://h.io/t", "tokenUrl=https://h.io/t"},
+		{"token_count=2048", "token_count=2048"},
+		{"git -c credential.helper=store push", "git -c credential.helper=store push"},
+		// The floor: origin/main masked these, so they stay masked.
+		{"my_secretary=alice1234", "my_secretary=••••"},
+		{"max_tokens=4096 AUTHTOKEN=FAKEtext0018", "max_tokens=•••• AUTHTOKEN=••••"},
+		{"x_tokenizer=cl100k_base", "x_tokenizer=••••"},
+	} {
+		if got := MaskText(tc.in); got != tc.want {
+			t.Errorf("MaskText(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 // NotSecret shares one Replacer: a call allocates no more than the
 // lowered name and the name without its separators.
 func TestNotSecretSharesItsReplacer(t *testing.T) {
 	if n := testing.AllocsPerRun(100, func() { NotSecret("MAX_OUTPUT_TOKENS") }); n > 2 {
 		t.Errorf("%.0f allocations a call", n)
+	}
+}
+
+// Each rule reads the text as given: a shape main didn't know, glued to
+// a secret's name or to a PEM block's header, hides neither the name's
+// value nor the block (the third pass's verifier's lines).
+func TestRulesReadTheTextAsGiven(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"hf" + "_FAKEfakeFAKEfakeFAKEfakeFAKE0001secretary=FAKEalice01", "**=**"},
+		{"hf" + "_FAKEfakeFAKEfakeFAKEfakeFAKE0002credentials= FAKEcred0002 x", "**= ** x"},
+		{"GOCSPX" + "-FAKEfakeFAKEfakeFAKEfake03-----BEGIN RSA KEY-----\nFAKEbody0003\n-----END RSA KEY-----", "** RSA KEY-----**"},
+		{"glpat" + "-FAKEfakeFAKEfake0004-----BEGIN RSA KEY-----\nFAKEbody0004", "** RSA KEY-----**"},
+		{"sk_" + "live_FAKEfakeFAKEfake0005token=FAKEvalue05", "**=**"},
+		{"a token=sk-ant-FAKEfakeFAKEfake0006 b", "a token=** b"}, // one span where two rules meet
+	} {
+		if got := Mask(tc.in, "**", Names); got != tc.want {
+			t.Errorf("Mask(%q) = %q, want %q", tc.in, got, tc.want)
+		}
 	}
 }

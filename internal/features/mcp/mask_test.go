@@ -19,7 +19,7 @@ func TestMaskAuthorizationIsLinear(t *testing.T) {
 		"masked value":    `Authorization: ` + Mask + `"`,
 	} {
 		s := strings.Repeat(h, size/len(h)) + "\nnext"
-		if _, read := maskAuthorizationIn(s); read > 2*len(s) {
+		if _, read := authorizationSpans(s); read > 2*len(s) {
 			t.Errorf("%s: read %d bytes of %d (%.0f times)", name, read, len(s), float64(read)/float64(len(s)))
 		}
 	}
