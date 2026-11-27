@@ -13,6 +13,7 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/editor_find.dart';
+import 'package:nushi/editor_floor.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/keys.dart';
@@ -75,7 +76,8 @@ class _SourceEditorState extends State<SourceEditor> {
   final _focus = FocusNode(debugLabel: 'editor');
 
   /// The editor's scrolling, down and (lines unwrapped) across.
-  final _down = ScrollController();
+  // Never above its start: re_editor's layout never ends there.
+  final _down = FlooredScroll();
   final _across = ScrollController();
   late final _scroll = CodeScrollController(
     verticalScroller: _down,
