@@ -13,8 +13,6 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/editor_find.dart';
-import 'package:nushi/editor_ink.dart';
-import 'package:nushi/editor_sight.dart' show EditorScroll;
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/keys.dart';
@@ -79,7 +77,7 @@ class _SourceEditorState extends State<SourceEditor> {
   /// The editor's scrolling, down and (lines unwrapped) across.
   final _down = ScrollController();
   final _across = ScrollController();
-  late final _scroll = EditorScroll(
+  late final _scroll = CodeScrollController(
     verticalScroller: _down,
     horizontalScroller: _across,
   );
@@ -91,7 +89,7 @@ class _SourceEditorState extends State<SourceEditor> {
     widget.edit.controller,
     _focus,
     lines: _lines,
-    scroll: _scroll,
+    down: _down,
   );
   final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
@@ -116,7 +114,6 @@ class _SourceEditorState extends State<SourceEditor> {
   void initState() {
     super.initState();
     widget.edit.controller.addListener(_selectionMoved);
-    widget.edit.ink = _find.ink;
     _focus.addListener(_focusChanged);
     tabSize.addListener(_tabSizeChanged);
     widget.base?.addListener(_mark);
@@ -255,7 +252,6 @@ class _SourceEditorState extends State<SourceEditor> {
     _blamed.dispose();
     tabSize.removeListener(_tabSizeChanged);
     _unfollow();
-    if (identical(widget.edit.ink, _find.ink)) widget.edit.ink = null;
     _find.dispose();
     _focus.dispose();
     _lines.dispose();
@@ -377,8 +373,7 @@ class _SourceEditorState extends State<SourceEditor> {
               fontHeight: code.height,
               textColor: t.text,
               backgroundColor: t.base,
-              // The code under it is drawn for it (EditorInk).
-              selectionColor: editorSelectionColor(context),
+              selectionColor: DefaultSelectionStyle.of(context).selectionColor,
               cursorColor: t.text,
               cursorWidth: 1.5,
               cursorLineColor: t.base,

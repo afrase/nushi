@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
-import 'package:nushi/editor_ink.dart';
 import 'package:nushi/editor_sight.dart';
 import 'package:nushi/line_search.dart' show LazyKeys;
 import 'package:nushi/transcript_find.dart';
@@ -22,16 +21,9 @@ class EditorFind extends Find {
     this.editor,
     this.editorFocus, {
     required EditorLines lines,
-    required EditorScroll scroll,
-  }) : sight = EditorSight(
-         lines: lines,
-         down: scroll.verticalScroller,
-         editor: editor,
-       ),
-       _scroll = scroll {
-    _code
-      ..addListener(_found)
-      ..addListener(_inked);
+    required ScrollController down,
+  }) : sight = EditorSight(lines: lines, down: down, editor: editor) {
+    _code.addListener(_found);
   }
 
   /// What of the text is in sight: the editor is built again as it
@@ -48,23 +40,12 @@ class EditorFind extends Find {
 
   /// What the editor is given as its find: re_editor's, less the tint on
   /// the match that's selected.
-  late final CodeFindController marking = _Marking(_code, ink);
-
-  /// How the editor's code is drawn on what it paints under it: given its
-  /// spans by `FileEdit`, told here of the matches.
-  late final EditorInk ink = EditorInk(editor, sight, _scroll.relayout);
-  final EditorScroll _scroll;
+  late final CodeFindController marking = _Marking(_code, editor, sight);
 
   /// The matches the editor was last given to paint.
   @visibleForTesting
   List<CodeLineSelection> get painted =>
       (marking as _Marking)._given ?? const [];
-
-  /// Whether re_editor's last answer is for the text as it is now: an
-  /// edit leaves the earlier one, which it still paints, until the next.
-  @visibleForTesting
-  bool get answered =>
-      _code.value?.result?.codeLines.equals(editor.codeLines) ?? false;
 
   /// Whether the text starts below the bar, for a match at the very top
   /// that no scroll takes out from under it; until the bar closes.
@@ -132,16 +113,6 @@ class EditorFind extends Find {
     );
   }
 
-  /// The matches as re_editor paints them, for [ink]: none while the
-  /// text has changed since they were found, or with the find closed.
-  void _inked() {
-    final r = _code.value?.result;
-    ink.found(
-      r == null || r.dirty ? const [] : r.matches,
-      _code.convertMatchToSelection,
-    );
-  }
-
   @override
   void step(int by) {
     if (!canStep || looking) return; // re_editor has no matches to step
@@ -180,9 +151,7 @@ class EditorFind extends Find {
   void dispose() {
     _code
       ..removeListener(_found)
-      ..removeListener(_inked)
       ..dispose();
-    ink.dispose();
     roomAbove.dispose();
     sight.dispose();
     super.dispose();
@@ -192,12 +161,13 @@ class EditorFind extends Find {
 /// re_editor's find as the editor draws it, but for the match the
 /// selection is on: that one shows as the selection (the current match, in
 /// the transcript's colors), not under the others' tint; and only the
-/// matches in [EditorInk.sight]'s window, as [_ink] has them for its code.
+/// matches in [_sight]'s window.
 class _Marking implements CodeFindController {
-  new(this._find, this._ink);
+  new(this._find, this._editor, this._sight);
 
   final CodeFindController _find;
-  final EditorInk _ink;
+  final CodeLineEditingController _editor;
+  final EditorSight _sight;
   List<CodeLineSelection>? _given;
 
   @override
@@ -205,18 +175,39 @@ class _Marking implements CodeFindController {
 
   List<CodeLineSelection>? _inSight() {
     final r = _find.value?.result;
-    if (r == null || r.dirty || r.matches.isEmpty) return null;
+    if (r == null || r.dirty || r.matches.isEmpty) {
+      _sight.forget();
+      return null;
+    }
     final matches = r.matches;
-    final window = _ink.sight.take();
+    final window = _sight.take();
+    // In order down the text: the first on the window's first line.
+    var (lo, hi) = (0, matches.length);
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (matches[mid].startIndex < window.first) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    final s = _editor.selection;
     final shown = <CodeLineSelection>[];
-    // In order down the text: each line with matches from the window's
-    // first, its painted ones.
-    var i = firstFrom(matches, window.first, 0);
-    while (i < matches.length) {
-      final line = matches[i].startIndex;
-      if (line > window.last) break;
-      shown.addAll(_ink.paintedOn(line));
-      i = firstFrom(matches, line + 1, 0);
+    for (var i = lo; i < matches.length; i++) {
+      final m = matches[i];
+      if (m.startIndex > window.last) break;
+      if (!_sight.shows(window, m.startIndex, m.startOffset, m.endOffset)) {
+        continue;
+      }
+      final at = _find.convertMatchToSelection(m);
+      if (at == null ||
+          at.startIndex == s.startIndex &&
+              at.startOffset == s.startOffset &&
+              at.endIndex == s.endIndex &&
+              at.endOffset == s.endOffset) {
+        continue;
+      }
+      shown.add(at);
     }
     return shown;
   }
