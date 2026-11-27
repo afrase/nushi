@@ -3,6 +3,7 @@ package claude
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/afrase/claude-acp-go/claudeacp"
@@ -56,7 +57,26 @@ func (Harness) Context(ctx context.Context, call func(ctx context.Context, metho
 		}
 		out.Categories = append(out.Categories, cat)
 	}
+	out.Categories = withConversation(out.Categories)
 	return out, nil
+}
+
+// withConversation is cats with a row for the conversation. claude's answer
+// can leave it out (docs/facts/claude.md), and the app counts what the
+// conversation holds from the agent's usage only into a category that is
+// the conversation: without one the widget's rows came to less than its
+// total. The row is at nothing, named as claude names it, where claude
+// puts it: before the buffer and the free space. An answer without
+// categories gets none.
+func withConversation(cats []model.ContextCategory) []model.ContextCategory {
+	if len(cats) == 0 || slices.ContainsFunc(cats, func(c model.ContextCategory) bool { return c.Part == model.PartMessages }) {
+		return cats
+	}
+	at := slices.IndexFunc(cats, func(c model.ContextCategory) bool { return c.Part == model.PartBuffer || c.Kind == "free" })
+	if at < 0 {
+		at = len(cats)
+	}
+	return slices.Insert(cats, at, model.ContextCategory{Name: "Messages", Part: model.PartMessages})
 }
 
 // contextLists reads the lists in claude's answer that /context put under
