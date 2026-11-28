@@ -28,7 +28,8 @@ List<AskedQuestion> askedQuestions(List<Field> fields) {
 /// Without [onTap] it's an answered question's, read-only: no digit, no
 /// row to press, and its name muted unless [picked]; [said] is what was
 /// typed for it (an "Other" answer), after its name, and [note] the note
-/// on it, a line under it in the secondary colour.
+/// on it, a line under it in the secondary colour. [dimmed]: it stands
+/// back, as Claude's card has it, while the box's text is the answer.
 class QuestionOption extends StatelessWidget {
   const new(
     this.option, {
@@ -40,6 +41,7 @@ class QuestionOption extends StatelessWidget {
     this.at = false,
     this.said = '',
     this.note = '',
+    this.dimmed = false,
   });
 
   final Option option;
@@ -50,6 +52,11 @@ class QuestionOption extends StatelessWidget {
   final VoidCallback? onTap;
   final String said;
   final String note;
+  final bool dimmed;
+
+  /// How much of a [dimmed] option shows: plainly fainter, still more
+  /// than a disabled control's 45%, since it can still be picked.
+  static const dimmedOpacity = 0.55;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +119,12 @@ class QuestionOption extends StatelessWidget {
     );
     // Read-only, nothing to press: no tint, no hand, no focus.
     if (readOnly) return Padding(padding: padding, child: row);
-    return Tap(onTap: onTap, selected: at, padding: padding, child: row);
+    return Tap(
+      onTap: onTap,
+      selected: at,
+      padding: padding,
+      child: dimmed ? Opacity(opacity: dimmedOpacity, child: row) : row,
+    );
   }
 
   /// How far down a 16-point mark sits to centre on the first line.

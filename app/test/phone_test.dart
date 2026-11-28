@@ -177,7 +177,11 @@ void main() {
             .height,
         greaterThanOrEqualTo(44),
       );
+      // A tap picks, the card's Send sends.
       await tester.tap(find.text('Rekeying'));
+      await tester.pump();
+      expect(fake.calls.whereType<AnswerQuestionRequest>(), isEmpty);
+      await tester.tap(find.text('Send'));
       await tester.pump();
       final answered = fake.calls.whereType<AnswerQuestionRequest>().single;
       expect(answered.itemId, 'q');

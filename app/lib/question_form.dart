@@ -23,6 +23,10 @@ final class QuestionForm {
   /// What's typed in [f]'s box, trimmed.
   String typed(Field f) => draft.text[f.id]?.text.trim() ?? '';
 
+  /// Whether [q]'s "Other" box holds text (none without one).
+  bool written(AskedQuestion q) =>
+      q.other != null && typed(q.other!).isNotEmpty;
+
   /// The answers as sent: each field's picks, else its text.
   List<FieldAnswer> get answer => [
     for (final f in fields.where((f) => !dropped(f)))
@@ -73,6 +77,14 @@ final class QuestionForm {
       f.replaces &&
       (draft.picked[f.otherFor]?.isNotEmpty ?? false) &&
       typed(f).isNotEmpty;
+
+  /// Whether [q]'s pick is quoted in a bar under its box: it has a box
+  /// whose text goes along with the pick (not in its place).
+  bool quotes(AskedQuestion q) => q.other != null && !replaces(q);
+
+  /// Whether [q]'s options stand back: nothing picked and the box's text
+  /// is the answer itself.
+  bool dims(AskedQuestion q) => !picked(q) && written(q);
 
   /// Whether [now] is [was] with one run of it deleted, nothing typed.
   static bool deleted(String was, String now) {

@@ -73,9 +73,9 @@ void main() {
     );
     await tester.enterText(find.byType(TextField), 'because');
     await tester.pump();
-    await tester.tap(find.text('Submit'));
+    await tester.tap(find.text('Send'));
     await tester.pump();
-    await tester.tap(find.text('Submit'));
+    await tester.tap(find.text('Send'));
     await tester.tap(find.text('Skip'));
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
