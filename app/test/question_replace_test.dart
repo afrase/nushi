@@ -132,7 +132,7 @@ void main() {
       _card(_item([_colour(), _other(), _size()]), draft: draft),
     );
     await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp); // into the box
+    await tester.tap(find.byType(TextField)); // into the box
     await tester.pump();
     expect(draft.picked['q0'], ['Red']);
   });
@@ -146,6 +146,10 @@ void main() {
     await tester.enterText(find.byType(TextField), 'teal');
     await tester.pump();
     await tester.tap(find.textContaining('Red', findRichText: true));
+    await tester.pump();
+    expect(sent, isNull, reason: 'a click only picks');
+    expect(find.text('“Red”'), findsNothing, reason: 'no bar: pick or type');
+    await tester.tap(find.text('Send'));
     await tester.pump();
     expect(_byField(sent!), {
       'q0': ['Red'],

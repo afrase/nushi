@@ -224,35 +224,38 @@ A chat remembers your picks, and a new chat starts with the ones you last picked
 
 When the agent asks permission to run something, or asks a question, the chat **needs you**:
 
-- A card shows in the chat: a **Permission** card with the agent's choices (such as Allow or Deny), or a question card with **Submit** and **Skip**.
+- A card shows in the chat: a **Permission** card with the agent's choices (such as Allow or Deny), or a question card with **Send** and **Skip** (**Submit** once it asks several questions).
 - The chat's dot in the sidebar turns amber and its row says **Needs you**, and Nushi's app icon shows how many chats need you.
 - If you've scrolled up, a **Needs you** chip takes you down to the card.
 
 Nushi never answers for you.
 
+### Answer a question
+
+Click an option to pick it. Nothing is sent until you press **Send** or **⏎**, so you can add to your pick first.
+
+- Type in the box under the options to add context. A bar under the box shows your pick, and **With note** once you've typed.
+- Click **×** on the bar (or press **Esc**) to unpick. Your text is then the answer itself, and the options dim.
+- With nothing picked, the box's text is your answer.
+
+The agent gets your pick as the answer and your text beside it: as a note on the pick with Claude and Codex (questions with one answer) and Ante (any question), and as one more answer otherwise. The answered card shows **Note:** and your note after your pick, greyed.
+
 ### Answer a question from the keyboard
 
 A new question card takes the keyboard when nothing else is using it.
 
-- Press an option's number to pick it.
-- **↑** and **↓** move through the options and then the box under them, round again at either end. **Space** picks the option you're on.
+- Press an option's number to pick it. If the box is empty, that sends it at once (or goes on to the next question); with text in the box it only picks.
+- **↑** and **↓** pick the option above or below, round again at either end. They work in the box too, so you can keep typing.
 - Start typing to write in the box. You don't need to reach it first: the letters go there. In the box, numbers and spaces are just text.
-- **Esc** in the box takes you back to the options, and keeps what you typed.
+- **Esc** unpicks. With nothing picked, Esc in the box takes you back to the options and keeps what you typed.
 - **⏎** sends, or goes on to the next question. **←**, **→** and **Tab** move between questions.
-
-### Add a note to your pick
-
-Claude, Codex and Ante let you pick an option and add a note to it, such as **PDF** with "landscape pages". The agent gets your pick as the answer and your words as a note on it. Claude and Codex take a note on a question with one answer; Ante on any question.
-
-1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**, and **Note:** stays in front of what you type.
-2. Pick the option. A single question is sent as soon as you pick, so type the note first.
-
-The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own.
+- On a question with several answers, **↑** and **↓** move through the options and the box, and **Space** ticks the one you're on.
 
 ### Pick or type, with OpenCode and oh-my-pi
 
 On a question with one answer, OpenCode and oh-my-pi take text in the box in place of a pick, so Nushi sends one or the other.
 
+- There's no bar under the box: your pick or your text is sent, not both.
 - Typing in the box unmarks the option you picked. The box says **Type your own answer in place of your pick…** while an option is picked.
 - Picking an option keeps what you typed, greyed, with **Not sent:** in front of it. Type in the box again to send your text instead; deleting text keeps your pick.
 - The answered card shows only what was sent.

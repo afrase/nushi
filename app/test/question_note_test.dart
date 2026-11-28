@@ -11,8 +11,9 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 // A pick with text in the box is a pick with a note, where the agent reads
-// it so (Field.note: Claude's one-choice question): the box asks for a
-// note, and the answered card shows the note after the pick.
+// it so (Field.note: Claude's one-choice question): the box asks for
+// context, a bar under it quotes the pick, "With note" once there's text,
+// and the answered card shows the note after the pick.
 
 Field _format({List<String> values = const []}) => Field(
   id: 'question_0',
@@ -133,19 +134,22 @@ void main() {
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
-    expect(_hint(tester), 'Add a note…');
+    expect(_hint(tester), 'Add context for this pick…');
   });
 
-  testWidgets('a note being written says so in the box', (tester) async {
+  testWidgets('a note being written: the bar says so, not the box', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _card(_item([_format(), _other()]), draft: _picked()),
     );
     await tester.pump();
-    expect(_label(tester), isNull, reason: 'empty: the placeholder says it');
+    expect(find.text('“PDF”'), findsOneWidget, reason: 'the pick, quoted');
+    expect(find.text('With note'), findsNothing, reason: 'nothing typed');
     await tester.enterText(find.byType(TextField), 'landscape pages');
     await tester.pump();
-    expect(_label(tester), 'Note: ');
-    expect(find.text('Note: '), findsOneWidget, reason: 'shown, typing on');
+    expect(find.text('With note'), findsOneWidget);
+    expect(_label(tester), isNull, reason: 'nothing inside the box');
   });
 
   testWidgets('text with nothing picked, or no note field, has no label', (
@@ -167,14 +171,28 @@ void main() {
     expect(_label(tester), isNull);
   });
 
-  testWidgets('where the agent takes no note, the box is as it was', (
+  testWidgets('where the agent takes no note, the text is sent as before', (
     tester,
   ) async {
+    List<FieldAnswer>? sent;
     await tester.pumpWidget(
-      _card(_item([_format(), _other(note: false)]), draft: _picked()),
+      _card(
+        _item([_format(), _other(note: false)]),
+        draft: _picked('landscape pages'),
+        onAnswer: (a) => sent = a,
+      ),
     );
     await tester.pump();
-    expect(_hint(tester), 'Other…');
+    expect(find.text('“PDF”'), findsOneWidget);
+    await tester.tap(find.text('Send'));
+    await tester.pump();
+    expect(
+      {for (final a in sent!) a.fieldId: a.values},
+      {
+        'question_0': ['PDF'],
+        'question_0_custom': ['landscape pages'],
+      },
+    );
   });
 
   testWidgets('a pick after the note keeps it: both fields are sent', (
@@ -188,6 +206,9 @@ void main() {
     await tester.enterText(find.byType(TextField), 'landscape pages');
     await tester.pump();
     await tester.tap(find.textContaining('PDF', findRichText: true));
+    await tester.pump();
+    expect(sent, isNull, reason: 'a click only picks');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(
       {for (final a in sent!) a.fieldId: a.values},

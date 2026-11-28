@@ -8,9 +8,9 @@ import 'package:nushi/question_card.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// A question card from the keyboard: ↑/↓ move through the options and the
-// box under them as one list, a character typed on the card goes into
-// the box, and Esc in the box gives the keys back to the card.
+// A question card from the keyboard: ↑/↓ move a one-choice question's
+// pick, a character typed on the card goes into the box, and Esc in the
+// box gives the keys back to the card once nothing is picked.
 
 Field _format() => Field(
   id: 'question_0',
@@ -115,56 +115,52 @@ void main() {
 
   for (final several in [false, true]) {
     final what = several ? 'several questions' : 'one question';
-    testWidgets('↑/↓ go round the options and the box ($what)', (tester) async {
+    testWidgets('↑/↓ move the pick round, sending nothing ($what)', (
+      tester,
+    ) async {
       final card = await _show(tester, [
         _format(),
         _other(),
         if (several) _colour(),
       ]);
-      card.draft.text['question_0_custom']!.text = 'landscape';
-      await _key(tester, LogicalKeyboardKey.arrowDown); // on CSV
-      expect(_inBox(tester), isFalse);
-      await _key(tester, LogicalKeyboardKey.arrowDown); // past the last
-      expect(_inBox(tester), isTrue);
-      expect(
-        _box(tester).controller.selection,
-        const TextSelection.collapsed(offset: 9),
-        reason: 'the caret at its end',
-      );
-      await _key(tester, LogicalKeyboardKey.arrowUp); // back to CSV
-      expect(_inBox(tester), isFalse);
-      await _key(tester, LogicalKeyboardKey.space);
-      if (several) {
-        expect(find.text('Which colour for its charts?'), findsOneWidget);
-        expect(card.draft.picked['question_0'], ['CSV']);
-        await _key(tester, LogicalKeyboardKey.arrowLeft);
-      } else {
-        expect(card.answers['question_0'], ['CSV']);
-        expect(card.answers['question_0_custom'], ['landscape']);
-        return;
+      List<String>? picked() => card.draft.picked['question_0'];
+      for (final (k, now) in [
+        (LogicalKeyboardKey.arrowDown, 'PDF'), // from nothing, the first
+        (LogicalKeyboardKey.arrowDown, 'CSV'),
+        (LogicalKeyboardKey.arrowDown, 'PDF'), // round
+        (LogicalKeyboardKey.arrowUp, 'CSV'), // round back
+      ]) {
+        await _key(tester, k);
+        expect(picked(), [now]);
       }
-      // Back on the first option: ↑ from it to the box, ↓ there to it.
-      await _key(tester, LogicalKeyboardKey.arrowUp);
-      expect(_inBox(tester), isTrue);
-      await _key(tester, LogicalKeyboardKey.arrowDown);
-      expect(_inBox(tester), isFalse);
-      await _key(tester, LogicalKeyboardKey.space); // the first: PDF
-      expect(card.draft.picked['question_0'], ['PDF']);
+      await _key(tester, LogicalKeyboardKey.escape);
+      expect(picked(), isEmpty);
+      await _key(tester, LogicalKeyboardKey.arrowUp); // from nothing, the last
+      expect(picked(), ['CSV']);
+      expect(_inBox(tester), isFalse, reason: 'the box is reached by typing');
+      expect(card.sends, 0);
+      expect(find.text('Which format should the weekly report use?'), findsOne);
     });
 
-    testWidgets('without a box, ↓ wraps among the options ($what)', (
+    testWidgets('without a box, ↓ picks round the options ($what)', (
       tester,
     ) async {
       final card = await _show(tester, [_format(), if (several) _colour()]);
       await _key(tester, LogicalKeyboardKey.arrowDown);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
       await _key(tester, LogicalKeyboardKey.arrowDown); // round to PDF
       await _key(tester, LogicalKeyboardKey.keyL); // no box: nothing
       expect(find.byType(EditableText), findsNothing);
-      await _key(tester, LogicalKeyboardKey.space);
-      expect(
-        several ? card.draft.picked['question_0'] : card.answers['question_0'],
-        ['PDF'],
-      );
+      expect(card.sends, 0);
+      await _key(tester, LogicalKeyboardKey.enter);
+      if (several) {
+        expect(find.text('Which colour for its charts?'), findsOneWidget);
+        expect(card.draft.picked['question_0'], ['PDF']);
+      } else {
+        expect(card.answers, {
+          'question_0': ['PDF'],
+        });
+      }
     });
 
     testWidgets('a character typed on the card starts the box ($what)', (
@@ -258,7 +254,10 @@ void main() {
         final first = _Card(_item([_format(), _other()]));
         await tester.pumpWidget(both(first));
         await tester.pump();
-        if (inBox) await _key(tester, LogicalKeyboardKey.arrowUp);
+        if (inBox) {
+          await tester.tap(find.byType(EditableText).first);
+          await tester.pump();
+        }
         final focus = FocusManager.instance.primaryFocus;
         expect(
           tester
@@ -308,6 +307,9 @@ void main() {
     expect(_inBox(tester), isFalse);
     expect(_box(tester).controller.text, 'l');
     await _key(tester, LogicalKeyboardKey.digit1); // the card's again
+    expect(card.draft.picked['question_0'], ['PDF']);
+    expect(card.sends, 0, reason: 'text in the box: a digit only picks');
+    await _key(tester, LogicalKeyboardKey.enter);
     expect(card.answers, {
       'question_0': ['PDF'],
       'question_0_custom': ['l'],
@@ -337,8 +339,8 @@ void main() {
     var card = _Card(_item([_format(), _other()]));
     await tester.pumpWidget(themed(card.build(width: 720)));
     await tester.pump();
-    await _key(tester, LogicalKeyboardKey.arrowDown);
-    await _key(tester, LogicalKeyboardKey.arrowDown);
+    await tester.tap(find.byType(EditableText));
+    await tester.pump();
     expect(_inBox(tester), isTrue);
     await tester.pump(const Duration(milliseconds: 300)); // its ring's fade
     await render(tester, find.byType(QuestionCard), 'after-box-focused');
@@ -351,7 +353,7 @@ void main() {
     await tester.pump();
     expect(
       tester.widget<TextField>(find.byType(TextField)).decoration?.hintText,
-      'Add a note…',
+      'Add context for this pick…',
     );
     await render(tester, find.byType(QuestionCard), 'after-picked-placeholder');
     card.draft.text['question_0_custom']!.text = 'landscape pages';

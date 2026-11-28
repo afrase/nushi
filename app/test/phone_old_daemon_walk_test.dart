@@ -11,6 +11,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/chat_sheet.dart';
 import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/phone_app.dart';
+import 'package:nushi/question_card.dart';
 import 'package:nushi/spinner.dart';
 
 import 'fake_daemon.dart';
@@ -296,7 +297,16 @@ void main() {
       status(ChatStatus(busy: true, started: started, waiting: true));
       await tester.pumpAndSettle();
       await snap('question');
+      // A tap picks, the card's Send sends.
       await tester.tap(find.text('Poll the ping'));
+      await tester.pumpAndSettle();
+      expect(fake.calls.whereType<AnswerQuestionRequest>(), isEmpty);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(QuestionCard),
+          matching: find.text('Send'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(fake.calls.whereType<AnswerQuestionRequest>().single.itemId, 'q');
       item(_question('answered', ['p']), 4);
