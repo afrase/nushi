@@ -147,6 +147,34 @@ List<InlineSpan> noteSpans(NushiTheme theme, String note, {double size = 13}) =>
       ),
     ];
 
+/// A line of a several-question card's review: the question's [title]
+/// muted, then what was [said] for it, its note after it as on the
+/// answered card, or "Not answered".
+Widget reviewLine(
+  NushiTheme theme,
+  String title,
+  ({String answer, String note}) said,
+) {
+  final t = theme.t;
+  return Text.rich(
+    TextSpan(
+      text: '$title   ',
+      style: theme.ui(t.textMuted, size: 12),
+      children: [
+        if (said case (:final answer, :final note)
+            when answer.isNotEmpty || note.isNotEmpty) ...[
+          TextSpan(text: answer, style: theme.ui(t.text, size: 12)),
+          if (note.isNotEmpty) ...[
+            const TextSpan(text: '  '),
+            ...noteSpans(theme, note, size: 12),
+          ],
+        ] else
+          TextSpan(text: 'Not answered', style: theme.ui(t.needs, size: 12)),
+      ],
+    ),
+  );
+}
+
 /// The note on [q]'s pick, or '': its "Other" text where the agent read
 /// it as one (Field.note) and an option was picked.
 String answeredNote(AskedQuestion q) =>
