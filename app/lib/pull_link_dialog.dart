@@ -267,6 +267,7 @@ class _LinkPullState extends State<_LinkPull> {
         Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
         Button(
           label: _busy ? 'Linking…' : 'Link',
+          roomFor: const ['Linking…'],
           kind: ButtonKind.primary,
           onPressed: _busy ? null : _submit,
         ),

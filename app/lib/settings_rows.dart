@@ -288,7 +288,8 @@ const settingsRowHeight = 46.0;
 
 /// A row of a [SettingsGroup]: [label] and its [description] on the left
 /// (cut to [descriptionLines] when given: text that isn't Nushi's own, as
-/// a reply card's words), [control] on the right, at the group's edge.
+/// a reply card's words), then [note], [control] on the right, at the
+/// group's edge.
 class SettingsRow extends StatelessWidget {
   const new(
     this.label, {
@@ -297,6 +298,7 @@ class SettingsRow extends StatelessWidget {
     this.control,
     this.descriptionColor,
     this.descriptionLines,
+    this.note,
     this.stackBelow,
   });
 
@@ -305,6 +307,11 @@ class SettingsRow extends StatelessWidget {
   final Widget? control;
   final Color? descriptionColor;
   final int? descriptionLines;
+
+  /// A muted line of its own under [description], what holds whatever it
+  /// says (Remote access's "Keeps the Mac awake" under its state, which
+  /// can be an error): never joined onto the description with a comma.
+  final String? note;
 
   /// The row's width under which [control] goes under the label, at its
   /// left, rather than squeeze the label beside a wide control (a field,
@@ -327,6 +334,8 @@ class SettingsRow extends StatelessWidget {
             overflow: descriptionLines == null ? null : TextOverflow.ellipsis,
             style: theme.ui(descriptionColor ?? t.textMuted, size: 12),
           ),
+        if (note case final n? when n.isNotEmpty)
+          Text(n, style: theme.ui(t.textMuted, size: 12)),
       ],
     );
     Widget beside() => Row(

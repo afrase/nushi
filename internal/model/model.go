@@ -39,9 +39,12 @@ type ChatRecord struct {
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
 	EarlierWorktrees []Worktree `json:",omitempty"`
-	// RelatedWorktrees are the worktrees the chat's subagents worked in
-	// (ADR 0081), in the order Nushi found them. Nushi neither made them
-	// nor removes them.
+	// RelatedWorktrees are the worktrees the chat's subagents, or its
+	// workflows' subagents, worked in (ADR 0081), in the order Nushi found
+	// them. Nushi neither made them nor removes them. The list only grows,
+	// but for a workflow's removed record with nothing to show while it is
+	// its path's last: kept, hidden from the app, and forgotten, oldest
+	// first, past 256 such (chats' hidden).
 	RelatedWorktrees []RelatedWorktree `json:",omitempty"`
 	// Throwaway are sessions the agent forked from the chat's that nobody
 	// will see again (side chats, commit messages' forks), until the agent has
@@ -114,9 +117,22 @@ type ChatRecord struct {
 	// messages is archived as it's closed (ADR 0115), and Undo makes it
 	// that chat's side chat again. Unarchiving clears it.
 	SideOf *SideOf `json:",omitempty"`
+	// Took is what the chat's agent took when its session last opened,
+	// for the chat's status while no agent runs (asleep, or not reopened
+	// since the daemon started); nil: not known (a record from before it
+	// was kept).
+	Took *AgentTook `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
+}
+
+// AgentTook is what a chat's agent said it can do when its session
+// opened, of what the app offers before the chat wakes.
+type AgentTook struct {
+	Images bool `json:",omitempty"` // images in prompts
+	Fork   bool `json:",omitempty"` // forking the session (side chats, Fork chat)
+	Rewind bool `json:",omitempty"` // forking at a message (rewind, Fork from here)
 }
 
 // ProjectFolder is the folder the chat stands for: in a worktree, the same
@@ -338,7 +354,51 @@ type MCPServer struct {
 	OffBy string
 	// Approved says the project's local settings approve a project server.
 	Approved bool
+	// Untrusted says the agent doesn't load this project server because
+	// the folder isn't trusted in it (PiG's trust.json).
+	Untrusted bool
+	// Held is why its switch can't act here, in a few words for the
+	// switch's tooltip ("Set by this folder's .pig/mcp.json"); "" when it
+	// can.
+	Held string
 }
+
+// MCPShape is what an agent's MCP config has of Claude Code's model
+// (features/mcp's Config.Shape).
+type MCPShape struct {
+	// Scopes are where its servers are added and changed, in the order
+	// offered: Claude's user, project and local; Ante's user alone.
+	Scopes []string
+	// Switch says a server turns off and on (SetOn); UserSwitch says
+	// where it reaches for a server of yours.
+	Switch     bool
+	UserSwitch Reach
+	// Approval says a project's servers are approved one by one (Claude's
+	// .mcp.json); without it, they load with the folder's trust in the
+	// agent (PiG's), and one not loaded is Untrusted.
+	Approval bool
+	// SSE says the agent speaks the legacy SSE transport.
+	SSE bool
+	// Checked are the scopes only the agent's check fills, whose servers
+	// no file of its gives (Claude's plugins' and claude.ai's).
+	Checked []string
+	// ProjectShared says a project server's switch writes the project's
+	// own file, which everyone on the repository shares (PiG's
+	// .pig/mcp.json), not a file of yours alone (Claude's local settings).
+	ProjectShared bool
+}
+
+// Reach is where the switch on a server of yours turns it off and on.
+type Reach string
+
+const (
+	// SwitchProject is for the folder's project only (Claude's /mcp,
+	// recorded in ~/.claude.json).
+	SwitchProject Reach = "project"
+	// SwitchEverywhere is on or off everywhere, in your own file (PiG's
+	// "enabled" in its mcp.json).
+	SwitchEverywhere Reach = "everywhere"
+)
 
 // ShellEnv is how reading the login shell's environment, which agents
 // start with, went last (ADR 0048): the shell, when it ended, and why it

@@ -111,6 +111,11 @@ func TestReadRefusesLinksOut(t *testing.T) {
 	if f, err := Read(dir, "folder"); err != nil || !f.Missing {
 		t.Errorf("Read(a folder) = %+v, %v; want missing", f, err)
 	}
+	// A file whose folder is gone (a worktree removed) isn't there: not a
+	// read that failed.
+	if f, err := Read(filepath.Join(dir, "removed"), "old.md"); err != nil || !f.Missing {
+		t.Errorf("Read(a removed folder's file) = %+v, %v; want missing", f, err)
+	}
 }
 
 func TestReadCapsSize(t *testing.T) {

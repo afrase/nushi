@@ -52,9 +52,11 @@ class StatusMark extends CustomPainter {
       old.color != color || old.ringing != ringing || old.halo != halo;
 }
 
-/// What a running row of a workflow has where [TaskMark] is (a phase on
-/// its card, an agent in its pane): the running dot, [TaskMark.size]
-/// square. A subagent's row has none: its words shine instead.
+/// What a running row with no state words has where [TaskMark] is (a phase
+/// on a workflow's card, an agent in its pane, a Worktrees row whose
+/// subagent or run runs, there as [TaskMark.dot]): the running dot,
+/// [TaskMark.size] square. A
+/// subagent's row in the transcript has none: its words shine instead.
 class RunningDot extends StatelessWidget {
   const new({super.key});
 

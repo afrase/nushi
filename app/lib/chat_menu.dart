@@ -414,6 +414,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           future: _plan,
           builder: (context, snap) => Button(
             label: _deleting ? 'Deleting…' : 'Delete',
+            roomFor: const ['Deleting…'],
             kind: ButtonKind.destructive,
             onPressed: snap.hasData && !_deleting ? _delete : null,
           ),

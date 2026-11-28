@@ -186,7 +186,7 @@ void main() {
     final title = _inPull(find.text('Pull request'));
     await mouse.moveTo(tester.getCenter(title));
     await tester.pump();
-    expect(find.byTooltip('Checked 20 s ago · every minute'), findsOneWidget);
+    expect(find.byTooltip('Checked 20 s ago, every minute'), findsOneWidget);
     await mouse.moveTo(Offset.zero); // the grip in the summary's place
     _opened(fake);
     await _later(tester, const Duration(seconds: 40));
@@ -195,7 +195,7 @@ void main() {
     await _later(tester, const Duration(seconds: 5));
     await mouse.moveTo(tester.getCenter(title));
     await tester.pump();
-    expect(find.byTooltip('Checked 5 s ago · every minute'), findsOneWidget);
+    expect(find.byTooltip('Checked 5 s ago, every minute'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
 
@@ -259,15 +259,15 @@ void main() {
     final at = DateTime(2026, 10, 29, 12);
     expect(
       checkedWords(at, pullWidgetPoll, at.add(const Duration(seconds: 20))),
-      'Checked 20 s ago · every minute',
+      'Checked 20 s ago, every minute',
     );
     expect(
       checkedWords(at, pullDonePoll, at.add(const Duration(minutes: 3))),
-      'Checked 3 min ago · every 15 minutes',
+      'Checked 3 min ago, every 15 minutes',
     );
     expect(
       checkedWords(null, pullWidgetPoll, at),
-      'Not checked yet · every minute',
+      'Not checked yet, every minute',
     );
   });
 
@@ -383,7 +383,7 @@ void main() {
     final p = pull()..item = item(1, 'Add Sub and Neg', state: 'merged');
     final (d, _) = await _app(tester, whole: p);
     expect(
-      _inPull(find.textContaining('Merged into main', findRichText: true)),
+      _inPull(find.textContaining('merged into main', findRichText: true)),
       findsOneWidget,
     );
     expect(_inPull(find.byType(ChecksBadge)), findsNothing);
@@ -399,6 +399,28 @@ void main() {
       _inPull(find.textContaining('1 new comment', findRichText: true)),
       findsOneWidget,
     );
+    e.dispose();
+  }, variant: onMac);
+
+  testWidgets("a row's cue follows its counts after a comma, lower case, "
+      'and Clean up… has a place of its own (issue 119)', (tester) async {
+    // A count beside a count reads as one: "−5 2 threads".
+    final (d, _) = await _app(tester, whole: pull()..mergeState = 'blocked');
+    final row = find.descendant(
+      of: find.byType(PullRow),
+      matching: find.byType(RichText),
+    );
+    String plain(Finder f) => tester
+        .widgetList<RichText>(f)
+        .map((r) => r.text.toPlainText())
+        .join('\n');
+    expect(plain(_inPull(row)), contains(', 2 threads'));
+    d.dispose();
+    final p = pull()..item = item(1, 'Add Sub and Neg', state: 'merged');
+    final (e, _) = await _app(tester, whole: p);
+    expect(plain(_inPull(row)), contains(', merged into main'));
+    expect(plain(_inPull(row)), isNot(contains('main.')));
+    expect(_inPull(find.text('Clean up…')), findsOneWidget);
     e.dispose();
   }, variant: onMac);
 

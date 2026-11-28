@@ -30,6 +30,7 @@ class ChangeSpan {
     this.status, {
     this.commits = const [],
     this.worktree,
+    this.related,
     this.head = '',
   });
 
@@ -40,7 +41,12 @@ class ChangeSpan {
   final List<Commit> commits;
 
   /// The related worktree this is of, by path: it only reads (ADR 0081).
+  /// Review comments are kept by it.
   final String? worktree;
+
+  /// That worktree's record's key (`RelatedWorktrees.keyOf`): a path can
+  /// have several records.
+  final String? related;
 
   /// The commit a removed worktree last had: it has no folder, so its
   /// commits are read in the chat's by this. '' for a folder's HEAD.
@@ -125,8 +131,9 @@ class ChangeSpan {
     return (base: base, counted: counted, status: status);
   }
 
-  /// Reads related worktree [w] of [chat], only ever for a click: what shows
-  /// next runs a GetDiff (ADR 0081). A removed one, or one whose folder went
+  /// Reads related worktree [w] of [chat], its record's [key] taken when
+  /// it was picked, only ever for a click: what shows next runs a GetDiff
+  /// (ADR 0081). A removed one, or one whose folder went
   /// since the daemon looked, reads its commits in the chat's folder. The
   /// scope is [picked] (a Scope's name), else Branch, as a subagent's work
   /// is what's being looked at.
@@ -134,6 +141,7 @@ class ChangeSpan {
     Daemon daemon,
     ChatState chat,
     RelatedWorktree w,
+    String key,
     String? picked,
   ) async {
     final client = daemon.client;
@@ -155,6 +163,7 @@ class ChangeSpan {
           status,
           commits: commits,
           worktree: w.path,
+          related: key,
           head: head,
         );
     final scopes = span(Scope.branch).scopes;

@@ -196,7 +196,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
               else
                 tildePath(wt.path),
               if (st.changed == 0 && !st.gone && st.error.isEmpty) 'clean',
-            ].join(' · '),
+            ].join(', '),
             note: wt.found && !st.gone ? 'Made outside Nushi.' : null,
             extra: st.changed > 0 && !st.gone
                 ? DirtyWorktree(

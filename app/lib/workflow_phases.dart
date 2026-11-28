@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/workflows.dart';
 
@@ -156,7 +155,7 @@ class _PhaseLine extends StatelessWidget {
           ),
           if (r.progress.isNotEmpty)
             TextSpan(
-              text: planned ? ' · ${r.progress}' : ' ${r.progress}',
+              text: ' ${r.progress}',
               style: planned ? muted : theme.ui(t.textSecondary, size: 12),
             ),
         ],
@@ -172,7 +171,8 @@ class _PhaseLine extends StatelessWidget {
           SizedBox(
             width: TaskMark.size,
             child: Center(
-              child: running ? const RunningDot() : TaskMark(r.state),
+              // One TaskMark, so its check draws itself as the phase ends.
+              child: TaskMark(r.state, dot: running),
             ),
           ),
           // The title is cut only past half the line; who runs takes the

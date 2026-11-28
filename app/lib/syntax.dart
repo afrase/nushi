@@ -6,6 +6,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/diff_find.dart';
 import 'package:nushi/syntax_languages.dart';
+import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:re_highlight/re_highlight.dart';
 
@@ -266,33 +267,48 @@ class SyntaxLines implements DiffLineSource {
   final _listeners = <void Function()>[];
   List<DiffHit> _hits = const [];
   DiffHit? _now;
-  // The lines with hits on them, as drawn, by side and line.
-  Map<(PaneSide, int), DiffLine> _marked = const {};
+  // The hits by side and line; the lines with hits on them, as drawn, made
+  // as the view asks for them (a large diff's tens of thousands of
+  // matches would draw every line on each step).
+  Map<(PaneSide, int), List<DiffHit>> _byLine = const {};
+  final _marked = <(PaneSide, int), DiffLine>{};
 
-  /// Marks a find's [hits], [now] the current one (none clears them).
+  /// Marks a find's [hits], [now] the current one (none clears them). The
+  /// same list again, a step: only the lines the current one left and
+  /// came to are drawn again.
   void mark(List<DiffHit> hits, DiffHit? now) {
-    _hits = hits;
+    if (identical(hits, _hits)) {
+      for (final h in [_now, now]) {
+        if (h != null) _marked.remove((h.side, h.line));
+      }
+    } else {
+      _hits = hits;
+      final byLine = <(PaneSide, int), List<DiffHit>>{};
+      for (final h in hits) {
+        (byLine[(h.side, h.line)] ??= []).add(h);
+      }
+      _byLine = byLine;
+      _marked.clear();
+    }
     _now = now;
-    _mark();
     _tell();
   }
 
-  void _mark() {
-    final byLine = <(PaneSide, int), List<DiffHit>>{};
-    for (final h in _hits) {
-      (byLine[(h.side, h.line)] ??= []).add(h);
-    }
-    _marked = {
-      for (final MapEntry(key: (side, line), value: hits) in byLine.entries)
-        (side, line): markHits(
-          _sides[side.index][line],
-          hits,
-          _now,
-          mark: Capture.values.length,
-          markNow: Capture.values.length + 1,
-        ),
-    };
+  /// A line drawn with its hits, counted ([linesMarked]).
+  DiffLine _markHits(
+    DiffLine line,
+    List<DiffHit> hits,
+    DiffHit? now, {
+    required int mark,
+    required int markNow,
+  }) {
+    linesMarked++;
+    return markHits(line, hits, now, mark: mark, markNow: markNow);
   }
+
+  /// The lines drawn with a find's hits since a test last set it to 0.
+  @visibleForTesting
+  static int linesMarked = 0;
 
   void _tell() {
     for (final l in List.of(_listeners)) {
@@ -321,13 +337,27 @@ class SyntaxLines implements DiffLineSource {
             l,
       ];
     }
-    _mark();
+    _marked.clear();
     _tell();
   }
 
+  /// Line [line] of [side] as it is, without a find's marks.
+  DiffLine? plainAt(PaneSide side, int line) =>
+      _sides[side.index].elementAtOrNull(line);
+
   @override
-  DiffLine? lineAt(PaneSide side, int line) =>
-      _marked[(side, line)] ?? _sides[side.index].elementAtOrNull(line);
+  DiffLine? lineAt(PaneSide side, int line) {
+    final plain = plainAt(side, line);
+    final hits = _byLine[(side, line)];
+    if (plain == null || hits == null) return plain;
+    return _marked[(side, line)] ??= _markHits(
+      plain,
+      hits,
+      _now,
+      mark: Capture.values.length,
+      markNow: Capture.values.length + 1,
+    );
+  }
 
   @override
   void prefetch(PaneSide side, ModelSpan span) {}
@@ -355,6 +385,12 @@ class SyntaxLines implements DiffLineSource {
 /// WCAG's floor for large text and for what must be seen; 4.5 would
 /// recolour most of a light set's code even where it reads.
 const double codeOnTintContrast = 3;
+
+/// Code's colour on a find's mark in a code block (`TextMarks.ink`): the
+/// same rule as on a diff's tint, for the fills Nushi paints itself
+/// (issue 117).
+Color codeOnMark(Color color, Color fill, Color background) =>
+    codeOn(color, fill, background: background, floor: codeOnTintContrast);
 
 /// The diff theme for [t]: its diff colors, with the transcript's code
 /// colors. A removed line in one column is red, the way an inserted one is

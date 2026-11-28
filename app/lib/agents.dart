@@ -42,7 +42,8 @@ String agentTitle(String agent) => switch (agent) {
   _ => capital(agent),
 };
 
-/// The agents whose MCP servers Nushi shows and changes (Claude, Ante).
+/// The agents whose MCP servers Nushi shows and changes (Claude, Ante,
+/// PiG).
 List<Agent> get mcpAgents => knownAgents.values.where((a) => a.mcp).toList();
 
 /// The agent new chats start with: the newest of [chats]'s, else the

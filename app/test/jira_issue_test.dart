@@ -272,8 +272,8 @@ void main() {
             )
           : null,
     );
-    expect(find.text('build.zip · 5.0 MB'), findsOneWidget);
-    expect(find.text('notes.txt · 20 KB'), findsOneWidget);
+    expect(find.text('build.zip, 5.0 MB'), findsOneWidget);
+    expect(find.text('notes.txt, 20 KB'), findsOneWidget);
     d.dispose();
   });
 
@@ -282,17 +282,20 @@ void main() {
   ) async {
     final (fake, d, opened) = await _open(tester);
     expect(find.text('Log in with a passkey'), findsOneWidget);
+    // The labels are a line of their own, so their commas never run into
+    // the meta line's (issue 119).
     expect(
-      find.text('Reported by Ann Lee · 3d ago · updated 2h ago · auth'),
+      find.text('Reported by Ann Lee, 3d ago, updated 2h ago'),
       findsOneWidget,
     );
+    expect(find.text('Labels: auth'), findsOneWidget);
     expect(find.text('Acceptance criteria'), findsOneWidget);
     expect(find.text('[image: beacon]'), findsOneWidget);
     expect(
       fake.calls.whereType<GetJiraAttachmentRequest>().map((r) => r.id).toSet(),
       {'10000'},
     );
-    expect(find.text('notes.pdf · 20 KB'), findsOneWidget);
+    expect(find.text('notes.pdf, 20 KB'), findsOneWidget);
     await tester.tap(find.text('ACME-13'));
     await tester.tap(find.text('ACME-1'));
     expect(opened, ['ACME-13', 'ACME-1']);
@@ -384,14 +387,14 @@ void main() {
     // The chat already on it is listed, and what its agent wrote.
     expect(find.text('Passkeys: the API'), findsOneWidget);
     expect(
-      find.text('Test User · 30m ago · by Claude in “Passkeys: the API”'),
+      find.text('Test User, 30m ago, by Claude in “Passkeys: the API”'),
       findsOneWidget,
     );
     expect(
-      find.text('To In Progress · 1h ago · by Claude in “Passkeys: the API”'),
+      find.text('To In Progress, 1h ago, by Claude in “Passkeys: the API”'),
       findsOneWidget,
     );
-    expect(find.text('Ann Lee · 5h ago'), findsOneWidget);
+    expect(find.text('Ann Lee, 5h ago'), findsOneWidget);
     await tester.tap(find.text('Start work'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('nushi'));

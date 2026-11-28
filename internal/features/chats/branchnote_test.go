@@ -161,3 +161,26 @@ func TestMoveToldForAnyFolderButALineBreak(t *testing.T) {
 		}
 	}
 }
+
+// The told line's suffix is ", told the agent" (no dot between a line's
+// parts, issue 119); a line stored with the old " · told the agent" is
+// still told, so it never gets a second suffix.
+func TestToldSuffixNewAndOld(t *testing.T) {
+	_, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	old := c.addLocked(model.Item{Kind: model.Notice, Status: "branch_renamed",
+		Text: "Branch renamed to nushi/kept · told the agent"})
+	fresh := c.addLocked(model.Item{Kind: model.Notice, Status: "branch_renamed", Text: "Branch renamed to nushi/fresh"})
+	ids := c.untoldLocked("branch_renamed")
+	if len(ids) != 1 || ids[0] != fresh {
+		t.Fatalf("untold %v, want only %s (not %s)", ids, fresh, old)
+	}
+	c.markToldLocked(ids)
+	if got, want := c.itemLocked(fresh).Text, "Branch renamed to nushi/fresh, told the agent"; got != want {
+		t.Errorf("told line %q, want %q", got, want)
+	}
+	if ids := c.untoldLocked("branch_renamed"); len(ids) != 0 {
+		t.Errorf("untold again: %v", ids)
+	}
+}

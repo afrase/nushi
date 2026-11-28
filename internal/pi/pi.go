@@ -34,22 +34,27 @@ import (
 
 // Flavor is a program that speaks Pi's RPC mode, and the names it has.
 type Flavor struct {
-	Name, Title string // as Nushi calls it
-	CLI         string // its program
-	Version     string // whose RPC mode the bridge follows; newer ones are tried, and say so in the log
-	Min         string // the oldest the bridge runs; see check
-	Folder      string // its folder in your home and in a project
-	Env         string // its variables' prefix
-	XDG         bool   // its home can move: <Env>_HOME, $XDG_CONFIG_HOME/<CLI>
+	Name, Title string   // as Nushi calls it
+	CLI         string   // its program
+	Version     string   // whose RPC mode the bridge follows; others are tried, and say so in the log
+	Tested      []string // the versions the bridge was tried with, oldest first
+	Min         string   // the oldest the bridge runs; see check
+	Folder      string   // its folder in your home and in a project
+	Env         string   // its variables' prefix
+	XDG         bool     // its home can move: <Env>_HOME, $XDG_CONFIG_HOME/<CLI>
+	// Own is the subcommand that names the program's own version when
+	// --version names only the Pi it ports (PiG 0.8.0's `pig version`);
+	// "" when --version is its own. See ReadVersion.
+	Own string
 }
 
 var (
 	// Pi is Pi itself, a Node program.
-	Pi = Flavor{Name: "pi", Title: "Pi", CLI: "pi", Version: "1.4.0", Min: "0.80.4",
+	Pi = Flavor{Name: "pi", Title: "Pi", CLI: "pi", Version: "1.4.0", Tested: []string{"1.4.0"}, Min: "0.80.4",
 		Folder: ".pi", Env: "PI"}
 	// PiG is the Go port.
-	PiG = Flavor{Name: "pig", Title: "PiG", CLI: "pig", Version: "0.5.3",
-		Folder: ".pig", Env: "PIG", XDG: true}
+	PiG = Flavor{Name: "pig", Title: "PiG", CLI: "pig", Version: "0.8.0", Tested: []string{"0.5.3", "0.8.0"},
+		Folder: ".pig", Env: "PIG", XDG: true, Own: "version"}
 )
 
 // Command is the nushid subcommand that runs the bridge for f.
@@ -115,22 +120,100 @@ func (f Flavor) Main() {
 	Serve(os.Stdin, os.Stdout, cfg)
 }
 
-// version reads the program's version (Pi's "1.4.0"; PiG's
-// "0.5.3+1.4.0.74f46864": its own, then the Pi it ports), and says so when
-// it isn't the one the bridge follows.
+// version reads the program's version (ReadVersion), and says so when it
+// isn't the one the bridge follows.
 func (f Flavor) version(bin string) (string, error) {
-	out, err := agentproc.Version(bin)
+	v, err := f.ReadVersion(func(bare []string, args ...string) ([]byte, error) {
+		var env []string // nil and "": the bridge's own
+		var dir string
+		if bare != nil {
+			env, dir = agentproc.Bare(os.Environ(), bare)
+		}
+		return agentproc.Output(bin, env, dir, args...)
+	})
 	if err != nil {
 		return "", err
 	}
-	v, _, _ := strings.Cut(out, "+")
 	if err := f.check(v); err != nil {
 		return "", err
 	}
-	if v != f.Version {
+	switch {
+	case v == "":
+		warnf("couldn't read %s's version; the bridge follows %s's RPC mode", f.CLI, f.Version)
+	case v != f.Version:
 		warnf("%s %s isn't %s, whose RPC mode the bridge follows", f.CLI, v, f.Version)
 	}
 	return v, nil
+}
+
+// ownSince is the Pi that PiG 0.8.0 ports, the first PiG seen to print
+// only Pi's version for --version, and to have `pig version`.
+const ownSince = "1.6.0"
+
+// ReadVersion reads the program's own version with run (the program run
+// with args, its stdout; with bare not nil, in an environment of PATH and
+// bare alone, in bare's HOME: agentproc.Bare). --version is Pi's "1.4.0", PiG 0.5.3's
+// "0.5.3+1.4.0.74f46864" (its own, then the Pi it ports and its commit),
+// PiG 0.8.0's "1.6.0" (the Pi alone), whose own is then the first line of
+// Own (`pig version`: "pig: 0.8.0", then "upstream pi: 1.6.0" and more).
+// Own is asked only of a program whose --version names Pi 1.6.0 or later:
+// a PiG between 0.5.3 and 0.8.0 may lack it, and would take "version" for
+// a prompt. So Own runs bare too (ownBare): no key to call a model with,
+// no settings or sessions of the user's to write to. "" when it can't be
+// read; an error when --version can't run.
+func (f Flavor) ReadVersion(run func(bare []string, args ...string) ([]byte, error)) (string, error) {
+	out, err := run(nil, "--version")
+	if err != nil {
+		return "", err
+	}
+	line := firstLine(out)
+	if own, _, ok := strings.Cut(line, "+"); ok {
+		if agentproc.Numbers(own) == nil {
+			return "", nil // not a version: unknown, as Own's garbage is
+		}
+		return own, nil
+	}
+	if f.Own == "" {
+		return line, nil
+	}
+	if old, err := agentproc.Older(line, ownSince); err != nil || old {
+		return "", nil //nolint:nilerr // not a version this reads: unknown, not a failure
+	}
+	out, err = f.ownBare(run)
+	if err != nil {
+		return "", nil //nolint:nilerr // --version ran: the program is there, its own version unknown
+	}
+	v, ok := strings.CutPrefix(firstLine(out), f.CLI+": ")
+	if !ok || agentproc.Numbers(v) == nil {
+		return "", nil
+	}
+	return v, nil
+}
+
+// ownBare runs Own with its home, <Env>_HOME and agent folder in an empty
+// temp folder, removed after, and no other variable but PATH; the home is
+// its working folder, so it reads no AGENTS.md or folder of the user's.
+func (f Flavor) ownBare(run func(bare []string, args ...string) ([]byte, error)) ([]byte, error) {
+	dir, err := os.MkdirTemp("", "nushi-"+f.CLI+"-version-")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+	bare := []string{"HOME=" + filepath.Join(dir, "home"), f.Env + "_HOME=" + filepath.Join(dir, f.CLI),
+		f.Env + "_CODING_AGENT_DIR=" + filepath.Join(dir, "agent")}
+	for _, kv := range bare {
+		_, d, _ := strings.Cut(kv, "=")
+		if err := os.Mkdir(d, 0o700); err != nil {
+			return nil, err
+		}
+	}
+	return run(bare, f.Own)
+}
+
+// firstLine is out's first line, trimmed.
+func firstLine(out []byte) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
+	return strings.TrimSpace(line)
 }
 
 // check refuses a version older than Min, or one it can't read. Trust

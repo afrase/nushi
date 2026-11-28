@@ -84,6 +84,6 @@ On Linux, use Ctrl wherever the Mac uses ⌘. The one exception: ⌥⌘1–9 is 
 - Your token is kept in your Mac's keychain (the keyring on Linux), never in a file. **Remove site…** deletes it from there. If the keychain won't let it (a dismissed prompt, no keyring), the site still goes, and the token stays there. Nushi says so in a note naming the item ("Nushi: Jira API token for" and the site) for you to delete there.
 - If Nushi says it needs your OK to read the token (for example, after an update), click **Allow…** and enter your password when asked. If it offers **Restart daemon** instead, click that. Restarting stops running turns and closes terminals.
 - The list refreshes every minute while it's open, showing the last results while new ones load. It waits while an issue is open over it or Nushi's window is in the background, and refreshes once when you come back.
-- If a refresh fails, the last results stay and the bar says, in red, **Couldn't refresh · as of** when they're from.
+- If a refresh fails, the last results stay and the bar says, in red, **Couldn't refresh, as of** when they're from.
 - A chat started on an issue gives the agent tools for that one issue: it can read it, comment on it, and move it. The agent's own permission mode decides whether it asks you first. The issue's details show which comments and moves came from an agent.
 - If you gave an expiry date, Nushi warns you two weeks before the token runs out. Make a new token and add the site again.

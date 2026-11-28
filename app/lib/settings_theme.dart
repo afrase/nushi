@@ -83,7 +83,9 @@ class ThemeGroup extends StatelessWidget {
   );
 }
 
-/// The first of a set's contrast warnings [w] on a card, and how many more.
+/// The first of a set's contrast warnings [w] on a card, and how many more:
+/// `contrastWarnings` puts the lowest ratio first, whatever its kind (a
+/// text, a mark, the terminal's search).
 String _warning(String set, List<String> w) =>
     '$set: ${w.first}${w.length > 1 ? ' (and ${w.length - 1} more)' : ''}';
 
@@ -260,7 +262,7 @@ class _Name extends StatelessWidget {
                   ),
                 if (card.file case final f?)
                   Text(
-                    'Yours · $f',
+                    'Yours, $f',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: nushi.ui(t.textMuted, size: 11.5),

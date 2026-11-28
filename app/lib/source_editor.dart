@@ -13,6 +13,7 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/editor_find.dart';
+import 'package:nushi/editor_floor.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/keys.dart';
@@ -75,7 +76,8 @@ class _SourceEditorState extends State<SourceEditor> {
   final _focus = FocusNode(debugLabel: 'editor');
 
   /// The editor's scrolling, down and (lines unwrapped) across.
-  final _down = ScrollController();
+  // Never above its start: re_editor's layout never ends there.
+  final _down = FlooredScroll();
   final _across = ScrollController();
   late final _scroll = CodeScrollController(
     verticalScroller: _down,
@@ -85,7 +87,12 @@ class _SourceEditorState extends State<SourceEditor> {
   /// The lines as re_editor laid them out, and its line numbers' place:
   /// where Show whitespace marks them.
   late final _lines = EditorLines(_across);
-  late final _find = EditorFind(widget.edit.controller, _focus);
+  late final _find = EditorFind(
+    widget.edit.controller,
+    _focus,
+    lines: _lines,
+    down: _down,
+  );
   final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
   bool _following = false;
@@ -328,6 +335,7 @@ class _SourceEditorState extends State<SourceEditor> {
       listenable: Listenable.merge([
         widget.edit,
         _find.roomAbove,
+        _find.sight,
         scrollPastEnd,
       ]),
       builder: (context, _) => LayoutBuilder(

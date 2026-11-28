@@ -264,6 +264,9 @@ const (
 	// NushiServiceWriteTerminalProcedure is the fully-qualified name of the NushiService's
 	// WriteTerminal RPC.
 	NushiServiceWriteTerminalProcedure = "/nushi.v1.NushiService/WriteTerminal"
+	// NushiServiceClearTerminalProcedure is the fully-qualified name of the NushiService's
+	// ClearTerminal RPC.
+	NushiServiceClearTerminalProcedure = "/nushi.v1.NushiService/ClearTerminal"
 	// NushiServiceResizeTerminalProcedure is the fully-qualified name of the NushiService's
 	// ResizeTerminal RPC.
 	NushiServiceResizeTerminalProcedure = "/nushi.v1.NushiService/ResizeTerminal"
@@ -778,7 +781,10 @@ type NushiServiceClient interface {
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
 	// its base_commit; once it's removed, GetDiff in the chat's folder with
-	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	// since and commit, while git keeps the commit. ADR 0081. API 99. A
+	// workflow's removed record with nothing to show (no commit of its own)
+	// is left out while it is its path's last record, and sent again, in
+	// its place, once a later record is made at its path (API 158).
 	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// What the Worktrees widget says of some of a chat's related worktrees,
 	// as last looked at: no look, and no filter or hook runs (API 100).
@@ -801,7 +807,10 @@ type NushiServiceClient interface {
 	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
 	// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
 	// refused for it. Login and Logout are refused only when that Ante has no
-	// sign-in for MCP servers (before 0.2.15).
+	// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+	// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+	// until PiG trusts the folder), checked by `pig mcp list --json` in the
+	// folder and signed in to by `pig mcp login`; McpShape says what it has.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
@@ -817,9 +826,13 @@ type NushiServiceClient interface {
 	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
 	// project's .claude/settings.local.json). A user or local server: as the
 	// agent's own switch does, asked of the agent (Claude: /mcp in a
-	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-	// any other scope (Claude's plugins' servers and claude.ai connectors)
-	// and by an agent with no off switch.
+	// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+	// 157): "enabled" in the file that has the server, so one of yours is on
+	// or off everywhere (McpShape.user_switch); refused, with
+	// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+	// it. Refused for any other scope (Claude's plugins' servers and
+	// claude.ai connectors) and by an agent with no off switch. These
+	// changes and the sign-ins are the Mac's app's alone (macOnly).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -867,9 +880,19 @@ type NushiServiceClient interface {
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again.
+	// A client that falls far behind is cut off and attaches again. Each
+	// message says where its data falls in all the terminal has printed
+	// (offset), and the first where the terminal was cleared, if it was
+	// (cleared_at; API 159).
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error)
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+	// the first message of each later attach gives as cleared_at, so the
+	// client clears again there (issue #122). The terminal keeps the latest
+	// place: an older one is ignored, one past its output taken as its end.
+	// The place goes when the terminal closes or restarts, with its output.
+	// API 159.
+	ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
 	// itself.
@@ -1615,6 +1638,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
 			connect.WithClientOptions(opts...),
 		),
+		clearTerminal: connect.NewClient[v1.ClearTerminalRequest, v1.ClearTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceClearTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ClearTerminal")),
+			connect.WithClientOptions(opts...),
+		),
 		resizeTerminal: connect.NewClient[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse](
 			httpClient,
 			baseURL+NushiServiceResizeTerminalProcedure,
@@ -2170,6 +2199,7 @@ type nushiServiceClient struct {
 	listTerminals           *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
 	attachTerminal          *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
 	writeTerminal           *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	clearTerminal           *connect.Client[v1.ClearTerminalRequest, v1.ClearTerminalResponse]
 	resizeTerminal          *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
 	renameTerminal          *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
 	arrangeTerminals        *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
@@ -2687,6 +2717,11 @@ func (c *nushiServiceClient) AttachTerminal(ctx context.Context, req *connect.Re
 // WriteTerminal calls nushi.v1.NushiService.WriteTerminal.
 func (c *nushiServiceClient) WriteTerminal(ctx context.Context, req *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
 	return c.writeTerminal.CallUnary(ctx, req)
+}
+
+// ClearTerminal calls nushi.v1.NushiService.ClearTerminal.
+func (c *nushiServiceClient) ClearTerminal(ctx context.Context, req *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error) {
+	return c.clearTerminal.CallUnary(ctx, req)
 }
 
 // ResizeTerminal calls nushi.v1.NushiService.ResizeTerminal.
@@ -3364,7 +3399,10 @@ type NushiServiceHandler interface {
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
 	// its base_commit; once it's removed, GetDiff in the chat's folder with
-	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	// since and commit, while git keeps the commit. ADR 0081. API 99. A
+	// workflow's removed record with nothing to show (no commit of its own)
+	// is left out while it is its path's last record, and sent again, in
+	// its place, once a later record is made at its path (API 158).
 	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// What the Worktrees widget says of some of a chat's related worktrees,
 	// as last looked at: no look, and no filter or hook runs (API 100).
@@ -3387,7 +3425,10 @@ type NushiServiceHandler interface {
 	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
 	// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
 	// refused for it. Login and Logout are refused only when that Ante has no
-	// sign-in for MCP servers (before 0.2.15).
+	// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+	// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+	// until PiG trusts the folder), checked by `pig mcp list --json` in the
+	// folder and signed in to by `pig mcp login`; McpShape says what it has.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
@@ -3403,9 +3444,13 @@ type NushiServiceHandler interface {
 	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
 	// project's .claude/settings.local.json). A user or local server: as the
 	// agent's own switch does, asked of the agent (Claude: /mcp in a
-	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-	// any other scope (Claude's plugins' servers and claude.ai connectors)
-	// and by an agent with no off switch.
+	// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+	// 157): "enabled" in the file that has the server, so one of yours is on
+	// or off everywhere (McpShape.user_switch); refused, with
+	// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+	// it. Refused for any other scope (Claude's plugins' servers and
+	// claude.ai connectors) and by an agent with no off switch. These
+	// changes and the sign-ins are the Mac's app's alone (macOnly).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -3453,9 +3498,19 @@ type NushiServiceHandler interface {
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again.
+	// A client that falls far behind is cut off and attaches again. Each
+	// message says where its data falls in all the terminal has printed
+	// (offset), and the first where the terminal was cleared, if it was
+	// (cleared_at; API 159).
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+	// the first message of each later attach gives as cleared_at, so the
+	// client clears again there (issue #122). The terminal keeps the latest
+	// place: an older one is ignored, one past its output taken as its end.
+	// The place goes when the terminal closes or restarts, with its output.
+	// API 159.
+	ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
 	// itself.
@@ -4197,6 +4252,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceClearTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceClearTerminalProcedure,
+		svc.ClearTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("ClearTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceResizeTerminalHandler := connect.NewUnaryHandler(
 		NushiServiceResizeTerminalProcedure,
 		svc.ResizeTerminal,
@@ -4837,6 +4898,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAttachTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceWriteTerminalProcedure:
 			nushiServiceWriteTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceClearTerminalProcedure:
+			nushiServiceClearTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceResizeTerminalProcedure:
 			nushiServiceResizeTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceRenameTerminalProcedure:
@@ -5350,6 +5413,10 @@ func (UnimplementedNushiServiceHandler) AttachTerminal(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WriteTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ClearTerminal is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error) {

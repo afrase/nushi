@@ -60,14 +60,14 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
   final resolved = p.threads.length - open;
   final found = findings == 0
       ? ''
-      : ' · $findings finding${findings == 1 ? '' : 's'}';
+      : ', $findings finding${findings == 1 ? '' : 's'}';
   final comments = seg(
     Segment.comments,
     'Comments',
     open > 0
         ? '$open unresolved$found'
         : p.threads.isEmpty
-        ? (found.isEmpty ? 'None' : found.substring(3))
+        ? (found.isEmpty ? 'None' : found.substring(2))
         : 'All resolved$found',
     (done: resolved, failing: 0, cancelled: 0, waiting: open + findings),
   );
@@ -93,7 +93,7 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
         : required && approved == 0
         ? 'Approval required'
         : approved > 0
-        ? '$approved approved${waiting > 0 ? ' · $waiting awaited' : ''}'
+        ? '$approved approved${waiting > 0 ? ', $waiting awaited' : ''}'
         : waiting > 0
         ? '$waiting awaited'
         : 'None required',

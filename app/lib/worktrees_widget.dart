@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart';
+import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/plain_text.dart';
@@ -8,6 +10,7 @@ import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/workflows.dart';
 
 /// How many rows show without a click: each one shown costs git processes
 /// when it refreshes, so the rest wait behind their line.
@@ -24,9 +27,22 @@ PanelWidget? worktreesWidget(
 }) {
   final list = chat.related.ordered;
   if (list.isEmpty) return null;
-  final subs = {for (final s in subagentsOf(chat.items)) s.call.id: s};
-  Widget row(RelatedWorktree w) =>
-      _WorktreeRow(chat, w, subs[w.callId], onChanges, key: ValueKey(w.path));
+  // Those running before the loaded page too: a run's item can be far
+  // back while it still runs.
+  final items = chat.withRunning;
+  final subs = {for (final s in subagentsOf(items)) s.call.id: s.call};
+  // A run's latest Workflow item: a resumed run's state is on its
+  // latest, the call that has its worktree maybe not loaded.
+  final runs = {for (final it in workflowsOf(items)) it.workflow.runId: it};
+  Widget row(RelatedWorktree w) => _WorktreeRow(
+    chat,
+    w,
+    w.runId.isEmpty ? subs[w.callId] : runs[w.runId],
+    onChanges,
+    key: ValueKey(
+      chat.related.keyOf(w)!,
+    ), // of the list; a path can have several
+  );
   final there = [
     for (final w in list)
       if (w.state == 'present') row(w),
@@ -87,15 +103,18 @@ String goneLine(List<RelatedWorktree> gone) {
   };
 }
 
-/// A related worktree: its branch and its subagent's mark, then its work and
-/// how it ended. Its stats are asked for by its being built: a collapsed
-/// widget, or a row folded away, asks for nothing.
+/// A related worktree: its branch and its subagent's or workflow's mark,
+/// then its work and how it ended. Its stats are asked for by its being
+/// built: a collapsed widget, or a row folded away, asks for nothing.
 class _WorktreeRow extends StatefulWidget {
   const new(this.chat, this.worktree, this.run, this.onChanges, {super.key});
 
   final ChatState chat;
   final RelatedWorktree worktree;
-  final SubagentRun? run;
+
+  /// The item whose state its mark shows: its subagent's Agent call, or
+  /// its workflow's latest Workflow item; null when none is loaded.
+  final Item? run;
   final VoidCallback onChanges;
 
   @override
@@ -103,15 +122,18 @@ class _WorktreeRow extends StatefulWidget {
 }
 
 class _WorktreeRowState extends State<_WorktreeRow> {
+  // Its record's key: the row is keyed by it, so it stays the row's.
+  late final String _key = widget.chat.related.keyOf(widget.worktree)!;
+
   @override
   void initState() {
     super.initState();
-    widget.chat.related.want(widget.worktree.path);
+    widget.chat.related.want(_key);
   }
 
   @override
   void dispose() {
-    widget.chat.related.unwant(widget.worktree.path);
+    widget.chat.related.unwant(_key);
     super.dispose();
   }
 
@@ -124,10 +146,13 @@ class _WorktreeRowState extends State<_WorktreeRow> {
     final end = worktreeEnd(w);
     return Tap(
       onTap: () {
-        widget.chat.related.pick(w.path);
+        widget.chat.related.pick(_key);
         widget.onChanges();
       },
-      tooltip: plainName(w.path),
+      tooltip: [
+        plainName(w.path),
+        if (run != null && run.hasWorkflow()) plainName(runName(run.workflow)),
+      ].join('\n'),
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +173,10 @@ class _WorktreeRowState extends State<_WorktreeRow> {
                   ),
                 ),
               ),
-              if (run != null) subagentMark(run),
+              // Its mark's place is kept whether or not its item is
+              // loaded, so the name never moves as one comes or goes.
+              if (w.callId.isNotEmpty || w.runId.isNotEmpty)
+                worktreeMark(run, gone: w.state != 'present'),
             ],
           ),
           Row(
@@ -158,7 +186,7 @@ class _WorktreeRowState extends State<_WorktreeRow> {
                 child: ListenableBuilder(
                   listenable: widget.chat.related,
                   builder: (context, _) => _Work(
-                    widget.chat.related.stats(w.path),
+                    widget.chat.related.stats(_key),
                     gone: w.state != 'present',
                   ),
                 ),
@@ -171,6 +199,26 @@ class _WorktreeRowState extends State<_WorktreeRow> {
       ),
     );
   }
+}
+
+/// The mark at a worktree's row's end for [run], its subagent's call or its
+/// workflow's item: the running dot while it runs and isn't stalled (the
+/// row has no state words, as the Workflow pane's tree), else [TaskMark]
+/// of its state. One [TaskMark] either way, so its check draws itself as
+/// the work ends. A [gone] worktree's row shows nothing live: its mark's
+/// place stays empty while the work goes on elsewhere. With no [run]
+/// loaded, its place is empty too.
+Widget worktreeMark(Item? run, {required bool gone}) {
+  if (run == null) return const TaskMark('');
+  final running =
+      !gone &&
+      (run.hasWorkflow()
+          ? workflowLive(run.workflow) && !run.workflow.stalled
+          : subagentRuns(run));
+  return TaskMark(
+    run.hasWorkflow() ? run.workflow.state : run.subagent.state,
+    dot: running,
+  );
 }
 
 /// "+12 −3, 4 files, 2 ahead", or that its commits are gone; a line of

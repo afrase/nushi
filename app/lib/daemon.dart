@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 155;
+const apiVersion = 159;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -146,10 +146,23 @@ const keepsGoneChatsApi = 151;
 /// what's loaded. Goes with the floor.
 const olderWrittenApi = 154;
 
+/// The API from which a workflow says the files its agents wrote
+/// (Workflow.written) and GetChat's older_written takes them in: with an
+/// older daemon a chat's artifacts are only its own calls'. Goes with the
+/// floor.
+const workflowWrittenApi = 156;
+
 /// The API that says who last changed each line of a file (GetBlame,
 /// issue #78): an older daemon's Files pane has no Blame. Goes with the
 /// floor.
 const blameApi = 155;
+
+/// The API from which an attach says each message's place in all the
+/// terminal printed (AttachTerminalResponse.offset) and where it was last
+/// cleared (cleared_at), and ClearTerminal keeps a clear's place (issue
+/// #122): with an older daemon ⌘K clears this screen only, as before.
+/// Goes with the floor.
+const clearTerminalApi = 159;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -326,7 +339,7 @@ class Daemon extends ChangeNotifier {
 
   /// The chats' terminals, whose sessions end with the daemon.
   late final Terminals terminals = () {
-    final t = Terminals(client);
+    final t = Terminals(client, api: () => daemonApi);
     whenDisposed(t.dispose);
     return t;
   }();

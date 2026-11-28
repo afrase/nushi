@@ -58,7 +58,7 @@ A chat can hold up to 10 pull requests, such as a stack the agent opened branch 
 
 ## The Pull requests widget
 
-The details panel lists the chat's pull requests, a row each: its state's icon, title, checks (`8/11`) and one thing to know, such as **2 threads** or **Ready to merge**. A stack lists its base first.
+The details panel lists the chat's pull requests, a row each: its state's icon, title, checks (`8/11`) and one thing to know, such as **2 threads** or **ready to merge**. A merged one has a **Clean up…** button at the end of its title. A stack lists its base first.
 
 - Click a row to open its **Pull request** tab.
 - Click the checks to see them, or **Fix checks** to send the failures to the agent.
@@ -159,6 +159,6 @@ After the merge, **Clean up…** offers to delete the worktree and branches and 
 - A chat's row in the sidebar gets a red dot while its checks fail, a grey one while a check was cancelled and none failed, and an amber one while they run.
 - For a pull request from a fork, the chat's branch isn't linked to the fork, so a push from the chat doesn't reach the pull request.
 - A fine-grained token works, but sees only one owner's repositories and can't show checks.
-- While Nushi runs it checks your chats' pull requests' state once a minute, every 5 minutes while its window is in the background. It reads a whole pull request only while the GitHub view or its Pull request tab shows it, and only writes what you send. The GitHub view refreshes each minute while it shows and Nushi is in front; if a refresh fails, the bar (and a pull request's page) says, in red, **Couldn't refresh · as of** when what shows is from. A pull request's page always says at its top right when it was last read (**Updated 2m ago**), and **refreshing** while it asks again. With a pull request open in the GitHub view, the bar's **Refresh** (or ⌘R) refreshes that pull request.
+- While Nushi runs it checks your chats' pull requests' state once a minute, every 5 minutes while its window is in the background. It reads a whole pull request only while the GitHub view or its Pull request tab shows it, and only writes what you send. The GitHub view refreshes each minute while it shows and Nushi is in front; if a refresh fails, the bar (and a pull request's page) says, in red, **Couldn't refresh, as of** when what shows is from. A pull request's page always says at its top right when it was last read (**Updated 2m ago**), and **refreshing** while it asks again. With a pull request open in the GitHub view, the bar's **Refresh** (or ⌘R) refreshes that pull request.
 - Text you're writing in a reply or review stays if you switch to another chat. It's lost if you quit Nushi.
 - The [Phone](Phone) shows a one-line pull request summary in the chat (`+2` for the others) and the link chips, but has no Pull request tab.

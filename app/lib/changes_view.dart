@@ -70,7 +70,8 @@ class _ChangesViewState extends State<ChangesView> {
   bool _reloading = false;
   bool _repick = false; // commits were picked during a reload
   // The related worktree the view last followed, and what it amounted to
-  // when read; the one whose commits turned out to be gone.
+  // when read; the one whose commits turned out to be gone. Each by its
+  // record's key (RelatedWorktrees.keyOf).
   late String? _following = chat.related.shown;
   String? _readStamp;
   String? _goneOf;
@@ -198,11 +199,11 @@ class _ChangesViewState extends State<ChangesView> {
 
   /// The worktree shown has moved on from what was read of it.
   bool get _behind {
-    final path = chat.related.shown;
-    return path != null &&
+    final key = chat.related.shown;
+    return key != null &&
         _readStamp != null &&
-        _span?.worktree == path &&
-        chat.related.stamp(path) != _readStamp;
+        _span?.related == key &&
+        chat.related.stamp(key) != _readStamp;
   }
 
   /// A click: reads what's shown again, a related worktree too.
@@ -216,12 +217,13 @@ class _ChangesViewState extends State<ChangesView> {
   }
 
   /// A related worktree's span, its commits' being gone null; the click
-  /// that asked is behind this, so its stats are read as they stand.
-  Future<ChangeSpan?> _relatedSpan(RelatedWorktree w) async {
-    final stats = await chat.related.statsNow(w.path);
-    _readStamp = chat.related.stamp(w.path);
+  /// that asked is behind this, so its stats are read as they stand. [key]
+  /// is its record's, taken before any wait: the list can move meanwhile.
+  Future<ChangeSpan?> _relatedSpan(RelatedWorktree w, String key) async {
+    final stats = await chat.related.statsNow(key);
+    _readStamp = chat.related.stamp(key);
     if (stats?.commitsGone ?? false) return null;
-    return await ChangeSpan.ofRelated(daemon, chat, w, chat.related.scope);
+    return await ChangeSpan.ofRelated(daemon, chat, w, key, chat.related.scope);
   }
 
   /// The commits picked, as indices: newest, oldest.
@@ -247,6 +249,7 @@ class _ChangesViewState extends State<ChangesView> {
   }
 
   Future<void> _reload(bool fresh) async {
+    final key = chat.related.shown;
     final worktree = chat.related.picked;
     if (worktree != null && !chat.related.takeAsked()) {
       if (mounted) setState(() {});
@@ -263,11 +266,11 @@ class _ChangesViewState extends State<ChangesView> {
     try {
       final span = worktree == null
           ? await (fresh ? _changes.reload() : _changes.read())
-          : await _relatedSpan(worktree);
+          : await _relatedSpan(worktree, key!);
       if (!mounted || asked != _asked) return; // another load took over
       if (span == null) {
         setState(() {
-          _goneOf = worktree?.path;
+          _goneOf = worktree == null ? null : key;
           _error = null;
         });
         return;
@@ -325,7 +328,7 @@ class _ChangesViewState extends State<ChangesView> {
       _span?.scope != Scope.commits || p == null
           ? '${_span?.scope.name}'
           : 'commits:${_commits[p.$1].hash}:${_commits[p.$2].hash}',
-      worktree: _span?.worktree,
+      worktree: _span?.related,
     );
   }
 
@@ -636,16 +639,16 @@ class _ChangesViewState extends State<ChangesView> {
   /// click) the way to read it.
   Widget? _unread() {
     final theme = NushiTheme.of(context);
-    final path = chat.related.shown;
-    if (path == null) return null;
-    if (_goneOf == path) {
+    final key = chat.related.shown;
+    if (key == null) return null;
+    if (_goneOf == key) {
       return Text(
         "This worktree's commits are gone: git no longer has them.",
         textAlign: TextAlign.center,
         style: theme.ui(theme.t.text),
       );
     }
-    if (_span?.worktree == path) return null;
+    if (_span?.related == key) return null;
     return _reloading
         ? const SizedBox.shrink()
         : Button(label: 'Show its changes', onPressed: _again);
@@ -834,7 +837,7 @@ class _ChangesViewState extends State<ChangesView> {
     final related = chat.related;
     final worktree = related.shown;
     // A related worktree not read yet has none of its own to show.
-    final unread = worktree != null && _span?.worktree != worktree;
+    final unread = worktree != null && _span?.related != worktree;
     final span = unread ? null : _span;
     // Before anything loaded (it failed), every scope, to leave the one
     // that fails.

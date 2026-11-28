@@ -135,7 +135,7 @@ class PullSide extends StatelessWidget {
               reviewerName(r),
               end: tooltip(
                 context,
-                r.codeOwner ? '$words · code owner' : words,
+                r.codeOwner ? '$words, code owner' : words,
                 Icon(icon, size: icon == Icons.circle ? 8 : 16, color: ink),
               ),
             ),

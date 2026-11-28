@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/terminals.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/web_page.dart' show openLinkOrSay;
@@ -79,11 +79,13 @@ Future<void> openLink(
 }
 
 /// ⌘F over a terminal, in a [FindBar]: finds in its scrollback,
-/// highlights every match and scrolls to the current one, starting from
-/// the latest. ⏎ goes to the next one down (round from the latest to the
-/// first), ⇧⏎ up. A match is keyed by where it starts.
+/// highlights every match and scrolls to the current one. A terminal is
+/// read from its end, as a chat is, so it reads newest first
+/// ([FindOrder.newestFirst]): the latest match is current and counted 1,
+/// ⏎ goes up to older output (round from the oldest to the latest), ⇧⏎
+/// down. A match is keyed by where it starts.
 class TerminalFind extends Find {
-  new(this.session);
+  new(this.session) : super(order: .newestFirst);
 
   /// The session it finds in (its emulator is a new one after each attach).
   final TermSession session;
@@ -97,7 +99,7 @@ class TerminalFind extends Find {
     _matches = q == null || q.isEmpty ? const [] : terminal.search(q);
     foundAt([
       for (final m in _matches) '${m.range.begin.y}:${m.range.begin.x}',
-    ], _matches.length - 1);
+    ], order.start(_matches.length));
     session.controller.setSearchHighlights(terminal.buffer, [
       for (final m in _matches) m.range,
     ], currentIndex: at);

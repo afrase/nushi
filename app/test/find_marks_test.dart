@@ -304,8 +304,9 @@ void main() {
     final after = _marks(tester);
     expect(after, hasLength(before.length + 1));
     expect(identical(after.first, before.first), isTrue);
+    // The newest was current: it stays, and the new one after it is 1.
     expect(
-      find.text('1 of ${after.length}'),
+      find.text('2 of ${after.length}'),
       findsOne,
       reason: 'the current one stays',
     );

@@ -105,6 +105,7 @@ class _TileTrimmerState extends State<TileTrimmer> {
       final t = theme.t;
       final label = switch (_moving) {
         _Moving.start || _Moving.end =>
+          // design: a range of times
           '${trimClock(f.startOf(f.start))} – ${trimClock(f.startOf(f.end))}',
         _Moving.playhead => trimClock(f.startOf(f.playhead)),
         _Moving.nothing => '',

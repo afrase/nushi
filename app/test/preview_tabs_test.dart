@@ -310,11 +310,77 @@ void main() {
     });
   });
 
-  test('a label says the folder only when two share a name', () {
+  test('a label says the folder only when two share a name, as a path '
+      'before the name (issue 119), to be drawn muted', () {
     const files = ['docs/plan.md', 'site/plan.md', 'a.md'];
-    expect(tabLabel('docs/plan.md', files), 'plan.md · docs');
+    expect(tabParts('docs/plan.md', files), ('plan.md', 'docs'));
+    expect(tabLabel('docs/plan.md', files), 'docs/plan.md');
+    expect(tabParts('a.md', files), ('a.md', ''));
     expect(tabLabel('a.md', files), 'a.md');
   });
+
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('two files of one name: the folder a muted path before '
+        'the name, which is never what is cut (${width.toInt()})', (
+      tester,
+    ) async {
+      final d = await _app(
+        tester,
+        width: width,
+        files: const ['docs/plan.md', 'site/plan.md', 'report.md'],
+      );
+      final names = inPane(find.text('plan.md'));
+      expect(names, findsNWidgets(2), reason: 'the name is its own text');
+      for (final e in names.evaluate()) {
+        final p = e.findRenderObject()! as RenderParagraph;
+        expect(p.didExceedMaxLines, isFalse, reason: 'the name is cut');
+      }
+      // No tab's text starts with an ellipsis: a folder that can't show
+      // four of its own characters shows none, the name alone, its path
+      // in the tab's tooltip (issue 119).
+      final texts = [
+        for (final e in inPane(
+          find.descendant(
+            of: find.byType(PaneTabs),
+            matching: find.byType(Text),
+          ),
+        ).evaluate())
+          if (e.renderObject case final RenderParagraph p when p.size.width > 0)
+            (e.widget as Text).data ?? '',
+      ];
+      expect(texts.where((t) => t.startsWith('…')), isEmpty, reason: '$texts');
+      // Wide, where the folder fits, the twins read apart, each folder a
+      // muted path before the name.
+      if (width > 1000) {
+        for (final folder in ['docs/', 'site/']) {
+          final parent = inPane(find.text(folder));
+          expect(parent, findsOneWidget, reason: folder);
+          expect(
+            tester.renderObject<RenderParagraph>(parent).text.style?.color,
+            NushiTheme.of(tester.element(parent)).t.textMuted,
+          );
+        }
+      }
+      d.dispose();
+    }, variant: onMac);
+    for (final b in renderThemes) {
+      renderTest('two files of one name: the folder muted before it '
+          '(${width.toInt()}, ${b.name})', (tester) async {
+        final d = await _app(
+          tester,
+          width: width,
+          brightness: b,
+          files: const ['docs/plan.md', 'site/plan.md', 'report.md'],
+        );
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'preview_twin_tabs_${width.toInt()}_${b.name}',
+        );
+        d.dispose();
+      }, variant: onMac);
+    }
+  }
 
   // A name is anyone's: a bidi override in it shows (docs/security.md), so
   // invoice\u202efdp.sh can't read as invoicehs.pdf.

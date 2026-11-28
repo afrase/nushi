@@ -16,7 +16,8 @@
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
 //   - containing "subagent": Claude's subagent: an Agent call whose step
 //     (the prompt run as a command) comes on the parent session, tagged
-//     with its parentToolUseId, then the call ends;
+//     with its parentToolUseId, then the call ends; the call is "a1", or
+//     the word after "call=" in the prompt;
 //   - containing "workflow": a Workflow call that launches a run in the
 //     background, as Claude Code 2.1.331 sent it (the "workflow" parity
 //     recording: run wf_194e61d3-d0e, task wtg819jtp), then a message; the
@@ -459,11 +460,15 @@ func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocogn
 		}
 	case strings.Contains(text, "subagent"):
 		claudeCode := func(fields map[string]any) map[string]any { return map[string]any{"claudeCode": fields} }
-		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "a1", "title": "Agent", "kind": "think", "status": "in_progress",
+		call := "a1"
+		if _, after, ok := strings.Cut(text, "call="); ok {
+			call, _, _ = strings.Cut(after, " ")
+		}
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": call, "title": "Agent", "kind": "think", "status": "in_progress",
 			"rawInput": map[string]any{"subagent_type": "general-purpose", "prompt": text}, "_meta": claudeCode(map[string]any{"toolName": "Agent"})})
-		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "a1-step", "title": "Run", "kind": "execute", "status": "completed",
-			"rawInput": map[string]any{"command": text}, "_meta": claudeCode(map[string]any{"toolName": "Bash", "parentToolUseId": "a1"})})
-		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "a1", "status": "completed",
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": call + "-step", "title": "Run", "kind": "execute", "status": "completed",
+			"rawInput": map[string]any{"command": text}, "_meta": claudeCode(map[string]any{"toolName": "Bash", "parentToolUseId": call})})
+		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": call, "status": "completed",
 			"_meta": claudeCode(map[string]any{"toolName": "Agent"})})
 		a.say(session, "The subagent is done.")
 	case strings.Contains(text, "workflow"):

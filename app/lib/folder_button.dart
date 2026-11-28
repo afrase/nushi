@@ -144,7 +144,7 @@ class FolderButton extends StatelessWidget {
               w.branch.isEmpty ? 'detached HEAD' : w.branch,
               detail: w.main
                   ? 'the repository'
-                  : folderParts(w.path).$1 + (w.locked ? ' · locked' : ''),
+                  : folderParts(w.path).$1 + (w.locked ? ', locked' : ''),
               tooltip: tildePath(w.path),
               onPick: () => moveChat(context, daemon, chat, to: w.path),
             ),

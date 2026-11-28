@@ -139,9 +139,12 @@ final _unprintable = RegExp(
 /// checks whatever the app asks for.
 String plainPath(String path) => path.replaceAll(_unprintable, '�');
 
-/// A tool call's title: the agent's, but an MCP call reads "server · tool",
-/// and "· inner" when its input names the tool it runs (a gateway's `tool`,
-/// `tool_name` or `name`).
+/// A tool call's title: the agent's, but an MCP call reads as its tool,
+/// then its server in parentheses, "search_issues (github)"; a gateway's
+/// as the tool its input names (`tool`, `tool_name` or `name`) in its own
+/// tool's place, "jira_search (example-mcp-gateway)", its own in the raw
+/// name on hover. Never "github, search_issues", a list of two (issue
+/// 119).
 String toolTitle(Item it) {
   if (isShow(it)) return 'Showing a file';
   if (serverVerb(it) case final verb?) {
@@ -152,7 +155,7 @@ String toolTitle(Item it) {
   if (mcp == null) return it.title;
   final (server, tool) = mcp;
   final inner = innerTool(shownInput(it), own: tool);
-  return [server, tool, ?inner].join(' · ');
+  return '${inner ?? tool} ($server)';
 }
 
 final _innerKey = RegExp(

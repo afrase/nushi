@@ -227,7 +227,7 @@ void main() {
     );
     // What it plans and hasn't reached comes last, said in words, with
     // nothing to fold (ADR 0141).
-    expect(find.text(' · planned'), findsOne);
+    expect(find.text(' planned'), findsOne);
     expect(
       tester.getRect(find.text('Verify')).top,
       greaterThan(tester.getRect(find.text('No phase')).top),
@@ -380,7 +380,7 @@ void main() {
     expect(find.textContaining('the daemon is busy'), findsOne);
     // Unmistakable, as a bar's failed refresh is: its mark, in crashed.
     expect(
-      find.textContaining("Couldn't refresh · the daemon is busy"),
+      find.textContaining("Couldn't refresh: the daemon is busy"),
       findsOne,
     );
     expect(find.byIcon(Icons.sync_problem), findsOne);

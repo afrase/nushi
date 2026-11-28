@@ -75,6 +75,17 @@ type Terminal struct {
 	Command string
 }
 
+// TerminalOutput is a piece of a terminal's output and its place: places
+// count every byte the terminal has printed since it started, so the
+// kept output's trim never moves one.
+type TerminalOutput struct {
+	At   int64 // the place of Data's first byte
+	Data []byte
+	// Cleared is the place of the terminal's clear (ClearTerminal), on an
+	// attach's first piece; -1 on later pieces and when it has none.
+	Cleared int64
+}
+
 // Usage is what the agent last reported of a chat's usage; what it hasn't
 // reported is zero. Nushi keeps it only while the agent runs.
 type Usage struct {

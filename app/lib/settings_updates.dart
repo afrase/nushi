@@ -62,9 +62,9 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
     final d = widget.daemon;
     final u = d.update;
     final checked = lastChecked(u.checkedMs, clock());
-    if (u.version.isNotEmpty) return '$checked · ${u.version} is out';
+    if (u.version.isNotEmpty) return '$checked, ${u.version} is out';
     if (u.latest.isNotEmpty && u.latest == d.daemonVersion) {
-      return '$checked · up to date';
+      return '$checked, up to date';
     }
     return checked;
   }
@@ -94,6 +94,8 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
             control: Button(
               key: const ValueKey('check-now'),
               label: _checking.value ? 'Checking…' : 'Check now',
+              // Its width while it checks, so it doesn't change.
+              roomFor: const ['Checking…'],
               onPressed: _checking.value
                   ? null
                   : () => unawaited(

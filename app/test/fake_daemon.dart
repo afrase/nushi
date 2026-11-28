@@ -31,6 +31,22 @@ List<Agent> readyAgents() => [
       path: '/bin/${a['name']}',
       ready: true,
       mcpUserOnly: a['mcpUserOnly']! as bool,
+      mcpShape: switch (a['mcpShape']) {
+        final Map<String, Object?> s => McpShape(
+          scopes: [for (final scope in s['scopes']! as List) scope as String],
+          offSwitch: s['offSwitch']! as bool,
+          approval: s['approval']! as bool,
+          sse: s['sse']! as bool,
+          userSwitch: McpUserSwitch.values.firstWhere(
+            (v) => v.name == s['userSwitch']! as String,
+          ),
+          checkedScopes: [
+            for (final scope in s['checkedScopes']! as List) scope as String,
+          ],
+          projectSwitchShared: s['projectSwitchShared']! as bool,
+        ),
+        _ => null,
+      },
       goAgentSwitch: a['goAgentSwitch']! as bool,
       signIn: a['signIn']! as String,
       expires: a['expires']! as String,
@@ -1032,6 +1048,33 @@ Item wrote(String id, String path) => Item(
   paths: [path],
 );
 
+/// A Workflow call of the agent's, item [id] of a transcript: run [name]
+/// in [state], whose agents wrote [files] (each path and how long ago it
+/// last changed, the one changed last first), as a daemon from
+/// `workflowWrittenApi` sends it (Workflow.written).
+Item workflowWrote(
+  String id,
+  String name,
+  List<(String, Duration)> files, {
+  String state = 'running',
+}) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: 'other',
+  title: 'Workflow',
+  tool: 'Workflow',
+  status: 'completed',
+  workflow: Workflow(
+    runId: 'wf_$id',
+    name: name,
+    state: state,
+    written: [
+      for (final (path, ago) in files)
+        WrittenFile(path: path, changed: msAgo(ago)),
+    ],
+  ),
+);
+
 /// An MCP tool call, item [id] of a transcript: [server]'s [tool] with
 /// [args], titled and its input written as Claude sends one
 /// (`mcp__server__tool`, the arguments as indented JSON) or, with
@@ -1154,3 +1197,18 @@ Chat sentChat(Chat c) {
         c.pull,
     ]);
 }
+
+/// The related worktrees the daemon sends of [stored], a chat's list as it
+/// keeps it (internal/features/chats/related_workflow.go's `visible`): a
+/// run's record removed with nothing to show (its last head its base) is
+/// held back while it is its path's last, and sent again, in its place,
+/// once a later record at its path is. So no record's place among its
+/// path's records, the app's key for it, ever moves.
+List<RelatedWorktree> relatedSent(List<RelatedWorktree> stored) => [
+  for (final (i, w) in stored.indexed)
+    if (w.runId.isEmpty ||
+        w.state != 'removed' ||
+        w.lastHead != w.baseCommit ||
+        stored.skip(i + 1).any((k) => k.path == w.path))
+      w,
+];

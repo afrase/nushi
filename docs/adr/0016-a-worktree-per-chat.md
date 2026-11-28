@@ -46,3 +46,6 @@ Several agents working in one repository step on each other's files. Git worktre
 
 ## Amendment (2026-11-23): the notes are bare tags
 - The rename's, switch's and move's notes above are now bare tags, not sentences (ADR 0084's second amendment).
+
+## Amendment (2026-11-26): told after a comma
+- The rename's line now ends ", told the agent", not "· told the agent": no dot between a line's parts (issue 119). A line kept with the old ending is still read as told, so none gets a second.

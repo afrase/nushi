@@ -36,7 +36,7 @@ class EarlierMessages extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        'Couldn’t load earlier messages · ',
+                        'Couldn’t load earlier messages. ',
                         overflow: TextOverflow.ellipsis,
                         style: theme.ui(t.textSecondary, size: 12),
                       ),

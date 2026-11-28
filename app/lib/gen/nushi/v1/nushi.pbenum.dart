@@ -14,6 +14,35 @@ import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
 
+/// Where the switch on one of your servers reaches (API 157).
+class McpUserSwitch extends $pb.ProtobufEnum {
+  /// No switch on yours.
+  static const McpUserSwitch MCP_USER_SWITCH_UNSPECIFIED =
+      McpUserSwitch._(0, _omitEnumNames ? '' : 'MCP_USER_SWITCH_UNSPECIFIED');
+
+  /// For the folder's project only (Claude's /mcp): "in this project".
+  static const McpUserSwitch MCP_USER_SWITCH_PROJECT =
+      McpUserSwitch._(1, _omitEnumNames ? '' : 'MCP_USER_SWITCH_PROJECT');
+
+  /// On or off everywhere, in your own file (PiG's "enabled" in its
+  /// mcp.json).
+  static const McpUserSwitch MCP_USER_SWITCH_EVERYWHERE =
+      McpUserSwitch._(2, _omitEnumNames ? '' : 'MCP_USER_SWITCH_EVERYWHERE');
+
+  static const $core.List<McpUserSwitch> values = <McpUserSwitch>[
+    MCP_USER_SWITCH_UNSPECIFIED,
+    MCP_USER_SWITCH_PROJECT,
+    MCP_USER_SWITCH_EVERYWHERE,
+  ];
+
+  static final $core.List<McpUserSwitch?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 2);
+  static McpUserSwitch? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const McpUserSwitch._(super.value, super.name);
+}
+
 class ItemKind extends $pb.ProtobufEnum {
   static const ItemKind ITEM_KIND_UNSPECIFIED =
       ItemKind._(0, _omitEnumNames ? '' : 'ITEM_KIND_UNSPECIFIED');

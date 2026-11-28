@@ -41,8 +41,12 @@ PanelWidget? pullWidget(ChatPull cp, {VoidCallback? onShow}) {
     rows: [
       (
         null,
+        // The job too: a merged row offers Clean up… only until one starts.
         ListenableBuilder(
-          listenable: GitHubItems.of(cp.daemon),
+          listenable: Listenable.merge([
+            CleanUpJob.of(cp.chat),
+            GitHubItems.of(cp.daemon),
+          ]),
           builder: (_, _) => _seen(() => _Rows(cp, show)),
         ),
       ),

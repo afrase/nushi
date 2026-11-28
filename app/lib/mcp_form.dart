@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agent_words.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -11,8 +12,9 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Opens the form that adds a server to [list]'s folder (for its agent),
-/// or edits [server] (its name and scope stay). Ante's are only yours, and
-/// it doesn't speak SSE.
+/// or edits [server] (its name and scope stay). The scopes offered, and
+/// SSE, are the agent's McpShape's: Ante's are only yours, and only
+/// Claude speaks SSE.
 Future<void> mcpForm(
   BuildContext context,
   McpServers list, {
@@ -50,6 +52,10 @@ class _FormState extends State<_Form> {
   bool _saving = false;
 
   bool get _editing => widget.server != null;
+
+  /// The server's oauth block, which the form keeps without showing, has
+  /// a part the daemon masked (shown as ••••).
+  bool get _oauthHidden => jsonEncode(_extra['oauth'] ?? '').contains('••••');
 
   @override
   void initState() {
@@ -150,6 +156,7 @@ class _FormState extends State<_Form> {
   /// What's wrong with the form, or ''.
   String _check(Map<String, dynamic> c) {
     if (!_name.hasMatch(_nameCtl.text)) {
+      // design: the hyphen named, not a separator
       return 'A name can only have letters, digits, - and _, and can’t '
           'start with -.';
     }
@@ -215,26 +222,136 @@ class _FormState extends State<_Form> {
     final muted = theme.ui(t.textMuted, size: 12);
     final mono = theme.code(t.text, size: 12);
     final stdio = _transport == 'stdio';
-    final userOnly = widget.list.userOnly;
-    final title = agentTitle(widget.list.agent);
+    final list = widget.list;
+    final shape = list.shape;
+    final userOnly = list.userOnly;
+    final title = agentTitle(list.agent);
+    // An agent with folder trust of its own loads a project's servers only
+    // in a folder it trusts: said where the daemon says it doesn't.
+    final untrusted = list.folderTrusted == false
+        ? ' $title loads it once you trust this folder.'
+        : '';
     final where = switch (_scope) {
       _ when userOnly =>
         'Yours, in every folder: $title reads no project’s MCP servers, so '
             'there’s no other scope.',
       'user' => 'Yours, in every folder.',
-      'project' => 'In the repository’s .mcp.json, shared with everyone on it.',
-      _ => 'Yours, in ${folderParts(widget.list.folder).$1} only.',
+      'project' =>
+        'In ${agentWords(list.agent).mcpProjectFile ?? 'the repository’s '
+                '.mcp.json'}, shared with everyone on it.$untrusted',
+      _ => 'Yours, in ${folderParts(list.folder).$1} only.',
     };
     Widget label(String text) => Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Text(text, style: theme.ui(t.textSecondary, size: 12)),
     );
+    // The form's own fields, below the name and scope both views show.
+    final fields = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        label('Transport'),
+        Row(
+          children: [
+            Segmented(
+              value: _transport,
+              onCard: true,
+              segments: [
+                ('stdio', 'stdio'),
+                ('http', 'HTTP'),
+                if (shape.sse || _transport == 'sse') ('sse', 'SSE'),
+              ],
+              onChanged: (v) => setState(() => _transport = v),
+            ),
+          ],
+        ),
+        if (stdio) ...[
+          label('Command'),
+          TextField(
+            controller: _command,
+            style: mono,
+            decoration: const InputDecoration(hintText: 'npx'),
+          ),
+          label('Arguments, one per line'),
+          TextField(
+            controller: _args,
+            minLines: 1,
+            maxLines: 6,
+            style: mono,
+            // An example, as the command's; its line holds the
+            // field at a regular control's height (ADR 0122).
+            decoration: const InputDecoration(
+              hintText: '@playwright/mcp@latest',
+            ),
+          ),
+          label('Environment variables'),
+          PairRows(_env, 'NAME', () => setState(() {})),
+        ] else ...[
+          label('URL'),
+          TextField(
+            controller: _url,
+            style: mono,
+            decoration: const InputDecoration(
+              hintText: 'https://example.com/mcp',
+            ),
+          ),
+          // The form doesn't show oauth (kept as it is): where the
+          // daemon masked part of it, an edit here is refused unless
+          // that part is typed again, which only the JSON can.
+          if (_oauthHidden)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Its OAuth settings have hidden parts: change them in '
+                'Edit as JSON.',
+                style: muted,
+              ),
+            ),
+          label('Headers'),
+          PairRows(_headers, 'Header', () => setState(() {})),
+        ],
+        if (_editing)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Values shown as •••• stay only if nothing else '
+              'changes; else type them again.',
+              style: muted,
+            ),
+          ),
+      ],
+    );
+    // The JSON's box fills the room the form's fields take, and 8 lines
+    // at least, which the unseen box under it ([least]) holds: its text
+    // never changes the dialog's height.
+    final json = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        label('Config'),
+        Expanded(
+          child: TextField(
+            controller: _json,
+            expands: true,
+            maxLines: null,
+            textAlignVertical: TextAlignVertical.top,
+            style: mono,
+          ),
+        ),
+      ],
+    );
+    final least = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        label('Config'),
+        TextField(minLines: 8, maxLines: 8, style: mono),
+      ],
+    );
     return nushiDialog(
+      // Named for the agent: with several, the scopes read alike.
       _editing
-          ? 'Edit ${widget.server!.name}'
-          : userOnly
-          ? 'Add an MCP server for $title'
-          : 'Add MCP server',
+          ? 'Edit $title’s ${widget.server!.name}'
+          : 'Add an MCP server for $title',
       width: 520,
       SingleChildScrollView(
         child: Column(
@@ -253,15 +370,14 @@ class _FormState extends State<_Form> {
             Row(
               children: [
                 if (_editing || userOnly)
-                  Text(scopes[_scope]!.$1, style: theme.ui(t.text))
+                  Text(scopeOf(list.agent, _scope).$1, style: theme.ui(t.text))
                 else
                   Segmented(
                     value: _scope,
                     onCard: true,
-                    segments: const [
-                      ('user', 'User'),
-                      ('project', 'Project'),
-                      ('local', 'Local'),
+                    segments: [
+                      for (final scope in shape.scopes)
+                        (scope, scopeOf(list.agent, scope).$1),
                     ],
                     onChanged: (v) => setState(() => _scope = v),
                   ),
@@ -269,73 +385,21 @@ class _FormState extends State<_Form> {
             ),
             const SizedBox(height: 4),
             Text(where, style: muted),
-            if (_asJson) ...[
-              label('Config'),
-              TextField(
-                controller: _json,
-                minLines: 8,
-                maxLines: 16,
-                style: mono,
-              ),
-            ] else ...[
-              label('Transport'),
-              Row(
-                children: [
-                  Segmented(
-                    value: _transport,
-                    onCard: true,
-                    segments: [
-                      ('stdio', 'stdio'),
-                      ('http', 'HTTP'),
-                      if (!userOnly || _transport == 'sse') ('sse', 'SSE'),
-                    ],
-                    onChanged: (v) => setState(() => _transport = v),
-                  ),
-                ],
-              ),
-              if (stdio) ...[
-                label('Command'),
-                TextField(
-                  controller: _command,
-                  style: mono,
-                  decoration: const InputDecoration(hintText: 'npx'),
-                ),
-                label('Arguments, one per line'),
-                TextField(
-                  controller: _args,
-                  minLines: 1,
-                  maxLines: 6,
-                  style: mono,
-                  // An example, as the command's; its line holds the
-                  // field at a regular control's height (ADR 0122).
-                  decoration: const InputDecoration(
-                    hintText: '@playwright/mcp@latest',
-                  ),
-                ),
-                label('Environment variables'),
-                PairRows(_env, 'NAME', () => setState(() {})),
-              ] else ...[
-                label('URL'),
-                TextField(
-                  controller: _url,
-                  style: mono,
-                  decoration: const InputDecoration(
-                    hintText: 'https://example.com/mcp',
-                  ),
-                ),
-                label('Headers'),
-                PairRows(_headers, 'Header', () => setState(() {})),
+            // Both views are laid out and one shown, so the dialog is as
+            // tall as the taller in either and Edit as JSON, Cancel and Add
+            // stay put as it's pressed. The one not shown keeps its fields
+            // as typed, out of reach of a pointer, the focus, a screen
+            // reader and a test's finders (an IndexedStack's other
+            // children).
+            IndexedStack(
+              sizing: StackFit.passthrough,
+              index: _asJson ? 2 : 0,
+              children: [
+                fields,
+                least,
+                Positioned.fill(child: json),
               ],
-              if (_editing)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Values shown as •••• stay only if nothing else '
-                    'changes; else type them again.',
-                    style: muted,
-                  ),
-                ),
-            ],
+            ),
             if (_error.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -353,6 +417,8 @@ class _FormState extends State<_Form> {
             children: [
               Button(
                 label: _asJson ? 'Edit in the form' : 'Edit as JSON',
+                // The same width either way: it stays put as it's pressed.
+                roomFor: const ['Edit as JSON', 'Edit in the form'],
                 onPressed: _toggleJson,
               ),
               const Spacer(),
@@ -360,6 +426,7 @@ class _FormState extends State<_Form> {
               const SizedBox(width: 8),
               Button(
                 label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
+                roomFor: const ['Saving…'],
                 kind: ButtonKind.primary,
                 onPressed: _saving ? null : _save,
               ),

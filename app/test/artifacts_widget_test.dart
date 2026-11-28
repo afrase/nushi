@@ -141,7 +141,7 @@ void main() {
     expect(_inRows(find.text('Markdown')), findsNWidgets(2));
     expect(_inRows(find.text('Image')), findsOneWidget);
     // Its folder and when it changed, in its tooltip.
-    expect(_tip(tester, 'chart.png'), 'docs/img/chart.png · 15m ago');
+    expect(_tip(tester, 'chart.png'), 'docs/img/chart.png, 15m ago');
     expect(_inRows(find.text('Show more')), findsNothing);
     await tester.tap(_inRows(find.text('chart.png')));
     await tester.pumpAndSettle();

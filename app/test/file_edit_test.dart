@@ -247,7 +247,8 @@ void main() {
     // Compare: the disk against the edits, in a dialog.
     await tester.tap(find.text('Compare'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('on disk · yours'), findsOneWidget);
+    // The diff's two sides, not a list (issue 119).
+    expect(find.textContaining('on disk and yours'), findsOneWidget);
     await tester.tap(find.byTooltip('Close').last);
     await tester.pumpAndSettle();
     // Overwrite with mine: over the version shown.

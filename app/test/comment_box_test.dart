@@ -7,9 +7,12 @@ import 'package:nushi/comment_box.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart' show loadFonts;
 import 'harness.dart';
 
 void main() {
+  setUpAll(loadFonts);
+
   testWidgets('the box: its button waits for text; ⌘⏎ posts it; a refused '
       'post keeps the text and says why; Esc cancels', (tester) async {
     final posted = <String>[];
@@ -53,6 +56,31 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     expect(cancelled, 1);
+  });
+
+  testWidgets('its button keeps its width while it reads Posting…, so '
+      'Cancel beside it stays put', (tester) async {
+    final hold = Completer<void>();
+    await tester.pumpWidget(
+      themed(
+        CommentBox(label: 'Reply', onCancel: () {}, onPost: (_) => hold.future),
+      ),
+    );
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    await tester.enterText(find.byType(TextField), 'Done.');
+    await tester.pump();
+    final rest = tester.getRect(button('Reply'));
+    final cancel = tester.getRect(button('Cancel'));
+    await render(tester, find.byType(CommentBox), 'busy_comment_box_idle');
+    await tester.tap(button('Reply'));
+    await tester.pump();
+    expect(tester.getRect(button('Posting…')), rest);
+    await render(tester, find.byType(CommentBox), 'busy_comment_box_busy');
+    expect(tester.getRect(button('Cancel')), cancel);
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(button('Reply')), rest);
   });
 
   testWidgets('a box left and opened again while its comment posts starts '

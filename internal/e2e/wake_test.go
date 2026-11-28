@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -152,5 +153,51 @@ func TestAWakeAtTheRestartIsRefused(t *testing.T) {
 	}
 	if st := a.get(id).Status; !st.Asleep || st.Busy || len(d.sent.loaded()) != loads {
 		t.Errorf("refused, status %v, %d loads (was %d)", st, len(d.sent.loaded()), loads)
+	}
+}
+
+// An asleep chat says its agent takes images, as it did awake, put to
+// sleep and after a daemon restart alike; an image sent to it wakes it
+// and goes with the message.
+func TestAnAsleepChatTakesImages(t *testing.T) {
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Agent: "codex", Folder: t.TempDir()})
+	a.say(id, "one")
+	must(a.c.SleepChat(t.Context(), connect.NewRequest(&nushiv1.SleepChatRequest{ChatId: id})))
+	listed := func() *nushiv1.ChatStatus {
+		for _, c := range must(a.c.ListChats(t.Context(), connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats {
+			if c.Id == id {
+				return c.Status
+			}
+		}
+		t.Fatalf("no chat %s", id)
+		return nil
+	}
+	if st := listed(); !st.Asleep || !st.Images {
+		t.Fatalf("put to sleep: status %v", st)
+	}
+	a = d.reopen(t)
+	// Forking only shows from the stored record: a chat stored without it
+	// says it can't, so this tells the stored value from that fallback.
+	if st := listed(); !st.Asleep || !st.Images || !st.CanFork {
+		t.Fatalf("after a restart: status %v", st)
+	}
+	png := acptest.NoisePNG(4, 4, 1)
+	must(a.c.SendPrompt(t.Context(), connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "look",
+		Images: []*nushiv1.ImageData{{MimeType: "image/png", Data: png}}})))
+	a.waitFor("the reply", turnEnded(id))
+	items := a.get(id).Items
+	i := slices.IndexFunc(items, func(it *nushiv1.Item) bool {
+		return it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE && it.Text == "look"
+	})
+	if i < 0 || len(items[i].Images) != 1 || !bytes.Equal(items[i].Images[0].Data, png) {
+		t.Fatalf("transcript %s", transcript(items))
+	}
+	if slices.ContainsFunc(items, func(it *nushiv1.Item) bool { return it.Kind == nushiv1.ItemKind_ITEM_KIND_NOTICE }) {
+		t.Errorf("a notice: %s", transcript(items))
+	}
+	if st := a.get(id).Status; st.Asleep || !st.Images {
+		t.Errorf("woken: status %v", st)
 	}
 }

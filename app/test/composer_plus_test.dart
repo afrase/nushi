@@ -4,6 +4,7 @@
 // file cards and go to the agent as links (ADR 0091).
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -20,7 +21,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/errors.dart' show updateOnMac;
 import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/images.dart' show maxImageBytes;
+import 'package:nushi/images.dart' show Thumbnails, maxImageBytes;
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/pasted_files.dart';
@@ -104,6 +105,12 @@ void _restoreFakes() {
     sendWhole = whole;
   });
 }
+
+/// A picture's few bytes: a PNG of one pixel.
+final Uint8List _png = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+  'YAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+);
 
 /// The clipboard as a test has it: its files and picture.
 class _Clipboard implements ClipboardFiles {
@@ -227,7 +234,7 @@ void main() {
       expect(opened, 1);
       expect(find.byType(FileCard), findsNWidgets(2));
       expect(find.text('notes.txt'), findsOne);
-      expect(find.text('PDF · 3.0 MB'), findsOne);
+      expect(find.text('PDF, 3.0 MB'), findsOne);
       await tester.pumpAndSettle(); // the cards' line grows in
       await expectLater(
         find.byType(MaterialApp),
@@ -460,6 +467,49 @@ void main() {
       'the picture pasted: a message sends 20 MB at most',
     );
     expect(chat.draft.images.value, hasLength(5));
+    _end();
+  }, variant: onMac);
+
+  testWidgets('⌘V of a picture into an asleep chat takes it, as the daemon '
+      'says its agent does', (tester) async {
+    // After a daemon restart an asleep chat has no session; the daemon says
+    // what its agent took when it last ran.
+    final (_, _, chat) = await _box(tester, images: false);
+    chat.listed(ChatStatus(asleep: true, images: true));
+    native.clipboard = _Clipboard(
+      onFiles: () async => const [],
+      onImage: () async => _png,
+    );
+    await tester.tap(find.byType(TextField));
+    await press(tester, LogicalKeyboardKey.keyV, cmd: true, settle: false);
+    await tester.pump();
+    await tester.runAsync(chat.draft.images.ready);
+    await tester.pump();
+    expect(chat.draft.images.value.single.data, _png);
+    expect(find.byType(Thumbnails), findsOne);
+    expect(find.textContaining('Not attached'), findsNothing);
+    _end();
+  }, variant: onMac);
+
+  testWidgets('⌘V of a picture the agent doesn’t take says so', (tester) async {
+    final (_, _, chat) = await _box(tester);
+    chat.listed(ChatStatus(asleep: true));
+    native.clipboard = _Clipboard(
+      onFiles: () async => const [],
+      onImage: () async => _png,
+    );
+    await tester.tap(find.byType(TextField));
+    await press(tester, LogicalKeyboardKey.keyV, cmd: true, settle: false);
+    await tester.pump();
+    await tester.pump();
+    expect(chat.draft.images.value, isEmpty);
+    expect(
+      find.text("Not attached: the picture pasted: Claude doesn't take images"),
+      findsOne,
+    );
+    // Nothing on the clipboard but text: nothing to say.
+    native.clipboard = _Clipboard(onFiles: () async => const []);
+    expect(await pasteFiles(chat, api: apiVersion), '');
     _end();
   }, variant: onMac);
 

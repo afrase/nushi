@@ -11,13 +11,14 @@ import 'package:nushi/file_mode.dart';
 import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/plain_text.dart';
+import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/syntax.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
 /// new side, in the Changes view it was made in ([where]: the scope, the
-/// commits in Commits, and a related [worktree]'s folder; [whereIn]).
+/// commits in Commits, and a related [worktree]'s record; [whereIn]).
 /// [quote] is those lines as they were, and [before] and [after] the lines
 /// around them: when the file changes, the comment moves to where they are
 /// now ([anchor]), or is [outdated] when they're gone. Once [sent], it
@@ -145,21 +146,24 @@ class ReviewComment {
 
   String get lines => linesWord(start, end);
 
-  /// The related worktree it was made in, by its folder; null for the
-  /// chat's own folder.
+  /// The related worktree it was made in, by its record's key (its folder
+  /// for a path's first record: `relatedKey`); null for the chat's own
+  /// folder.
   String? get worktree => worktreeOf(where);
 }
 
 /// A Changes view's [ReviewComment.where]: [scope] (a Scope's name, or the
 /// Commits picked as `commits:<newest>:<oldest>`) of the chat's own folder,
-/// or of the related worktree at [worktree] (ADR 0081). A worktree's
-/// comments are its own: a file of the same path in the chat's folder
-/// shares no comment, draft or sent state with it.
+/// or of the related worktree whose record's key is [worktree] (ADR 0081;
+/// the folder for a path's first record, so comments kept before a path
+/// could have several stay where they were). A worktree's comments are its
+/// own: a file of the same path in the chat's folder, or another record of
+/// its path, shares no comment, draft or sent state with it.
 String whereIn(String scope, {String? worktree}) =>
     worktree == null ? scope : '$worktree\n$scope';
 
-/// The related worktree's folder [where] names ([whereIn]), null for the
-/// chat's own. A scope has no line break; a folder might.
+/// The related worktree's record [where] names ([whereIn]), by its key,
+/// null for the chat's own. A scope has no line break; a folder might.
 String? worktreeOf(String where) {
   final i = where.lastIndexOf('\n');
   return i < 0 ? null : where.substring(0, i);
@@ -333,12 +337,10 @@ const myReviewComments = 'My review comments on your changes:';
 /// they go to the chat's own agent, as the subagent has usually exited, so
 /// it names the worktree's folder and branch, which their paths are of.
 String worktreeComments(String folder, RelatedWorktree? w) {
-  final branch = plainName(w?.branch ?? '');
   final head = w?.lastHead ?? '';
   final short = head.substring(0, min(7, head.length));
   return [
-    _worktreeLead(folder),
-    if (branch.isNotEmpty) ' on branch `$branch`',
+    _recordLead(folder, w),
     if (w != null && w.state != 'present' && head.isNotEmpty)
       ' (removed since: its last commit is `$short`)',
     ', its paths relative to that folder:',
@@ -348,6 +350,16 @@ String worktreeComments(String folder, RelatedWorktree? w) {
 /// How [worktreeComments] starts for [folder], whatever became of it.
 String _worktreeLead(String folder) =>
     'My review comments on the changes in the worktree `${plainName(folder)}`';
+
+/// How [worktreeComments] starts for [folder]'s record [w], to its branch,
+/// whatever became of it since: the folder's lead alone when it has none.
+String _recordLead(String folder, RelatedWorktree? w) {
+  final branch = plainName(w?.branch ?? '');
+  return [
+    _worktreeLead(folder),
+    if (branch.isNotEmpty) ' on branch `$branch`',
+  ].join();
+}
 
 /// A review comment as a reply card in the chat's box (the reply-card
 /// model the Pull request tab's Send to agent uses): the quote is the
@@ -395,9 +407,9 @@ void reviewToBox(ChatState chat) {
   final unsent = unsentComments(chat.id);
   if (unsent.isEmpty) return;
   String lead(ReviewComment c) => switch (c.worktree) {
-    final path? => worktreeComments(
-      path,
-      chat.related.list.where((w) => w.path == path).firstOrNull,
+    final key? => worktreeComments(
+      relatedPath(key),
+      chat.related.recordOf(key),
     ),
     null => myReviewComments,
   };
@@ -424,16 +436,20 @@ void reviewToBox(ChatState chat) {
 
 /// Whether [c]'s card waits to go to the agent ([_waiting]): its card as it
 /// was put in the box, or (after a restart) any card on its file and lines'
-/// text under its place's lead; the comment may have moved or become
+/// text under its place's lead, a worktree's to its record's branch (a path
+/// can have several records); the comment may have moved or become
 /// outdated since.
 bool _cardWaits(ChatState chat, ReviewComment c) {
+  final lead = switch (c.worktree) {
+    final key? => _oneLine(
+      _recordLead(relatedPath(key), chat.related.recordOf(key)),
+    ),
+    null => myReviewComments,
+  };
   bool of(Reply x) =>
       x.quote.startsWith('`${c.path}`, ') &&
       x.quote.contains('\n${c.quote}\n') &&
-      switch (c.worktree) {
-        final path? => x.from.startsWith(_oneLine(_worktreeLead(path))),
-        null => x.from == myReviewComments,
-      };
+      (c.worktree == null ? x.from == lead : x.from.startsWith(lead));
   if (_sentAs[c.id] case final r?) return _waiting(chat, r);
   return _led(chat.draft.replies.value).any(of) ||
       chat.queue.any((m) => _led(splitReplies(m.text).$1).any(of));

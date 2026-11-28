@@ -2,41 +2,108 @@ part of 'source_view.dart';
 
 // ⌘F in a read-only source (issue 63): the file's lines are all there,
 // though only those in sight are laid out, so matches are found in the
-// text and counted whole; each line paints its own ([LineHits]), and a
-// step jumps near the line until it's laid out, then onto the match.
+// text and counted whole, off the keystroke ([LineSearch]: a slice at a
+// time, at most 10,000 kept, a step past them looking on for the next);
+// each line in sight finds and paints its own ([LineHits]), and a step
+// jumps near the line until it's laid out, then onto the match.
 
 /// A match: its line (from 0) and its characters there.
 typedef _Hit = ({int line, int start, int end});
 
 extension on _SourceViewState {
-  /// Finds the query in the lines anew and tells the bar.
+  /// Looks for the (lowered) query in the lines anew, and tells the bar
+  /// once the search ends; the current match stays if it's still one.
   void _look(String query) {
     _looked = query;
-    final hits = <_Hit>[];
-    final byLine = <int, List<int>>{};
-    for (final (i, whole) in _lines.indexed) {
-      final line = whole.length > _maxLine
-          ? whole.substring(0, _maxLine)
-          : whole;
-      for (final (start, end) in hitsIn(line, query)) {
-        (byLine[i] ??= []).add(hits.length);
-        hits.add((line: i, start: start, end: end));
-      }
+    final f = find as LaterFind?;
+    if (f == null) return;
+    if (query.isEmpty) {
+      _search.cancel();
+      _hits = PackedHits();
+      f.took(const [], 0, more: false);
+      return;
     }
-    _hits = hits;
-    _hitsByLine = byLine;
-    find?.found([for (final h in hits) '${h.line}:${h.start}']);
+    f.look();
+    _search.start(
+      _lines,
+      query,
+      cut: _maxLine,
+      done: (hits, {required more}) {
+        final was = _current();
+        _hits = hits;
+        final i = was == null ? -1 : hits.indexOf(was.line, was.start);
+        f.took(hits.keys, i >= 0 ? i : f.order.start(hits.length), more: more);
+      },
+    );
   }
 
-  /// Line [i]'s matches as its [LineHits] paints them.
-  List<LineHit> _lineHits(int i) {
-    final at = _hitsByLine[i];
+  /// Looks on past the matches kept, [way], for a step that went past
+  /// them; the find takes what it finds and steps into it.
+  void _beyond(Beyond way) {
+    final f = find as LaterFind?;
+    if (f == null) return;
+    final kept = _hits;
+    final last = kept.length - 1;
+    switch (way) {
+      case Beyond.after || Beyond.top:
+        _search.start(
+          _lines,
+          _looked,
+          cut: _maxLine,
+          after: way == Beyond.after && last >= 0
+              ? (line: kept.line(last), start: kept.start(last))
+              : null,
+          done: (hits, {required more}) {
+            _hits = hits;
+            final base = way == Beyond.after ? f.base + kept.length : 0;
+            f.took(hits.keys, 0, more: more, base: base);
+          },
+        );
+      case Beyond.before || Beyond.end:
+        _search.back(
+          _lines,
+          _looked,
+          cut: _maxLine,
+          before: way == Beyond.before && last >= 0
+              ? (line: kept.line(0), start: kept.start(0))
+              : null,
+          done: (hits, {required earlier}) {
+            _hits = hits;
+            f.took(
+              hits.keys,
+              hits.length - 1,
+              more: way == Beyond.before,
+              base: earlier,
+            );
+          },
+        );
+    }
+  }
+
+  /// The current match, if any.
+  _Hit? _current() {
     final f = find;
-    if (at == null || f == null || f.query == null) return const [];
-    final now = _hits.isEmpty ? -1 : f.at.clamp(0, _hits.length - 1);
+    if (f == null || _hits.isEmpty) return null;
+    final i = f.at.clamp(0, _hits.length - 1);
+    return (line: _hits.line(i), start: _hits.start(i), end: _hits.end(i));
+  }
+
+  /// Line [i]'s matches as its [LineHits] paints them: found in the line
+  /// itself, so a line in sight shows all its own, past the 10,000 kept
+  /// and before the search ends.
+  List<LineHit> _lineHits(int i) {
+    final f = find;
+    if (f == null || f.query == null || _looked.isEmpty) return const [];
+    final whole = _lines[i];
+    final line = whole.length > _maxLine ? whole.substring(0, _maxLine) : whole;
+    final now = _current();
     return [
-      for (final n in at)
-        (start: _hits[n].start, end: _hits[n].end, now: n == now),
+      for (final (start, end) in hitsIn(line, _looked))
+        (
+          start: start,
+          end: end,
+          now: now != null && now.line == i && now.start == start,
+        ),
     ];
   }
 
@@ -44,17 +111,21 @@ extension on _SourceViewState {
   void _showCurrent() {
     final f = find;
     if (f == null || f.query == null || f.asked == _shownAsk) return;
+    // Its matches still coming: once they have.
+    if (f is LaterFind && f.looking) return;
     _shownAsk = f.asked;
-    if (_hits.isEmpty) return;
-    _revealHit(_hits[f.at.clamp(0, _hits.length - 1)], 30);
+    if (_current() case final hit?) _revealHit(hit, 30, f.asked);
   }
 
   /// Takes the list to [hit]: once its line is laid out, onto the match
   /// ([revealFound]); until then, near where the line should be, from the
-  /// lines laid out, and again after the frame, [tries] times at most.
-  void _revealHit(_Hit hit, int tries) =>
+  /// lines laid out, and again after the frame, [tries] times at most;
+  /// dropped once a later ask ([asked]) has its own on the way, so steps
+  /// quicker than frames end on the last one's.
+  void _revealHit(_Hit hit, int tries, int asked) =>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return; // closed meanwhile: its context is gone
+        if (asked != _shownAsk) return;
         final s = _sliver(wrapped: widget.wrap);
         final view = context.findRenderObject();
         if (!mounted || !_down.hasClients || tries == 0) return;
@@ -84,7 +155,7 @@ extension on _SourceViewState {
           );
           if (r == Revealed.needsRoom) {
             _setRoomAbove();
-            _revealHit(hit, tries - 1);
+            _revealHit(hit, tries - 1, asked);
           }
           return;
         }
@@ -102,6 +173,6 @@ extension on _SourceViewState {
             p.maxScrollExtent,
           ),
         );
-        _revealHit(hit, tries - 1);
+        _revealHit(hit, tries - 1, asked);
       });
 }

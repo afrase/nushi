@@ -15,15 +15,45 @@ import (
 // Version is what `bin --version` printed, trimmed: a bridge's check of
 // the program it speaks to (Ante's host, pi). It has 10 s.
 func Version(bin string) (string, error) {
+	out, err := Output(bin, nil, "", "--version")
+	return strings.TrimSpace(string(out)), err
+}
+
+// Output is what `bin args...` printed on stdout, its stdin empty: a
+// bridge asking the program what it is. env, when not nil, is its whole
+// environment, and dir, when not "", its working folder (Bare's); nil
+// and "", this process's. It has 10 s, and what it started ends with it.
+func Output(bin string, env []string, dir string, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, "--version")
+	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // the agent's own CLI, asked what it is
+	cmd.Env, cmd.Dir = env, dir
 	procgroup.Bound(cmd)
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
+		return nil, fmt.Errorf("couldn't run %s %s: %w", bin, strings.Join(args, " "), err)
 	}
-	return strings.TrimSpace(string(out)), nil
+	return out, nil
+}
+
+// Bare is an environment of env's PATH and set alone, and set's HOME as
+// the working folder ("" when set has none): for a run that must reach no
+// key and none of the user's settings, and read no folder of theirs (a
+// program that took its arguments for a prompt would read the working
+// folder's AGENTS.md and name the folder).
+func Bare(env, set []string) (environ []string, dir string) {
+	environ = slices.Clone(set)
+	for _, kv := range set {
+		if home, ok := strings.CutPrefix(kv, "HOME="); ok {
+			dir = home
+		}
+	}
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "PATH=") {
+			environ = append(environ, kv)
+		}
+	}
+	return environ, dir
 }
 
 // Numbers reads a version's three numbers, a prerelease's tag left out;

@@ -70,7 +70,7 @@ class CommentBox extends StatefulWidget {
   final String hint;
   final String label;
 
-  /// Small print at the buttons' left ("Markdown · posts to GitHub as
+  /// Small print at the buttons' left ("Markdown, posts to GitHub as
   /// octo").
   final String note;
 
@@ -258,6 +258,7 @@ class _CommentBoxState extends State<CommentBox> {
             const SizedBox(width: 6),
             Button(
               label: _busy ? 'Posting…' : widget.label,
+              roomFor: ['Posting…', widget.label],
               hint: cmdEnterLabel,
               kind: widget.primary ? ButtonKind.primary : ButtonKind.secondary,
               onPressed: _busy || _text.text.trim().isEmpty ? null : _post,

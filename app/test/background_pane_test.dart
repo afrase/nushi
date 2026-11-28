@@ -60,7 +60,7 @@ void main() {
     ]);
     expect(find.text('npm run dev'), findsOne);
     expect(find.text(r'$ npm run dev'), findsOne);
-    expect(find.text('running · 12s'), findsOne);
+    expect(find.text('running, 12s'), findsOne);
     expect(find.text('Output so far'), findsOne);
     expect(find.text('ready on :5173'), findsOne);
     await tester.tap(find.byTooltip('Stop'));

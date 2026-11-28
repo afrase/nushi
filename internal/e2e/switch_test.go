@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -122,7 +123,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	}
 	lines := 0
 	for _, it := range a.get(one).Items {
-		if it.Status == "branch_switched" && it.Text == "Switched to branch other · told the agent" {
+		if it.Status == "branch_switched" && it.Text == "Switched to branch other,\u00a0told\u00a0the\u00a0agent" {
 			lines++
 		}
 	}
@@ -173,5 +174,51 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	}
 	if _, err := os.Stat(try); err != nil {
 		t.Errorf("the worktree that was there: %v", err)
+	}
+}
+
+// A switch's line that already ends with the old words (" · told the
+// agent", before issue 119) is read as told: it gains no second ending,
+// and the agent is still told of the switch, by the chat's record, not by
+// its line. The branch note's test has the same for a rename.
+func TestSwitchLineWithTheOldEnding(t *testing.T) {
+	ctx := context.Background()
+	repo, dataDir, history := gitRepo(t), t.TempDir(), &acptest.History{}
+	testcheck.Git(t, repo, "branch", "other")
+	d := startDaemon(t, dataDir, history)
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Folder: repo})
+	a.send(id, "start")
+	a.settled(id)
+	if _, err := a.c.SwitchBranch(ctx, connect.NewRequest(&nushiv1.SwitchBranchRequest{ChatId: id, Branch: "other", WithOthers: true})); err != nil {
+		t.Fatal(err)
+	}
+	d.stop()
+	const oldTold = " · told the agent"
+	items := filepath.Join(dataDir, "transcripts", id, "items.jsonl")
+	kept, err := os.ReadFile(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kept = bytes.Replace(kept, []byte(`branch other"`), []byte(`branch other`+oldTold+`"`), 1); !bytes.Contains(kept, []byte(oldTold)) {
+		t.Fatalf("the switch's line isn't stored as expected:\n%s", kept)
+	}
+	if err := os.WriteFile(items, kept, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	a = open(t, startDaemon(t, dataDir, history))
+	a.send(id, "next")
+	p := history.Prompts(a.settled(id).Chat.SessionId)
+	if got := p[len(p)-1]; !slices.Equal(got, []string{`<nushi-branch-switched from="main" to="other"/>`, "next"}) {
+		t.Errorf("the prompt after the switch: %q", got)
+	}
+	var lines []string
+	for _, it := range a.get(id).Items {
+		if it.Status == "branch_switched" {
+			lines = append(lines, it.Text)
+		}
+	}
+	if want := []string{"Switched to branch other" + oldTold}; !slices.Equal(lines, want) {
+		t.Errorf("the switch's lines: %q, want %q", lines, want)
 	}
 }

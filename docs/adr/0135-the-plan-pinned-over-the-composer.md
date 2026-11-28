@@ -15,3 +15,6 @@ The owner: "I think this plan card should stick above the prompt input. You shou
 
 ## Consequences
 A plan the agent abandoned stays pinned until a new plan comes; collapse it. The transcript's line turns back into the card as the pinned card's last check draws, a moment before the pinned card folds away.
+
+## Amendment (2026-11-26): no dot between a line's parts
+The owner reads a middle dot between parts as an AI tell (issue 119): the foot reads "Plan 1 of 3 done" ("Plan" in `text`, the count muted after it), and the transcript's line "Plan 1 of 3 done, shown over the box".

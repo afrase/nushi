@@ -23,17 +23,17 @@ String cost(Usage u) {
   return u.currency == 'USD' ? '\$$amount' : '$amount ${u.currency}';
 }
 
-/// The last turn's tokens ("950 in · 210 out"), or ''.
+/// The last turn's tokens ("950 in, 210 out"), or ''.
 String lastTurn(Usage u) => [
   if (u.inputTokens > 0) '${tokens(u.inputTokens.toInt())} in',
   if (u.outputTokens > 0) '${tokens(u.outputTokens.toInt())} out',
-].join(' · ');
+].join(', ');
 
 /// The last turn's cache use, or ''.
 String cacheUse(Usage u) => [
   if (u.cachedReadTokens > 0) '${tokens(u.cachedReadTokens.toInt())} read',
   if (u.cachedWriteTokens > 0) '${tokens(u.cachedWriteTokens.toInt())} written',
-].join(' · ');
+].join(', ');
 
 /// How full the agent's context is, as Claude's own panel shows it: a
 /// percentage and a small pill that fills, amber past 70% and red past 90%.

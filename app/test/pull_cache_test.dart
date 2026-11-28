@@ -49,7 +49,7 @@ void main() {
   }, variant: onMac);
 
   testWidgets('an open of a pull request read before: it shows at once, '
-      '"Updated 2m ago · refreshing", then what GitHub says', (tester) async {
+      '"Updated 2m ago, refreshing", then what GitHub says', (tester) async {
     _kept(const Duration(minutes: 2));
     final answer = Completer<GetGitHubPullResponse>();
     final (d, _) = await openPullTab(
@@ -60,7 +60,7 @@ void main() {
     expect(find.byType(PullSkeleton), findsNothing);
     expect(find.text(_title), findsOneWidget); // the head's
     expect(find.text('Merging is blocked'), findsOneWidget);
-    expect(find.text('Updated 2m ago · refreshing'), findsOneWidget);
+    expect(find.text('Updated 2m ago, refreshing'), findsOneWidget);
     answer.complete(
       GetGitHubPullResponse(pull: fixturePull()..item.title = 'Renamed'),
     );
@@ -85,7 +85,7 @@ void main() {
           : null,
     );
     expect(find.text(_title), findsOneWidget); // the head's
-    expect(find.text("Couldn't refresh · as of 5m ago"), findsOneWidget);
+    expect(find.text("Couldn't refresh, as of 5m ago"), findsOneWidget);
     d.dispose();
   }, variant: onMac);
 

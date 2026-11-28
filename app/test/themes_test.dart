@@ -1,6 +1,7 @@
 // Themes (ADR 0086): the built-ins, a theme file's format, and the
 // warning a custom theme under AA gets.
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:nushi/chat_colors.dart';
 import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme/theme_file.dart';
+import 'package:nushi/theme/tokyo_night.dart';
 
 import 'theme_sets.dart';
 
@@ -239,6 +241,107 @@ void main() {
     expect(w.first, startsWith('avatars.blue on raised: 1.00:1, under 3:1'));
     expect(w, contains(startsWith('textMuted on base: ')));
     expect(w.where((l) => l.startsWith('textMuted')), isNotEmpty);
+  });
+
+  test("a custom theme whose terminal search hits can't be told apart is "
+      'warned, naming the keys to move apart', () {
+    // A made-up dark set: its body text and needsSoft too near each other
+    // for both of the hits' fills to read and stand apart.
+    final t = withColors(Tokens.dark, {
+      'text': const Color(0xFFD9DDD3),
+      'needsSoft': const Color(0xFF736D4D),
+    });
+    expect(t.terminal.foreground, isNull);
+    final w = contrastWarnings(t);
+    expect(
+      w,
+      contains(
+        allOf(
+          startsWith('accent against needsSoft in terminal search: '),
+          endsWith(', under 2:1'),
+        ),
+      ),
+    );
+    expect(w.where((l) => l.contains('terminal search')), hasLength(1));
+    // Each line the search adds holds in every built-in set, as the rest.
+    for (final (name, b) in everySet) {
+      expect(
+        contrastWarnings(b).where((l) => l.contains('terminal search')),
+        isEmpty,
+        reason: name,
+      );
+    }
+  });
+
+  test("the terminal's search hits' text under 4.5:1 on needsSoft is "
+      'warned, by the key its text comes from', () {
+    // A made-up dark set whose needsSoft is a light grey: even white
+    // reads about 2.6:1 on it.
+    final dim = withColors(Tokens.dark, {'needsSoft': const Color(0xFFA0A0A0)});
+    final line = contrastWarnings(dim)
+        .where((l) => l.contains('on needsSoft in terminal search'));
+    expect(line, [
+      allOf(
+        startsWith('text on needsSoft in terminal search: '),
+        endsWith(', under 4.5:1'),
+      ),
+    ]);
+    // From a theme with the terminal's own text (Tokyo Night Day's), which
+    // a file can't set: only needsSoft is named as a key. Its needsSoft a
+    // grey just lighter than that blue text, which darkens toward it,
+    // where even black reads 4:1.
+    final own = withColors(tokyoNightLight, {
+      'needsSoft': const Color(0xFF6C6C6C),
+    });
+    expect(own.terminal.foreground, isNotNull);
+    expect(
+      contrastWarnings(own)
+          .where((l) => l.contains('on needsSoft in terminal search')),
+      [startsWith('terminal text on needsSoft in terminal search: ')],
+    );
+  });
+
+  test("the terminal's search hits' text always reads 4.5:1 on the current "
+      'hit, so that pair has no warning line', () {
+    // The current hit's fill is accent moved toward black or white until
+    // the hits' text reads on it (`searchHitCurrent`), and either end
+    // reads on that text however a theme sets it: seeded made-up themes,
+    // from Tokyo Night Day too, whose terminal has its own text.
+    final random = Random(117);
+    Color any() => Color(0xFF000000 | random.nextInt(0x1000000));
+    for (var i = 0; i < 6000; i++) {
+      final from = [Tokens.dark, Tokens.light, tokyoNightLight][i % 3];
+      final t = withColors(from, {
+        'text': any(),
+        'needsSoft': any(),
+        'accent': any(),
+      });
+      expect(
+        contrast(t.searchHitInk, t.searchHitCurrent),
+        greaterThanOrEqualTo(Tokens.searchHitContrast),
+        reason:
+            '${hexColor(t.text)} ${hexColor(t.needsSoft)} '
+            '${hexColor(t.accent)}',
+      );
+    }
+  });
+
+  test("the lowest ratio comes first, so the card's one line can be the "
+      "terminal's search", () {
+    // The made-up dark set above: its search's fills too near, its muted
+    // text a little under AA on needsSoft.
+    final w = contrastWarnings(
+      withColors(Tokens.dark, {
+        'text': const Color(0xFFD9DDD3),
+        'needsSoft': const Color(0xFF736D4D),
+      }),
+    );
+    double ratio(String line) =>
+        double.parse(RegExp(r': ([\d.]+):1, under ').firstMatch(line)![1]!);
+    final ratios = w.map(ratio).toList();
+    expect(ratios, [...ratios]..sort());
+    expect(w.length, greaterThan(1));
+    expect(w.first, startsWith('accent against needsSoft in terminal'));
   });
 
   test('a color as a file writes it', () {

@@ -211,6 +211,20 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets("a plugin's counts are Nushi's own muted line under its "
+      "author's description (issue 119)", (tester) async {
+    final (_, d) = await _view(tester, '$_home/counts');
+    expect(find.text('A demo plugin'), findsOneWidget);
+    final counts = find.text('1 skill, 2 commands, 1 agent, 1 MCP server');
+    expect(counts, findsOneWidget);
+    final t = NushiTheme.of(tester.element(counts)).t;
+    expect(tester.widget<Text>(counts).style?.color, t.textMuted);
+    await tester.ensureVisible(find.text('team@market'));
+    await tester.pumpAndSettle();
+    await render(tester, find.byType(SkillsView), 'skills_plugin_counts');
+    await closeView(tester, d);
+  });
+
   testWidgets('Delete… names the folder going to the Trash', (tester) async {
     final (fake, d) = await _view(tester, '$_home/delete');
     await tester.tap(find.byTooltip('More').at(3)); // deploy
@@ -440,6 +454,18 @@ void main() {
       await expectLater(
         find.byType(SkillsView),
         matchesGoldenFile('goldens/skills_view_$name.png'),
+      );
+      // The plugins, scrolled to: each one's counts a muted line under its
+      // author's description (issue 119).
+      await tester.ensureVisible(find.text('team@market'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('1 skill, 2 commands, 1 agent, 1 MCP server'),
+        findsOneWidget,
+      );
+      await expectLater(
+        find.byType(SkillsView),
+        matchesGoldenFile('goldens/skills_plugins_$name.png'),
       );
       await closeView(tester, d);
     });

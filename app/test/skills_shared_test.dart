@@ -170,13 +170,13 @@ void main() {
     expect(find.text('Shared'), findsOneWidget);
     expect(
       find.textContaining(
-        'Codex, oh-my-pi, PiG  ·  Off for oh-my-pi  ·  PiG loads it once '
+        'Codex, oh-my-pi, PiG\nOff for oh-my-pi\nPiG loads it once '
         'the folder is trusted',
       ),
       findsOneWidget,
     );
     expect(
-      find.textContaining('Claude (linked), Codex, Ante  ·  Off for Codex'),
+      find.textContaining('Claude (linked), Codex, Ante\nOff for Codex'),
       findsOneWidget,
     );
     expect(find.text('for Codex'), findsNWidgets(3));

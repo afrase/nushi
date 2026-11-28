@@ -9,6 +9,7 @@ import 'package:nushi/github_card.dart';
 import 'package:nushi/github_items.dart';
 import 'package:nushi/github_link_chip.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_rows.dart';
 import 'package:nushi/theme/theme.dart';
@@ -106,7 +107,7 @@ class LivePullCards extends StatelessWidget {
 
 /// The card of a pull request the chat's tool call opened or merged (ADR
 /// 0117 section 4), after that tool call's turn group: a filled card, the
-/// state pill and `owner/repo #n · author · age`, the title with its size
+/// state pill and `owner/repo #n, author, age`, the title with its size
 /// as two tags, and under a hairline the checks in words or the row's cue.
 /// A click opens the Pull request tab on it; right-click is its row's ⋯.
 class LivePullCard extends StatefulWidget {
@@ -177,14 +178,14 @@ class _LivePullCardState extends State<LivePullCard> {
                 ],
               )
             : cue != null
-            ? Text(cue.words, style: theme.ui(cue.color, size: 12))
+            ? Text(capital(cue.words), style: theme.ui(cue.color, size: 12))
             : null;
         final head = [
           '${a.repo} #${a.number}',
           if (it != null && it.author.isNotEmpty) it.author,
           if (it != null && it.createdMs > 0)
             agoAt(it.createdMs.toInt(), clock()),
-        ].join(' · ');
+        ].join(', ');
         final card = Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           decoration: BoxDecoration(

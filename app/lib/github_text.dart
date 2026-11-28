@@ -24,7 +24,7 @@ final _delimiter = RegExp(r'^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$');
 
 /// A comment's first words, as one plain line: its first line of text that
 /// isn't a table's head or delimiter, without Markdown's marks (a table
-/// row's cells joined by " · ", links as their text, images and `:emoji:`
+/// row's cells joined by ", ", links as their text, images and `:emoji:`
 /// codes dropped); 200 characters at most.
 String commentSummary(String body) {
   final lines = body.split('\n').map((l) => l.trim()).toList();
@@ -37,10 +37,12 @@ String commentSummary(String body) {
         _delimiter.hasMatch(lines[i + 1])) {
       continue;
     }
-    if (l.startsWith('|')) {
-      l = _cells(l).where((c) => c.trim().isNotEmpty).join(' · ');
-    }
-    l = _plain(l);
+    // A table row's cells plain each, so one that's only an image or an
+    // :emoji: leaves no comma behind, and only once: a second pass would
+    // read an escape again and take a cell's leading dash for a bullet.
+    l = l.startsWith('|')
+        ? _cells(l).map(_plain).where((c) => c.isNotEmpty).join(', ')
+        : _plain(l);
     if (l.isEmpty) continue;
     return l.length > 200 ? '${l.substring(0, 199)}…' : l;
   }
@@ -65,6 +67,7 @@ String _plain(String line) => line
     .replaceAll(RegExp(r'\*\*|__|`'), '')
     .replaceAllMapped(RegExp(r'\\([\\`*_{}\[\]()#+\-.!|<>~])'), (m) => m[1]!)
     .replaceAll(RegExp(r'\s+'), ' ')
+    // design: the dots of the text's own, cut from its ends
     .replaceAll(RegExp(r'^[\s·:]+|[\s·]+$'), '')
     .trim();
 

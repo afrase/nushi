@@ -5,6 +5,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -96,14 +97,14 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            baseName(f),
+            plainName(baseName(f)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: phoneText(context),
           ),
           if (folderOf(f) case final dir when dir.isNotEmpty)
             Text(
-              dir,
+              plainName(dir),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: phoneText(

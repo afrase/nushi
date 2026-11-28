@@ -29,8 +29,14 @@ func (s *server) ListTerminals(_ context.Context, req *connect.Request[nushiv1.L
 
 func (s *server) AttachTerminal(ctx context.Context, req *connect.Request[nushiv1.AttachTerminalRequest], stream *connect.ServerStream[nushiv1.AttachTerminalResponse]) error {
 	var sendErr error
-	exited, code, err := s.Terms.Attach(req.Msg.TerminalId, ctx.Done(), func(b []byte) bool {
-		sendErr = stream.Send(&nushiv1.AttachTerminalResponse{Data: b})
+	var end int64 // the place after the last byte sent
+	exited, code, err := s.Terms.Attach(req.Msg.TerminalId, ctx.Done(), func(o model.TerminalOutput) bool {
+		msg := &nushiv1.AttachTerminalResponse{Data: o.Data, Offset: o.At}
+		if o.Cleared >= 0 {
+			msg.ClearedAt = &o.Cleared
+		}
+		end = o.At + int64(len(o.Data))
+		sendErr = stream.Send(msg)
 		return sendErr == nil
 	})
 	switch {
@@ -39,7 +45,13 @@ func (s *server) AttachTerminal(ctx context.Context, req *connect.Request[nushiv
 	case sendErr != nil || !exited:
 		return sendErr
 	}
-	return stream.Send(&nushiv1.AttachTerminalResponse{Exited: true, ExitCode: int32(code)})
+	return stream.Send(&nushiv1.AttachTerminalResponse{Exited: true, ExitCode: int32(code), Offset: end})
+}
+
+// ClearTerminal keeps where a client cleared a terminal. Whoever may write
+// to the terminal may clear it: the same refusal as WriteTerminal's.
+func (s *server) ClearTerminal(_ context.Context, req *connect.Request[nushiv1.ClearTerminalRequest]) (*connect.Response[nushiv1.ClearTerminalResponse], error) {
+	return done[nushiv1.ClearTerminalResponse](s.Terms.Clear(req.Msg.TerminalId, req.Msg.At), refused)
 }
 
 func (s *server) WriteTerminal(_ context.Context, req *connect.Request[nushiv1.WriteTerminalRequest]) (*connect.Response[nushiv1.WriteTerminalResponse], error) {

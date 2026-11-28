@@ -231,6 +231,7 @@ List<String>? _sectionFindings(List<_Block> blocks) {
 /// `` `path` ``, `` **`path:12`**: ``.
 final _place = RegExp(
   r'^(\*\*)?\s*(`)?((?:[\w.@-]+/)*[\w.@-]+\.[A-Za-z0-9]{1,8}|(?:[\w.@-]+/)+[\w.@-]+)'
+  // design: the dashes a reviewer's text puts after a place, matched
   r'(?::(\d+)(?:\s*[-–]\s*(\d+))?)?(`)?\s*(\*\*)?\s*([:—–]|\s-\s)?\s*',
 );
 

@@ -161,6 +161,7 @@ class _UpdateToastState extends State<UpdateToast> {
     );
     Widget copy(String cask) => Button(
       label: _copied ? 'Copied' : 'Copy',
+      roomFor: const ['Copy', 'Copied'],
       kind: ButtonKind.primary,
       tooltip: 'Copy “${brewUpgrade(cask)}”',
       onPressed: () => _copy(cask),
@@ -173,6 +174,10 @@ class _UpdateToastState extends State<UpdateToast> {
             : again
             ? 'Retry'
             : 'Update',
+        // Update and Retry keep their width as they read Updating…, so
+        // Release notes stays put; Retry is where Update is, so a retry
+        // reads as the update did.
+        roomFor: const ['Updating…', 'Update'],
         kind: again ? ButtonKind.secondary : ButtonKind.primary,
         tooltip: installing ? '' : 'Runs “${brewUpgrade(cask)}”',
         onPressed: installing || _install.value
@@ -228,19 +233,32 @@ class _UpdateToastState extends State<UpdateToast> {
                 style: theme.ui(t.textSecondary, size: 12),
               ),
             ),
+          // Why it failed, and Copy beside it: Homebrew's upgrade to run
+          // in a terminal. Copy sits here, not in the buttons' row: that
+          // row is the Update row's, so Retry's Updating… lands where
+          // Update's does and nothing in it moves as it's pressed; three
+          // buttons with room for Copied and Updating… don't fit the card.
           if (error.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: tooltip(
-                context,
-                error,
-                Text(
-                  error,
-                  key: const ValueKey('update-error'),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.crashed, size: 12),
-                ),
+              child: Row(
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: tooltip(
+                      context,
+                      error,
+                      Text(
+                        error,
+                        key: const ValueKey('update-error'),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.crashed, size: 12),
+                      ),
+                    ),
+                  ),
+                  if (cask != null) copy(cask),
+                ],
               ),
             ),
           Row(
@@ -256,7 +274,6 @@ class _UpdateToastState extends State<UpdateToast> {
                   onPressed: () => openRelease(context, d),
                 )
               else if (error.isNotEmpty) ...[
-                copy(cask),
                 update(cask, again: true),
                 notes,
               ] else ...[

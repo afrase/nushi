@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/editor_sight.dart';
+import 'package:nushi/line_search.dart' show LazyKeys;
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/whitespace_marks.dart' show EditorLines;
 import 'package:re_editor/re_editor.dart';
@@ -12,11 +14,21 @@ import 'package:re_editor/re_editor.dart';
 /// The current match is the editor's selection, starting from the caret,
 /// so it stays selected when the bar closes and the editor takes the focus
 /// back. Only the bar's field takes the keys while it's open: nothing typed
-/// there reaches the file.
+/// there reaches the file. Of the matches, the editor paints only those in
+/// sight ([sight]), however many there are.
 class EditorFind extends Find {
-  new(this.editor, this.editorFocus) {
+  new(
+    this.editor,
+    this.editorFocus, {
+    required EditorLines lines,
+    required ScrollController down,
+  }) : sight = EditorSight(lines: lines, down: down, editor: editor) {
     _code.addListener(_found);
   }
+
+  /// What of the text is in sight: the editor is built again as it
+  /// leaves the matches painted.
+  final EditorSight sight;
 
   /// The editor's text.
   final CodeLineEditingController editor;
@@ -28,7 +40,12 @@ class EditorFind extends Find {
 
   /// What the editor is given as its find: re_editor's, less the tint on
   /// the match that's selected.
-  late final CodeFindController marking = _Marking(_code, editor);
+  late final CodeFindController marking = _Marking(_code, editor, sight);
+
+  /// The matches the editor was last given to paint.
+  @visibleForTesting
+  List<CodeLineSelection> get painted =>
+      (marking as _Marking)._given ?? const [];
 
   /// Whether the text starts below the bar, for a match at the very top
   /// that no scroll takes out from under it; until the bar closes.
@@ -86,9 +103,14 @@ class EditorFind extends Find {
     final matches = r == null || r.dirty
         ? const <CodeLineSelection>[]
         : r.matches;
-    foundAt([
-      for (final m in matches) '${m.startIndex}:${m.startOffset}',
-    ], r?.index ?? 0);
+    // Each key made only when read: there can be tens of thousands.
+    foundAt(
+      LazyKeys(matches.length, (i) {
+        final m = matches[i];
+        return '${m.startIndex}:${m.startOffset}';
+      }),
+      r?.index ?? 0,
+    );
   }
 
   @override
@@ -131,31 +153,63 @@ class EditorFind extends Find {
       ..removeListener(_found)
       ..dispose();
     roomAbove.dispose();
+    sight.dispose();
     super.dispose();
   }
 }
 
 /// re_editor's find as the editor draws it, but for the match the
 /// selection is on: that one shows as the selection (the current match, in
-/// the transcript's colors), not under the others' tint.
+/// the transcript's colors), not under the others' tint; and only the
+/// matches in [_sight]'s window.
 class _Marking implements CodeFindController {
-  new(this._find, this._editor);
+  new(this._find, this._editor, this._sight);
 
   final CodeFindController _find;
   final CodeLineEditingController _editor;
+  final EditorSight _sight;
+  List<CodeLineSelection>? _given;
 
   @override
-  List<CodeLineSelection>? get allMatchSelections {
+  List<CodeLineSelection>? get allMatchSelections => _given = _inSight();
+
+  List<CodeLineSelection>? _inSight() {
+    final r = _find.value?.result;
+    if (r == null || r.dirty || r.matches.isEmpty) {
+      _sight.forget();
+      return null;
+    }
+    final matches = r.matches;
+    final window = _sight.take();
+    // In order down the text: the first on the window's first line.
+    var (lo, hi) = (0, matches.length);
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (matches[mid].startIndex < window.first) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
     final s = _editor.selection;
-    return _find.allMatchSelections
-        ?.where(
-          (m) =>
-              m.startIndex != s.startIndex ||
-              m.startOffset != s.startOffset ||
-              m.endIndex != s.endIndex ||
-              m.endOffset != s.endOffset,
-        )
-        .toList();
+    final shown = <CodeLineSelection>[];
+    for (var i = lo; i < matches.length; i++) {
+      final m = matches[i];
+      if (m.startIndex > window.last) break;
+      if (!_sight.shows(window, m.startIndex, m.startOffset, m.endOffset)) {
+        continue;
+      }
+      final at = _find.convertMatchToSelection(m);
+      if (at == null ||
+          at.startIndex == s.startIndex &&
+              at.startOffset == s.startOffset &&
+              at.endIndex == s.endIndex &&
+              at.endOffset == s.endOffset) {
+        continue;
+      }
+      shown.add(at);
+    }
+    return shown;
   }
 
   @override

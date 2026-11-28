@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -17,7 +18,9 @@ import (
 func TestHeadsAndPick(t *testing.T) {
 	s, _ := open(t)
 	img := model.Image{MimeType: "image/png", Data: []byte("png bytes")}
-	step := model.Item{ID: "s1", Kind: model.ToolCall, Status: "completed", Parent: "sa", WorktreePath: "/wt", Text: "step", Images: []model.Image{img}}
+	step := model.Item{ID: "s1", Kind: model.ToolCall, Status: "completed", Parent: "sa", WorktreePath: "/wt", Text: "step", Images: []model.Image{img},
+		Started: time.UnixMilli(1000).UTC(), Ended: time.UnixMilli(2000).UTC(),
+		Workflow: &model.Workflow{RunID: "wf_1", Name: "audit", Written: []model.WrittenFile{{Path: "a.md", Changed: time.UnixMilli(1500).UTC()}}}}
 	add(t, s, "C", "", msg("a", "A"), msg("b", "B"), step, msg("c", "C"), msg("d", "D"))
 	add(t, s, "C", "a", msg("b", "B2")) // written again, in place
 	testcheck.NoErr(t, s.Drop("C", "c"))
@@ -33,6 +36,11 @@ func TestHeadsAndPick(t *testing.T) {
 	if h := heads[2]; h.Parent != "sa" || h.WorktreePath != "/wt" || len(h.Images) != 1 || h.Images[0].Data != nil || h.Images[0].Hash == "" || h.Images[0].MimeType != "image/png" {
 		t.Errorf("a step's head %+v", h)
 	}
+	// What writtenBy reads of a workflow's call, and no more of its run.
+	if h := heads[2]; !h.Ended.Equal(step.Ended) || !h.Started.Equal(step.Started) || h.Workflow == nil || h.Workflow.Name != "" || h.Workflow.RunID != "wf_1" ||
+		len(h.Workflow.Written) != 1 || h.Workflow.Written[0] != step.Workflow.Written[0] {
+		t.Errorf("a workflow call's head: %+v, %+v", h, h.Workflow)
+	}
 	picked, err := s.Pick("C", []string{"d", "s1", "b", "c", "none"})
 	testcheck.NoErr(t, err)
 	if ids(picked) != "b=B2 s1=step d=D" || string(picked[1].Images[0].Data) != "png bytes" {
@@ -44,6 +52,29 @@ func TestHeadsAndPick(t *testing.T) {
 	}
 	if heads, err := s.Heads("NONE"); heads != nil || err != nil {
 		t.Errorf("a chat without a copy has heads %v, %v", heads, err)
+	}
+}
+
+// A workflow call's head carries what a chat's related worktrees read of
+// its run (its id, folder, written files and worktrees) when it wrote a
+// file or had a worktree, and nothing of a run that had neither.
+func TestHeadsOfWorkflows(t *testing.T) {
+	s, _ := open(t)
+	since := time.UnixMilli(1000).UTC()
+	wt := model.WorkflowWorktree{Path: "/repo/.claude/worktrees/wf_1-1", Since: since}
+	call := func(id string, w model.Workflow) model.Item {
+		return model.Item{ID: id, Kind: model.ToolCall, Status: "completed", Workflow: &w}
+	}
+	add(t, s, "C", "",
+		call("trees", model.Workflow{RunID: "wf_1", Name: "isolated", Folder: "/repo", Worktrees: []model.WorkflowWorktree{wt}}),
+		call("none", model.Workflow{RunID: "wf_2", Name: "read only", Folder: "/repo"}))
+	heads, err := s.Heads("C")
+	testcheck.NoErr(t, err)
+	if h := heads[0].Workflow; h == nil || h.RunID != "wf_1" || h.Folder != "/repo" || h.Name != "" || len(h.Worktrees) != 1 || h.Worktrees[0] != wt {
+		t.Errorf("a run with a worktree: %+v", h)
+	}
+	if h := heads[1].Workflow; h != nil {
+		t.Errorf("a run with neither: %+v", h)
 	}
 }
 

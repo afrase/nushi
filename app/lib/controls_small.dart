@@ -2,6 +2,7 @@ part of 'controls.dart';
 
 /// A link inside text or beside it, to go somewhere ("Settings ›
 /// Agents"): the link color, underlined under the pointer or when focused.
+/// [roomFor]: labels it keeps room for, as a [Button]'s.
 class LinkText extends StatelessWidget {
   const new(
     this.text, {
@@ -10,6 +11,7 @@ class LinkText extends StatelessWidget {
     this.size = 13,
     this.mono = false,
     this.tooltip = '',
+    this.roomFor = const [],
   });
 
   final String text;
@@ -17,6 +19,11 @@ class LinkText extends StatelessWidget {
   final double size;
   final bool mono;
   final String tooltip;
+
+  /// Labels it keeps room for, the widest of them and [text] setting its
+  /// width, its text at the start: one whose text changes as it's pressed
+  /// (Show, then Hide) doesn't change width, so nothing beside it moves.
+  final List<String> roomFor;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +38,7 @@ class LinkText extends StatelessWidget {
         final style = mono
             ? theme.code(color, size: size)
             : theme.ui(color, size: size);
-        return Text(
+        final shown = Text(
           text,
           style: style.copyWith(
             decoration: look.hover || look.focus
@@ -39,6 +46,20 @@ class LinkText extends StatelessWidget {
                 : null,
             decorationColor: color,
           ),
+        );
+        // The texts it keeps room for are laid out with its own and
+        // never shown, as a Button's.
+        final room = [
+          for (final l in roomFor)
+            if (l != text) l,
+        ];
+        if (room.isEmpty) return shown;
+        return IndexedStack(
+          alignment: AlignmentDirectional.centerStart,
+          children: [
+            shown,
+            for (final l in room) Text(l, style: style),
+          ],
         );
       },
     );

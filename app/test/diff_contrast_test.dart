@@ -1,8 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -15,6 +12,7 @@ import 'package:nushi/theme/tokyo_night.dart';
 import 'package:nushi/transcript_find.dart';
 
 import 'fake_daemon.dart';
+import 'fill_pixels.dart';
 import 'harness.dart';
 
 // Code on a diff's changed line or word keeps the contrast its theme gives
@@ -101,111 +99,6 @@ Widget _box(Tokens tokens, FileChange change, {Find? find}) => themed(
   ),
 );
 
-/// Where [fill] is painted in [pixels] (an image [width] wide, RGBA):
-/// each patch of it, a changed word's box or a changed line's band, as its
-/// size and its bounding box. Specks under 400 pixels are left out.
-List<(int, ({int x0, int y0, int x1, int y1}))> _patches(
-  ByteData pixels,
-  int width,
-  Color fill,
-) {
-  final height = pixels.lengthInBytes ~/ (width * 4);
-  final want = fill.toARGB32();
-  final seen = Uint8List(width * height);
-  final found = <(int, ({int x0, int y0, int x1, int y1}))>[];
-  for (var start = 0; start < seen.length; start++) {
-    if (seen[start] != 0 || _at(pixels, start) != want) continue;
-    var (x0, y0, x1, y1, size) = (width, height, -1, -1, 0);
-    final stack = [start];
-    seen[start] = 1;
-    while (stack.isNotEmpty) {
-      final i = stack.removeLast();
-      final (x, y) = (i % width, i ~/ width);
-      size++;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-      for (final j in [
-        if (x > 0) i - 1,
-        if (x < width - 1) i + 1,
-        if (y > 0) i - width,
-        if (y < height - 1) i + width,
-      ]) {
-        if (seen[j] == 0 && _at(pixels, j) == want) {
-          seen[j] = 1;
-          stack.add(j);
-        }
-      }
-    }
-    if (size >= 400) found.add((size, (x0: x0, y0: y0, x1: x1, y1: y1)));
-  }
-  return found;
-}
-
-/// The pixel at [i] of [pixels] (RGBA), as ARGB.
-int _at(ByteData pixels, int i) =>
-    pixels.getUint8(i * 4 + 3) << 24 |
-    pixels.getUint8(i * 4) << 16 |
-    pixels.getUint8(i * 4 + 1) << 8 |
-    pixels.getUint8(i * 4 + 2);
-
-/// Each patch of [fill] in [pixels] (an image [width] wide, RGBA) and its
-/// most contrasting pixel, largest patch first, with its box's left edge
-/// (a changed line's band left of the code is the gutter's). A patch's
-/// bounding box is read with the boxes of the [inside] fills' patches left
-/// out (a changed line's band holds its changed words' boxes, whose text
-/// is theirs), so what is left is the fill and the text drawn on it: the
-/// most contrasting pixel is that text's colour, a glyph's core, which
-/// antialiasing can only soften.
-List<({double contrast, Color ink, Set<int> colors, int left})> _textOn(
-  ByteData pixels,
-  int width,
-  Color fill, {
-  List<Color> inside = const [],
-}) {
-  final masks = [
-    for (final f in inside)
-      for (final (_, box) in _patches(pixels, width, f)) box,
-  ];
-  bool masked(int x, int y) =>
-      masks.any((m) => x >= m.x0 && x <= m.x1 && y >= m.y0 && y <= m.y1);
-  final found =
-      <(int, ({double contrast, Color ink, Set<int> colors, int left}))>[];
-  for (final (size, box) in _patches(pixels, width, fill)) {
-    var (most, ink) = (1.0, fill);
-    final colors = <int>{};
-    for (var y = box.y0; y <= box.y1; y++) {
-      for (var x = box.x0; x <= box.x1; x++) {
-        if (masked(x, y)) continue;
-        final c = Color(_at(pixels, y * width + x));
-        colors.add(c.toARGB32());
-        final r = contrast(c, fill);
-        if (r > most) (most, ink) = (r, c);
-      }
-    }
-    found.add((size, (contrast: most, ink: ink, colors: colors, left: box.x0)));
-  }
-  found.sort((a, b) => b.$1.compareTo(a.$1));
-  return [for (final (_, patch) in found) patch];
-}
-
-/// What the box shows, at four times its size.
-Future<(ByteData, int)> _pixels(WidgetTester tester) async {
-  final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find.byKey(const ValueKey('box')),
-  );
-  return (await tester.runAsync(() async {
-    final image = await boundary.toImage(pixelRatio: 4);
-    try {
-      final bytes = await image.toByteData();
-      return (bytes!, image.width);
-    } finally {
-      image.dispose();
-    }
-  }))!;
-}
-
 /// Waits for the diff's code colours, which come from an isolate.
 Future<void> _coloured(WidgetTester tester) async {
   final split = find.byType(SideBySideDiff);
@@ -248,7 +141,7 @@ void main() {
       inInclusiveRange(2.7, 3),
       reason: 'about 2.8, its comments on the background',
     );
-    final (pixels, width) = await _pixels(tester);
+    final (pixels, width) = await boxPixels(tester);
     final word = Color.alphaBlend(theme.insertedWord, theme.insertedLine);
     for (final (what, fill, inside) in [
       ('an inserted word', word, <Color>[]),
@@ -256,7 +149,7 @@ void main() {
     ]) {
       // Before, the comment all but vanished there.
       expect(contrast(comment, fill), lessThan(own - 0.5));
-      final patches = _textOn(pixels, width, fill, inside: inside);
+      final patches = textOn(pixels, width, fill, inside: inside);
       expect(patches, isNotEmpty, reason: '$what is painted');
       // Every patch of the code holds only comment; one at the image's
       // left edge is the gutter's, under the line numbers.
@@ -307,8 +200,8 @@ void main() {
     await tester.pumpWidget(_box(tokens, _oneWord));
     await tester.pumpAndSettle();
     await _coloured(tester);
-    final (pixels, width) = await _pixels(tester);
-    final patches = _textOn(pixels, width, word);
+    final (pixels, width) = await boxPixels(tester);
+    final patches = textOn(pixels, width, word);
     expect(patches, isNotEmpty, reason: 'an inserted word is painted');
     for (final p in patches) {
       expect(
@@ -331,8 +224,8 @@ void main() {
     final keyword = tokyoNightDark.syntax[Capture.keyword]!.color;
     // `var` on the added line reads well over the floor there.
     expect(contrast(keyword, theme.insertedLine), greaterThan(3.5));
-    final (pixels, width) = await _pixels(tester);
-    final line = _textOn(pixels, width, theme.insertedLine);
+    final (pixels, width) = await boxPixels(tester);
+    final line = textOn(pixels, width, theme.insertedLine);
     expect(
       line.any((p) => p.colors.contains(keyword.toARGB32())),
       isTrue,
@@ -355,13 +248,13 @@ void main() {
       final comment = tokens.syntax[Capture.comment]!.color;
       final own = contrast(comment, theme.background);
       final target = own < 3 ? own : 3.0;
-      final (pixels, width) = await _pixels(tester);
+      final (pixels, width) = await boxPixels(tester);
       for (final (what, fill, patches, inside) in [
         ('a changed word', theme.modifiedWord, 2, <Color>[]),
         ('an added line', theme.insertedLine, 1, [theme.modifiedWord]),
       ]) {
         expect(contrast(comment, fill), lessThan(target));
-        final found = _textOn(pixels, width, fill, inside: inside);
+        final found = textOn(pixels, width, fill, inside: inside);
         expect(
           found.length,
           greaterThanOrEqualTo(patches),
@@ -391,10 +284,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(f.hits, isNotEmpty);
     final theme = _theme(tester);
-    final (pixels, width) = await _pixels(tester);
+    final (pixels, width) = await boxPixels(tester);
     // Every hit on an unchanged line is on the same fill: only its text
     // says which is current.
-    final hits = _textOn(
+    final hits = textOn(
       pixels,
       width,
       Color.alphaBlend(theme.modifiedWord, theme.background),

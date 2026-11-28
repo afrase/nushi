@@ -267,10 +267,15 @@ func InitializeRequest(info model.HarnessInfo) *acp.InitializeRequest {
 
 // useLocked makes an opened session the chat's, on a new agent, whose
 // record it has by now: what came ahead of the session's id goes in first.
-// What the agent sends from then on is live, not a replay (kept).
-func (s *Service) useLocked(c *chat, o opened) {
+// What the agent sends from then on is live, not a replay (kept). The
+// record keeps what the agent takes (tookLocked); it says whether that
+// changed, for a caller whose chat is stored already to store it.
+func (s *Service) useLocked(c *chat, o opened) (tookChanged bool) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
 	c.forkAt, c.held, c.outlived, c.reopenFailed = o.forkAt, false, false, false
+	if took := c.tookLocked(); c.record.Took == nil || *c.record.Took != *took {
+		c.record.Took, tookChanged = took, true
+	}
 	c.endOwnTurnLocked(model.NotEnded, "")                  // the old agent's, which orphanLocked ended
 	c.canLoad, c.asleep, c.reapplying = o.load, false, true // until reapply
 	c.mcpChanged = false                                    // the new agent has the MCP servers as they are now
@@ -284,6 +289,7 @@ func (s *Service) useLocked(c *chat, o opened) {
 			c.updateLocked(n, nil)
 		}
 	}
+	return tookChanged
 }
 
 // watch notices the agent's process ending on its own: the chat lets go of

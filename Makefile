@@ -287,10 +287,13 @@ lint-dart:
 # Git in the tests reads no config or ignore file of the user's: a global
 # excludes file (XDG_CONFIG_HOME's git/ignore) changed what git check-ignore
 # said in the tests' own repositories. A test that hangs (the tests wait
-# with plain receives, no deadlines of their own) ends at 3 minutes, not
-# go test's 10, with every goroutine's stack showing where it stuck.
+# with plain receives, no deadlines of their own) ends at 5 minutes, not
+# go test's 10, with every goroutine's stack showing where it stuck. Five
+# is over twice the longest package's longest recent run on CI's macOS
+# runner (features/chats: 81 to 124 s, 2026-11-26), whose speed halves on
+# a bad day: at 3 minutes such a day failed the build with nothing hung.
 test-go:
-	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race -timeout 3m $(GOTESTFLAGS) ./...
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race -timeout 5m $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (daemon_transport's interop builds a
 # Go peer), and in Chrome where there's one. One flutter pub get resolves

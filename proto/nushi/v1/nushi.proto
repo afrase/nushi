@@ -293,7 +293,10 @@ service NushiService {
   // looked at now: its head is recorded, and one that went stays as
   // "removed". GetDiff and GetFolderStatus read one by its path, against
   // its base_commit; once it's removed, GetDiff in the chat's folder with
-  // since and commit, while git keeps the commit. ADR 0081. API 99.
+  // since and commit, while git keeps the commit. ADR 0081. API 99. A
+  // workflow's removed record with nothing to show (no commit of its own)
+  // is left out while it is its path's last record, and sent again, in
+  // its place, once a later record is made at its path (API 158).
   rpc GetRelatedWorktrees(GetRelatedWorktreesRequest) returns (GetRelatedWorktreesResponse);
 
   // What the Worktrees widget says of some of a chat's related worktrees,
@@ -317,7 +320,10 @@ service NushiService {
   // are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
   // by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
   // refused for it. Login and Logout are refused only when that Ante has no
-  // sign-in for MCP servers (before 0.2.15).
+  // sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+  // agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+  // until PiG trusts the folder), checked by `pig mcp list --json` in the
+  // folder and signed in to by `pig mcp login`; McpShape says what it has.
   rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
   // Add, edit and remove an MCP server in a scope ("user", "project",
   // "local"), through the agent's own CLI; the folder names the project.
@@ -333,9 +339,13 @@ service NushiService {
   // .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
   // project's .claude/settings.local.json). A user or local server: as the
   // agent's own switch does, asked of the agent (Claude: /mcp in a
-  // terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-  // any other scope (Claude's plugins' servers and claude.ai connectors)
-  // and by an agent with no off switch.
+  // terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+  // 157): "enabled" in the file that has the server, so one of yours is on
+  // or off everywhere (McpShape.user_switch); refused, with
+  // McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+  // it. Refused for any other scope (Claude's plugins' servers and
+  // claude.ai connectors) and by an agent with no off switch. These
+  // changes and the sign-ins are the Mac's app's alone (macOnly).
   rpc SetMcpServerOn(SetMcpServerOnRequest) returns (SetMcpServerOnResponse);
   // Signs in to a server that needs OAuth: the agent opens the browser and
   // the call returns once the sign-in is done there, or failed (a few
@@ -383,9 +393,19 @@ service NushiService {
   rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
   // Streams a terminal's output: first what it kept (the last 1 MB, maybe
   // empty), then new output, and a last message once its shell has exited.
-  // A client that falls far behind is cut off and attaches again.
+  // A client that falls far behind is cut off and attaches again. Each
+  // message says where its data falls in all the terminal has printed
+  // (offset), and the first where the terminal was cleared, if it was
+  // (cleared_at; API 159).
   rpc AttachTerminal(AttachTerminalRequest) returns (stream AttachTerminalResponse);
   rpc WriteTerminal(WriteTerminalRequest) returns (WriteTerminalResponse);
+  // Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  // the first message of each later attach gives as cleared_at, so the
+  // client clears again there (issue #122). The terminal keeps the latest
+  // place: an older one is ignored, one past its output taken as its end.
+  // The place goes when the terminal closes or restarts, with its output.
+  // API 159.
+  rpc ClearTerminal(ClearTerminalRequest) returns (ClearTerminalResponse);
   rpc ResizeTerminal(ResizeTerminalRequest) returns (ResizeTerminalResponse);
   // Names a terminal; an empty name goes back to the one it shows by
   // itself.
@@ -846,9 +866,11 @@ message GetChatResponse {
   // With `recent`: every file the items before `items` wrote or edited (a
   // subagent's too), each once by the name the items give it, the one
   // changed last first, 1000 at most (the ones changed last); a file a
-  // later call deleted is left out. A client goes over the items it has
-  // after these, as they load and as they come, for the chat's whole list
-  // (issue #62). API 154.
+  // later call deleted is left out. From API 156 it takes in the files
+  // the workflows those items launched wrote (Workflow.written), placed
+  // among the items' own by when they changed. A client goes over the
+  // items it has after these, as they load and as they come, for the
+  // chat's whole list (issue #62). API 154.
   repeated string older_written = 11;
 }
 
@@ -984,7 +1006,7 @@ message Agent {
   // session id, such as "claude --resume".
   string resume = 3;
   // Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
-  // and Ante's from API 80.
+  // Ante's from API 80, PiG's from API 157.
   bool mcp = 4;
   // Deleting a chat archives the agent's history of it rather than
   // deleting it: the resume command still offers it.
@@ -1031,6 +1053,9 @@ message Agent {
   // deletes sessions after 30 days by default"); empty when nothing does
   // (API 142).
   string expires = 18;
+  // What its MCP config has, which Settings › MCP servers offers by (API
+  // 157); unset from an older daemon, where mcp_user_only says it.
+  McpShape mcp_shape = 19;
 }
 
 // An agent's adapter.
@@ -1762,6 +1787,10 @@ message ListMcpServersResponse {
   repeated McpServer servers = 1;
   // Why checking failed; the servers then come unchecked.
   string check_error = 2;
+  // Whether the agent trusts the folder, so loads its project servers
+  // (PiG's trust.json, as its servers' untrusted says); absent for an
+  // agent with no folder trust of its own (Claude's, Ante's) (API 157).
+  optional bool folder_trusted = 3;
 }
 
 message McpServer {
@@ -1788,6 +1817,56 @@ message McpServer {
   // The project's local settings approve this project server (Claude in
   // the terminal takes that once the folder is trusted there).
   bool approved = 10;
+  // A project server the agent doesn't load because the folder isn't
+  // trusted in it (PiG: until its trust.json, or defaultProjectTrust
+  // "always", says so; trusted in pig itself, its start's prompt or
+  // /trust). It hides no server of its name, and a check passes it by
+  // (API 157).
+  bool untrusted = 11;
+  // Why its switch can't act here, in words for the switch's tooltip;
+  // empty when it can. PiG's: "Set by this folder's .pig/mcp.json", on one
+  // of yours whose "enabled" a trusted folder's file overrides (API 157).
+  string held = 12;
+}
+
+// Where the switch on one of your servers reaches (API 157).
+enum McpUserSwitch {
+  // No switch on yours.
+  MCP_USER_SWITCH_UNSPECIFIED = 0;
+  // For the folder's project only (Claude's /mcp): "in this project".
+  MCP_USER_SWITCH_PROJECT = 1;
+  // On or off everywhere, in your own file (PiG's "enabled" in its
+  // mcp.json).
+  MCP_USER_SWITCH_EVERYWHERE = 2;
+}
+
+// What an agent's MCP config has of Claude Code's model (API 157).
+message McpShape {
+  // Where its servers are added and changed, in the order offered:
+  // Claude's "user", "project", "local"; Ante's "user"; PiG's "user",
+  // "project".
+  repeated string scopes = 1;
+  // A server turns off and on (SetMcpServerOn): Claude's and PiG's
+  // (PiG's by "enabled" in the file that has it); user_switch says where
+  // it reaches for one of yours.
+  bool off_switch = 2;
+  // A project's servers are approved one by one (Claude's .mcp.json, and
+  // McpServer.approved); without it they load with the folder's trust in
+  // the agent, and one not loaded is McpServer.untrusted.
+  bool approval = 3;
+  // It speaks the legacy SSE transport (Claude's).
+  bool sse = 4;
+  // Where the switch on one of yours reaches: Claude's PROJECT, PiG's
+  // EVERYWHERE (API 157).
+  McpUserSwitch user_switch = 5;
+  // The scopes only the check fills, whose servers no file of the
+  // agent's gives: Claude's "plugin" and "claudeai" (API 157).
+  repeated string checked_scopes = 6;
+  // A project server's switch writes the project's own file, which
+  // everyone on the repository shares (PiG's .pig/mcp.json); false: a
+  // file of yours alone (Claude's .claude/settings.local.json, kept out of
+  // git) (API 157).
+  bool project_switch_shared = 7;
 }
 
 message AddMcpServerRequest {
@@ -2034,8 +2113,9 @@ message ChatRelatedWorktrees {
   repeated RelatedWorktree worktrees = 1;
 }
 
-// A worktree of the chat's repository that one of its subagents works in.
-// Paths and branches are as git lists them, which an agent can write.
+// A worktree of the chat's repository that one of its subagents, or of a
+// workflow's, works in. Paths and branches are as git lists them, which an
+// agent can write.
 message RelatedWorktree {
   string path = 1;
   string branch = 2;
@@ -2044,7 +2124,9 @@ message RelatedWorktree {
   string base_commit = 3;
   // Its commit the last time the daemon looked.
   string last_head = 4;
-  // The tool call that started the subagent (Item.id).
+  // The tool call that has it (Item.id): the Agent call that started the
+  // subagent, or the Workflow call whose run claimed it (run_id set): its
+  // launch, or a resume of it.
   string call_id = 5;
   // "present", or "removed" once git no longer lists it.
   string state = 6;
@@ -2056,6 +2138,11 @@ message RelatedWorktree {
   // after it was removed with commits of its own that merged doesn't show
   // (API 135).
   bool pull_merged = 8;
+  // The run id of the workflow whose subagents work in it, when call_id is
+  // a Workflow call; empty for a subagent's (API 158). A resumed run keeps
+  // its id: the client finds the run's state on the latest Workflow item
+  // with it.
+  string run_id = 9;
 }
 
 message GetRelatedWorktreeStatsRequest {
@@ -2065,6 +2152,13 @@ message GetRelatedWorktreeStatsRequest {
 }
 
 message GetRelatedWorktreeStatsResponse {
+  // One for each of the chat's records of a path asked, in the order of
+  // its list: a path can have several, a worktree removed and another made
+  // there since (issue #118). The list only grows, but for a workflow's
+  // removed record with nothing to show, left out while it is its path's
+  // last (GetRelatedWorktrees): a record's place among its path's records
+  // never changes, but for a hidden record forgotten past 256 (ADR 0081),
+  // whose place a later record at its path takes.
   repeated RelatedWorktreeStats stats = 1;
 }
 
@@ -2467,8 +2561,8 @@ message EventsResponse {
     // named it (its show tool, ADR 0068); these events have no seq, and
     // only the Mac's app acts on them (API 95).
     string show = 17;
-    // The chat's related worktrees, all of them, when they changed; these
-    // events have no seq (API 99).
+    // The chat's related worktrees, all of them as GetRelatedWorktrees
+    // sends them, when they changed; these events have no seq (API 99).
     ChatRelatedWorktrees related_worktrees = 18;
     // A folder whose dev servers changed: one started, answered, failed
     // or ended (chat_id is empty; API 109).
@@ -2755,6 +2849,21 @@ message Workflow {
   // order (Claude's meta.phases), with phases 32 at most; their counts are
   // 0. A phase leaves it for phases once reached. API 134.
   repeated WorkflowPhase planned = 20;
+  // The files its agents wrote or edited with their file tools, each once,
+  // the one changed last first, 1000 at most: by the rule a chat's own
+  // calls have (a failed call counts for nothing), named as a chat's calls
+  // name theirs (relative to the chat's folder when inside it), the
+  // agent's paths as plain text. Kept up to date while it runs (read
+  // every few seconds), read to the end once it ended. A shell command's
+  // files aren't among them. Empty from a daemon below API 156.
+  repeated WrittenFile written = 21;
+}
+
+// A file a workflow's agents wrote: its path, and when the last call that
+// changed it ended, in Unix milliseconds (0 when not known).
+message WrittenFile {
+  string path = 1;
+  int64 changed = 2;
 }
 
 // A phase of a workflow: its title, the agent's line on it, and how many
@@ -3082,6 +3191,17 @@ message AttachTerminalResponse {
   // The shell has exited; this is the last message.
   bool exited = 2;
   int32 exit_code = 3;
+  // The place of data's first byte: how many bytes the terminal had
+  // printed before it, since it started (a restart starts again at 0).
+  // On every message; on the last, the place after all it printed. The
+  // first message's data starts where the kept output does, so its
+  // offset is 0 until the terminal has printed more than it keeps. API
+  // 159.
+  int64 offset = 4;
+  // On the first message only, and only when the terminal was cleared
+  // (ClearTerminal): the place of the latest clear. It may be before
+  // offset, when the kept output no longer reaches back to it. API 159.
+  optional int64 cleared_at = 5;
 }
 
 message WriteTerminalRequest {
@@ -3090,6 +3210,16 @@ message WriteTerminalRequest {
 }
 
 message WriteTerminalResponse {}
+
+message ClearTerminalRequest {
+  string terminal_id = 1;
+  // The place the client's screen had taken in when it was cleared: the
+  // offset after the last byte it was given (AttachTerminalResponse's
+  // offset). A negative one is ignored.
+  int64 at = 2;
+}
+
+message ClearTerminalResponse {}
 
 message ResizeTerminalRequest {
   string terminal_id = 1;

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:connectrpc/connect.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 import 'fake_daemon.dart';
@@ -11,6 +14,11 @@ import 'fake_daemon.dart';
 /// app typed into each ([typed]; into any, in order, [typedAll]). A
 /// terminal opened with a command (API 143) plays what [commands] says it
 /// prints and exits with once attached, or runs until [ends].
+///
+/// Each message says its place in all the terminal printed (`offset`,
+/// API 159), counted from [replayAt]; the replay says where the terminal
+/// was [cleared], and ClearTerminal keeps the latest place as the daemon
+/// does ([clears], the calls).
 class FakeShells {
   new(this.fake, {List<Terminal>? terminals}) {
     list.addAll(terminals ?? const []);
@@ -24,6 +32,19 @@ class FakeShells {
   final replay = <String, String>{};
   final typed = <String, List<String>>{};
   final typedAll = <String>[];
+
+  /// Where each terminal's replay starts in all it printed: past 0 once
+  /// the daemon has trimmed what it keeps.
+  final replayAt = <String, int>{};
+
+  /// Each terminal's clear, as the daemon keeps it: the replay says so.
+  final cleared = <String, int>{};
+
+  /// The ClearTerminal calls, in order.
+  final clears = <ClearTerminalRequest>[];
+
+  /// The place after the last byte each terminal's streams have sent.
+  final _sent = <String, int>{};
 
   /// What each terminal's shell writes as soon as it's attached, after
   /// its replay.
@@ -61,9 +82,18 @@ class FakeShells {
     }
   }
 
+  /// The stream of terminal [id] ends with no exit, as when another
+  /// client restarted the terminal: the app attaches again after a wait.
+  void drops(String id) => unawaited(_live.remove(id)?.close());
+
   /// The shell in terminal [id] writes [s].
   void write(String id, String s) =>
       _live[id]?.add(AttachTerminalResponse(data: utf8.encode(s)));
+
+  /// The shell in terminal [id] writes [bytes] as they are: a character
+  /// or an escape sequence may end in the next write.
+  void writeBytes(String id, List<int> bytes) =>
+      _live[id]?.add(AttachTerminalResponse(data: bytes));
 
   /// A command's run, as fish marks it: C, [output], D with [exit].
   void runs(String id, String output, {int exit = 0}) => write(
@@ -85,8 +115,24 @@ class FakeShells {
       utf8.decode(data),
     ),
     CloseTerminalRequest(:final terminalId) => _close(terminalId),
+    final ClearTerminalRequest r => _clear(r),
     _ => null,
   };
+
+  // The daemon's rule: the latest place, a negative or older one ignored,
+  // one past what was sent taken as its end.
+  ClearTerminalResponse _clear(ClearTerminalRequest r) {
+    final id = r.terminalId;
+    if (!list.any((t) => t.id == id)) {
+      throw ConnectException(Code.failedPrecondition, 'no terminal "$id"');
+    }
+    clears.add(r);
+    final at = r.at.toInt();
+    if (at >= 0) {
+      cleared[id] = max(cleared[id] ?? 0, min(at, _sent[id] ?? 0));
+    }
+    return ClearTerminalResponse();
+  }
 
   OpenTerminalResponse _open(String chatId, String command) {
     final t = Terminal(
@@ -126,20 +172,35 @@ class FakeShells {
         StreamController<AttachTerminalResponse>.broadcast();
     final command = list.where((t) => t.id == id).firstOrNull?.command;
     final plays = commands[command];
+    // Each message placed after the one before it.
+    var at = replayAt[id] ?? 0;
+    AttachTerminalResponse placed(AttachTerminalResponse m) {
+      final out = m.deepCopy()..offset = Int64(at);
+      at += m.data.length;
+      _sent[id] = max(_sent[id] ?? 0, at);
+      return out;
+    }
+
     Stream<AttachTerminalResponse> attach() async* {
-      yield AttachTerminalResponse(data: utf8.encode(replay[id] ?? ''));
+      final first = placed(
+        AttachTerminalResponse(data: utf8.encode(replay[id] ?? '')),
+      );
+      if (cleared[id] case final c?) first.clearedAt = Int64(c);
+      yield first;
       if (plays != null) {
-        yield AttachTerminalResponse(data: utf8.encode(plays.output));
+        yield placed(AttachTerminalResponse(data: utf8.encode(plays.output)));
         _exit(id, plays.exit);
-        yield AttachTerminalResponse(exited: true, exitCode: plays.exit);
+        yield placed(
+          AttachTerminalResponse(exited: true, exitCode: plays.exit),
+        );
         return;
       }
       if (onAttach[id] case final s?) {
-        yield AttachTerminalResponse(data: utf8.encode(s));
+        yield placed(AttachTerminalResponse(data: utf8.encode(s)));
       }
       // Its last message is its exit's, as the daemon's stream ends.
       await for (final m in live.stream) {
-        yield m;
+        yield placed(m);
         if (m.exited) return;
       }
     }

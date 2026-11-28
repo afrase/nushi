@@ -46,10 +46,10 @@ String phaseCount(WorkflowPhase p) => '${p.done + p.failed}/${p.started}';
 String phaseProgress(WorkflowPhase p) => '${p.title} ${phaseCount(p)}';
 
 /// Its state line, in a subagent row's order (#103, #106): while it runs
-/// "Review 5/7 · 3 running · 412k tokens · 4m 12s"; at its end "100
-/// agents · 1.2M tokens · 14m 05s" (done says no word: its check does;
+/// "Review 5/7, 3 running, 412k tokens, 4m 12s"; at its end "100
+/// agents, 1.2M tokens, 14m 05s" (done says no word: its check does;
 /// "failed", "stopped", "ended" when the agent didn't say how); stalled
-/// "no activity for 1h · Review 5/7 · 3 running · 412k tokens", without
+/// "no activity for 1h, Review 5/7, 3 running, 412k tokens", without
 /// its time, which no longer ticks and would be cut first where the line
 /// is short (a phone's). Its tokens show once the daemon read some (API
 /// 132); no cost, which the agent doesn't report for a workflow. Without
@@ -71,7 +71,7 @@ String workflowState(Workflow w, {bool count = true, bool tokens = true}) {
       if (phase == null && w.runningCount == 0) 'starting',
       ?used,
       if (time.isNotEmpty && !w.stalled) time,
-    ].join(' · ');
+    ].join(', ');
   }
   return [
     ?switch (w.state) {
@@ -83,7 +83,7 @@ String workflowState(Workflow w, {bool count = true, bool tokens = true}) {
     if (w.agents > 0 && count) agents,
     ?used,
     if (time.isNotEmpty) time,
-  ].join(' · ');
+  ].join(', ');
 }
 
 /// Its state for a short line, the fullest first: [workflowState], then

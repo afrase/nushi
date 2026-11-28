@@ -315,6 +315,14 @@ void main() {
         _call('t3', 'gh pr merge 221 --squash', 'Merged'),
       );
       expect(find.text('Merged'), findsWidgets);
+      // The row's cue, alone at the card's foot, takes a capital.
+      expect(
+        find.descendant(
+          of: find.byType(LivePullCard),
+          matching: find.text('Merged into main'),
+        ),
+        findsOneWidget,
+      );
       await render(tester, find.byType(NushiApp), 'pull_live_merged_$name');
       // Another chat, and back: gone.
       d.select('d');

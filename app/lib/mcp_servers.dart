@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/agent_words.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
@@ -58,10 +59,56 @@ class McpServers extends ChangeNotifier {
   /// Whose servers: an agent's name, as ListAgents gives it.
   final String agent;
 
-  /// They are only yours, with no off switch or legacy SSE, as the daemon
-  /// says of the agent.
-  bool get userOnly => knownAgents[agent]?.mcpUserOnly ?? false;
+  /// What the agent's MCP config has (its scopes, an off switch and where
+  /// it reaches, approval, SSE, the scopes only the check fills), as the
+  /// daemon says of it (API 157); from an older daemon, mcpUserOnly says
+  /// it: Ante's yours only, else Claude's. An agent gone from the list
+  /// (removed in Settings › Agents while its form is open) keeps the last
+  /// shape seen, and one never seen has the narrowest: never Claude's
+  /// whole model, which would offer what it hasn't.
+  McpShape get shape => _seen = switch (knownAgents[agent]) {
+    final a? when a.hasMcpShape() => a.mcpShape,
+    final a? when a.mcpUserOnly => _yoursOnly,
+    _? => _claudes,
+    null => _seen ?? _yoursOnly,
+  };
+  McpShape? _seen; // the shape last given, for an agent gone from the list
+
+  static final _yoursOnly = McpShape(scopes: ['user']);
+  static final _claudes = McpShape(
+    scopes: ['user', 'project', 'local'],
+    offSwitch: true,
+    approval: true,
+    sse: true,
+    userSwitch: McpUserSwitch.MCP_USER_SWITCH_PROJECT,
+    checkedScopes: ['plugin', 'claudeai'],
+  );
+
+  /// Its servers are only yours: one scope, the user's.
+  bool get userOnly =>
+      shape.scopes.length == 1 && shape.scopes.single == 'user';
+
+  /// What the Project group says under it in a folder the agent doesn't
+  /// trust ([folderTrusted]), once: the agent loads its servers only once the
+  /// folder is trusted in it, which only the agent itself does (Nushi has
+  /// no trust card for it, ADR 0078), in its own program's words.
+  static String untrustedNote(String agent) =>
+      switch (agentWords(agent).command) {
+        final command? =>
+          'Folder not trusted: run $command here in a terminal and trust '
+              'it, then Check again.',
+        null =>
+          'Folder not trusted: trust it in ${agentTitle(agent)}, then Check '
+              'again.',
+      };
+
   List<McpServer> servers = [];
+
+  /// Whether the agent trusts the folder, so loads its project's servers,
+  /// as the daemon says (ListMcpServersResponse.folder_trusted, API 157);
+  /// null for an agent with no folder trust of its own (Claude's, Ante's)
+  /// and until the daemon has said.
+  bool? folderTrusted;
   bool loaded = false;
   bool checking = false;
   String error = ''; // why the list or the check failed
@@ -83,7 +130,7 @@ class McpServers extends ChangeNotifier {
       _again = false;
       try {
         _take(await _list(false));
-        _take(await _list(true));
+        _take(await _list(true), checked: true);
       } on Object catch (e) {
         _unchecked();
         error = errorText(e);
@@ -119,9 +166,14 @@ class McpServers extends ChangeNotifier {
         ListMcpServersRequest(folder: folder, checkHealth: check, agent: agent),
       );
 
-  void _take(ListMcpServersResponse r) {
+  /// Takes [r]'s servers. After a check ([checked]) one it left without a
+  /// state wasn't checked: PiG's list leaves out a project's servers it
+  /// doesn't load, and one in a folder trusted only by its
+  /// defaultProjectTrust "always" (docs/facts/pig.md).
+  void _take(ListMcpServersResponse r, {bool checked = false}) {
     servers = r.servers;
-    if (r.checkError.isNotEmpty) _unchecked();
+    folderTrusted = r.hasFolderTrusted() ? r.folderTrusted : null;
+    if (checked || r.checkError.isNotEmpty) _unchecked();
     error = r.checkError;
     loaded = true;
     notifyListeners();
@@ -158,6 +210,19 @@ const scopes = {
   ),
   'other': ('Other', 'From settings Nushi doesn’t read, such as managed ones.'),
 };
+
+/// [scope]'s heading and what it means for [agent]: [scopes]', but a
+/// project's file where the agent keeps it elsewhere ([agentWords]'
+/// mcpProjectFile: PiG's own folder's file).
+(String, String) scopeOf(String agent, String scope) =>
+    switch ((scope, agentWords(agent).mcpProjectFile)) {
+      ('project', final file?) => (
+        'Project',
+        '${file[0].toUpperCase()}${file.substring(1)}, shared with everyone '
+            'on it.',
+      ),
+      _ => scopes[scope] ?? (scope, ''),
+    };
 
 /// A server's config, decoded; empty when it isn't a JSON object. A
 /// repository's .mcp.json is anyone's, and the daemon passes its values
@@ -198,11 +263,12 @@ String secrets(Map<String, dynamic> c) => [
 
 /// A server's state in words, and its color.
 (String, Color) stateOf(McpServer s, Tokens t) => switch (s.state) {
+  _ when s.untrusted => ('Folder not trusted', t.needs),
   _ when s.off => ('Off', t.idle),
   'connected' => ('Connected', t.done),
   'failed' => ('Failed to connect', t.crashed),
   'needs_auth' => ('Needs login', t.needs),
-  'pending' when s.approved => ('Approved · folder not trusted', t.needs),
+  'pending' when s.approved => ('Approved, folder not trusted', t.needs),
   'pending' => ('Waiting for approval', t.needs),
   'disabled' => ('Off', t.idle),
   '' => ('Checking…', t.textMuted),
@@ -214,6 +280,7 @@ String secrets(Map<String, dynamic> c) => [
 /// and GitHub's accounts alike): working, failed, waiting on you, or
 /// quiet for off and not known yet.
 NoteTone toneOf(McpServer s) => switch (s.state) {
+  _ when s.untrusted => NoteTone.needs,
   _ when s.off => NoteTone.quiet,
   'connected' => NoteTone.done,
   'failed' => NoteTone.crashed,
@@ -232,11 +299,16 @@ class McpDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final (word, color) = stateOf(server, t);
+    // Untrusted, it isn't used: a ring, as an off one's.
     final ring =
-        server.off || ['', 'disabled', 'unknown'].contains(server.state);
+        server.untrusted ||
+        server.off ||
+        ['', 'disabled', 'unknown'].contains(server.state);
     return tooltip(
       context,
-      server.detail.isEmpty ? word : '$word: ${server.detail}',
+      server.detail.isEmpty || server.untrusted
+          ? word
+          : '$word: ${server.detail}',
       Container(
         width: 7,
         height: 7,

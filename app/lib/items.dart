@@ -378,8 +378,12 @@ class _ToSubagentMark extends StatelessWidget {
                   name: item.toSubagentName,
                   call: item.toSubagent,
                 ),
-                if (state.isNotEmpty)
-                  TextSpan(text: ' · $state', style: theme.ui(color, size: 12)),
+                // A gap, not a comma: after a command's code ink a comma
+                // reads as part of the command.
+                if (state.isNotEmpty) ...[
+                  const WidgetSpan(child: SizedBox(width: 8)),
+                  TextSpan(text: state, style: theme.ui(color, size: 12)),
+                ],
               ],
             ),
             maxLines: 1,
@@ -397,7 +401,7 @@ class _ToSubagentMark extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: ', through $agent${state.isEmpty ? '' : ' · $state'}',
+                  text: ', through $agent${state.isEmpty ? '' : ', $state'}',
                   style: theme.ui(color, size: 12),
                 ),
               ],

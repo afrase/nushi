@@ -54,7 +54,7 @@ func (h Harness) Context(ctx context.Context, call func(ctx context.Context, met
 	lines := []string{
 		fmt.Sprintf("Messages: %d from you, %d from %s", st.UserMessages, st.AssistantMessages, h.Title),
 		fmt.Sprintf("Tool calls: %d", st.ToolCalls),
-		fmt.Sprintf("Tokens: %s in · %s out", short(t.Input), short(t.Output)),
+		fmt.Sprintf("Tokens: %s in, %s out", short(t.Input), short(t.Output)),
 	}
 	var cache []string
 	if t.CacheRead > 0 {
@@ -64,7 +64,7 @@ func (h Harness) Context(ctx context.Context, call func(ctx context.Context, met
 		cache = append(cache, short(t.CacheWrite)+" written")
 	}
 	if len(cache) > 0 {
-		lines = append(lines, "Cache: "+strings.Join(cache, " · "))
+		lines = append(lines, "Cache: "+strings.Join(cache, ", "))
 	}
 	lines = append(lines, fmt.Sprintf("Compactions: %d", st.Compactions))
 	return model.ContextUsage{Markdown: "- " + strings.Join(lines, "\n- ") + "\n"}, nil

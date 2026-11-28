@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -100,5 +101,51 @@ func TestTheRecentPartSaysWhatCameBeforeWrote(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if len(whole.Written) != 0 {
 		t.Errorf("the whole chat loaded, still written before it: %q", whole.Written)
+	}
+}
+
+// A workflow's files are among the chat's own, placed by when they
+// changed: a later call of the chat's moves or deletes one, a file both
+// wrote is one, and one whose time isn't known is where its launch is.
+func TestWrittenByTakesInWorkflows(t *testing.T) {
+	at := func(m int) time.Time { return time.Date(2026, 11, 20, 10, m, 0, 0, time.UTC) }
+	timed := func(it model.Item, m int) model.Item {
+		it.Started, it.Ended = at(m), at(m)
+		return it
+	}
+	wf := timed(call("wf", "other", "completed"), 2)
+	wf.Workflow = &model.Workflow{RunID: "wf_1", Written: []model.WrittenFile{
+		{Path: "later.md", Changed: at(9)}, {Path: "a.md", Changed: at(5)}, {Path: "docs/report.md", Changed: at(3)}, {Path: "untimed.md"}}}
+	items := []model.Item{
+		{ID: "u", Kind: model.UserMessage, Text: "go", Sent: at(0)},
+		timed(call("w1", "edit", "completed", "docs/report.md"), 1),
+		wf,
+		timed(call("w2", "edit", "completed", "b.md"), 4),
+		timed(call("del", "delete", "completed", "a.md"), 6),
+		call("w3", "edit", "completed", "c.md"), // no time: after the one before
+	}
+	want := []string{"later.md", "c.md", "b.md", "docs/report.md", "untimed.md"}
+	if got := writtenBy(items); !slices.Equal(got, want) {
+		t.Errorf("writtenBy = %q, want %q", got, want)
+	}
+
+	// A tie isn't "before": a run's write and a delete after it in the
+	// same millisecond keep their order.
+	tie := timed(call("wf", "other", "completed"), 2)
+	tie.Workflow = &model.Workflow{RunID: "wf_2", Written: []model.WrittenFile{{Path: "x.md", Changed: at(5)}}}
+	if got := writtenBy([]model.Item{tie, timed(call("del", "delete", "completed", "x.md"), 5)}); len(got) != 0 {
+		t.Errorf("a write and a delete at one time: %q", got)
+	}
+	// An item is timed by when it started: a long call (a subagent's,
+	// 10:02 to 10:30) doesn't jump the clock past its children, so a
+	// run's write at 10:10 comes after a child's delete at 10:04.
+	long := call("agent", "think", "completed")
+	long.Started, long.Ended = at(2), at(30)
+	child := timed(call("child", "delete", "completed", "y.md"), 4)
+	child.Parent = "agent"
+	run := timed(call("wf", "other", "completed"), 1)
+	run.Workflow = &model.Workflow{RunID: "wf_3", Written: []model.WrittenFile{{Path: "y.md", Changed: at(10)}}}
+	if got := writtenBy([]model.Item{run, long, child}); !slices.Equal(got, []string{"y.md"}) {
+		t.Errorf("a run's write after a long call's child's delete: %q", got)
 	}
 }

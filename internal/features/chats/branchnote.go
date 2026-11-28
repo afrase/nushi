@@ -23,9 +23,19 @@ import (
 // started (docs/facts/claude.md). What's pending is the worktree's Told
 // against its Branch, kept with the chat.
 
-// toldSuffix ends a "Branch renamed to …" line once the agent was told;
-// no-break spaces keep it whole where the line wraps.
-const toldSuffix = " ·\u00a0told\u00a0the\u00a0agent"
+// toldSuffix ends a "Branch renamed to …" line once the agent was told,
+// after a comma (no dot between a line's parts, issue 119); no-break
+// spaces keep it whole where the line wraps. oldToldSuffix is what a line
+// stored before then ends with, still read as told.
+const (
+	toldSuffix    = ",\u00a0told\u00a0the\u00a0agent"
+	oldToldSuffix = " ·\u00a0told\u00a0the\u00a0agent"
+)
+
+// saysTold says whether a line already says the agent was told.
+func saysTold(text string) bool {
+	return strings.HasSuffix(text, toldSuffix) || strings.HasSuffix(text, oldToldSuffix)
+}
 
 // note is one of Nushi's notes to the agent: a bare tag,
 // <nushi-NAME k="v" .../>, with no words of Nushi's (the owner's rule,
@@ -213,7 +223,7 @@ func (c *chat) untoldLocked(status string) []string {
 		switch it := &c.items[i]; {
 		case it.Kind == model.UserMessage && it.Parent == "":
 			users++
-		case it.Kind == model.Notice && it.Status == status && !strings.HasSuffix(it.Text, toldSuffix):
+		case it.Kind == model.Notice && it.Status == status && !saysTold(it.Text):
 			ids = append(ids, it.ID)
 		}
 	}

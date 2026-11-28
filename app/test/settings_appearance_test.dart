@@ -290,7 +290,7 @@ void main() {
       matching: find.byType(ThemeCard),
     );
     expect(
-      find.descendant(of: card, matching: find.text('Yours · Harbor.json')),
+      find.descendant(of: card, matching: find.text('Yours, Harbor.json')),
       findsOne,
     );
     expect(

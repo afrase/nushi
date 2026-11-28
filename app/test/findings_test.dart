@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart' show Button;
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -211,6 +212,44 @@ void main() {
       findsWidgets,
     );
     expect(find.text('Hide JSON'), findsOneWidget);
+  });
+
+  // Show JSON turns into Hide JSON without changing width, so it stays put
+  // at the head's end.
+  testWidgets('Show JSON keeps its width as it reads Hide JSON', (
+    tester,
+  ) async {
+    final found = findingsInText(_message)!;
+    for (final b in renderThemes) {
+      await _pump(
+        tester,
+        FindingsCard(
+          found.findings,
+          ChatState('c', '/nowhere'),
+          json: found.json,
+        ),
+        b == Brightness.dark ? Tokens.dark : Tokens.light,
+      );
+      await tester.pumpAndSettle();
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label);
+      final at = tester.getRect(button('Show JSON'));
+      await render(
+        tester,
+        find.byType(FindingsCard),
+        'press_show_json_${b.name}',
+      );
+      await tester.tap(button('Show JSON'));
+      await tester.pump();
+      expect(tester.getRect(button('Hide JSON')), at);
+      await render(
+        tester,
+        find.byType(FindingsCard),
+        'press_hide_json_${b.name}',
+      );
+      await tester.tap(button('Hide JSON'));
+      await tester.pump();
+    }
   });
 
   final twelve = [

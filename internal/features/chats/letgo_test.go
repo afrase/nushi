@@ -528,3 +528,29 @@ func TestClearingAShownLetGoChatsCopyKeepsItsItems(t *testing.T) {
 		t.Errorf("cleared while shown: let go %v, it shows %s", c.inCopy, describe(c.items))
 	}
 }
+
+// A chat let go still answers Wrote for a file its workflow's agents
+// wrote, from the copy's Workflow call.
+func TestWroteOfAWorkflowFromTheCopy(t *testing.T) {
+	svc, agent, c, _, _ := lettingGo(t, nil)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "one")}
+	turn(t, svc, c, "one")
+	outside := filepath.Join(t.TempDir(), "audit.md")
+	c.mu.Lock()
+	c.addLocked(model.Item{ID: "wf", Kind: model.ToolCall, Status: "completed", Title: "Workflow",
+		Workflow: &model.Workflow{RunID: "wf_a", State: model.RunDone, Written: []model.WrittenFile{{Path: outside}}}})
+	c.mu.Unlock()
+	if !svc.Wrote(c.id, outside) {
+		t.Fatal("Wrote doesn't take the workflow's files")
+	}
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	c.mu.Lock()
+	let := c.inCopy && c.items == nil
+	c.mu.Unlock()
+	if !let {
+		t.Fatal("not let go")
+	}
+	if !svc.Wrote(c.id, outside) || svc.Wrote(c.id, filepath.Join(filepath.Dir(outside), "other.md")) {
+		t.Error("Wrote doesn't answer from the copy's workflow")
+	}
+}

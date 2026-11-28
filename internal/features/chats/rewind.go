@@ -119,6 +119,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		c.sid, c.config, c.reapplying = next, config, true
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
 		cut := copyCut(c.items[i:])
+		related := c.rewoundLocked(c.items[:i])
 		c.items = c.items[:i]
 		c.cutCopyLocked(cut)
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
@@ -129,6 +130,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 				s.Title, s.HasMessages = "", false
 			}
 			s.Pins = pinsIn(s.Pins, c.items) // a message cut takes its pin
+			s.RelatedWorktrees = related     // their points moved back to what's kept (issue #118)
 		})
 		return c.record.Mode, c.record.Picks, nil
 	}()

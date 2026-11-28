@@ -212,6 +212,6 @@ class TreeRowView extends StatelessWidget {
         'a link that leads out of the folder, or nowhere',
       if (r.kind == TreeRowKind.file && !r.opens) 'not text: no preview',
     ];
-    return what.join(' · ');
+    return what.join(', ');
   }
 }

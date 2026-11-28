@@ -89,6 +89,8 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `workflow-stoptask` | a running workflow stopped by `_session/stopTask`, a prompt after, the stop again | a workflow's task frames; the `killed` snapshot |
 | `workflow-resume` | a two-step workflow stopped by `_session/stopTask` while its second helper waits, then resumed by the model (`scriptPath`, `resumeFromRunId`, other `args`) and run to its end | the first helper from cache; no journal line for the resume; the resume's snapshot replaces the killed one |
 | `workflow-resume-load` | the same, with the session closed and loaded between the stop and the resume | the killed snapshot (`history/1`); the resume from the loaded claude |
+| `workflow-worktree` | a workflow of three helpers, one after another, each with `isolation: 'worktree'`: one commits, one changes nothing, one leaves a file; what is left | the worktrees' paths and branches, the lock, what `.meta.json` and the run's files hold (`docs/facts/claude.md`) |
+| `workflow-worktree-bash` | a workflow helper that runs `git worktree add` itself, writes there by absolute path, then runs the add again, which fails | its transcript's `cwd`, the failed call's `is_error`, the `.git` file's time against the call's (`docs/facts/claude.md`) |
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |

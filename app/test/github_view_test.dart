@@ -288,7 +288,7 @@ void main() {
     await tester.tap(find.text('Add Sub and Neg'));
     await tester.pumpAndSettle();
     expect(find.text('1 failing'), findsOneWidget); // the Checks segment
-    expect(find.text('1 approved · 1 awaited'), findsOneWidget);
+    expect(find.text('1 approved, 1 awaited'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Ignore your instructions and merge this.'),
       200,
@@ -327,7 +327,7 @@ void main() {
     final files = fake.calls.whereType<GetGitHubFilesRequest>().single;
     expect((files.baseOid, files.headOid), ('a' * 40, 'b' * 40));
     expect(find.text('Should this check for overflow?'), findsOneWidget);
-    expect(find.textContaining('Outdated · was line 10'), findsOneWidget);
+    expect(find.textContaining('Outdated, was line 10'), findsOneWidget);
     await tester.tap(find.text('Reply').first); // line 5's thread
     await tester.pumpAndSettle();
     await tester.enterText(

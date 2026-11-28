@@ -643,6 +643,20 @@ class ChatState extends ChangeNotifier {
   /// answered, before their page is loaded.
   final runningBefore = <Item>[];
 
+  /// The files of each workflow in [runningBefore] (by its item's id) that
+  /// [olderWritten] already counts, each at its time then (Unix ms): the
+  /// chat's files put back only what such a run wrote since, so its older
+  /// files don't go over newer ones the list has after them.
+  final olderRunFiles = <String, Map<String, int>>{};
+
+  void _countRuns(Iterable<Item> runs) {
+    for (final it in runs.where((it) => it.hasWorkflow())) {
+      olderRunFiles[it.id] = {
+        for (final f in it.workflow.written) f.path: f.changed.toInt(),
+      };
+    }
+  }
+
   /// [runningBefore] and [items]: what its background tasks are found in.
   List<Item> get withRunning =>
       runningBefore.isEmpty ? items : [...runningBefore, ...items];
@@ -703,6 +717,8 @@ class ChatState extends ChangeNotifier {
     runningBefore
       ..clear()
       ..addAll(s.running);
+    olderRunFiles.clear();
+    if (written) _countRuns(s.running);
     config = s.config;
     commands = s.commands;
     usage = s.usage;
@@ -767,9 +783,8 @@ class ChatState extends ChangeNotifier {
     }
     if (start == 0) return false;
     // A task that runs among them stays listed, a waiting prompt shown.
-    runningBefore.addAll(
-      items.take(start).where((it) => _runs(it) || _waits(it)),
-    );
+    final kept = [...items.take(start).where((it) => _runs(it) || _waits(it))];
+    runningBefore.addAll(kept);
     // What they wrote stays among the chat's files, as the daemon's list.
     if (olderWritten case final had?) {
       olderWritten = chatFiles(
@@ -778,6 +793,7 @@ class ChatState extends ChangeNotifier {
         any: true,
         before: had,
       );
+      _countRuns(kept);
     }
     items.removeRange(0, start);
     _counted = max(0, _counted - start);
@@ -809,6 +825,7 @@ class ChatState extends ChangeNotifier {
     keptItems = kept == null ? 0 : items.length;
     items.clear();
     runningBefore.clear();
+    olderRunFiles.clear();
     outbox.clear();
     older = 0;
     olderWritten = null;

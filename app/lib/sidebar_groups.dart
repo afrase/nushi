@@ -7,6 +7,7 @@ import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/path_name.dart';
 import 'package:nushi/project_sort.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
@@ -172,8 +173,10 @@ void moveInProject(String folder, List<ChatState> shown, int from, int to) {
 }
 
 /// For the folders of [folders] that share their name with another: what
-/// tells them apart, their parent's name ("work" for ~/work/app), or its
-/// path when that's shared too.
+/// tells them apart, the shortest run of trailing folders of its parent's
+/// path that no twin's parent ends in (issue 119): "work" for ~/work/app
+/// beside ~/play/app, "north/work" beside south/work, and the whole path
+/// ("~", "/", "/x") where it is the end of another's.
 Map<String, String> twinParents(Iterable<String> folders) {
   final byName = <String, List<String>>{};
   for (final f in folders.where((f) => f.isNotEmpty)) {
@@ -181,13 +184,33 @@ Map<String, String> twinParents(Iterable<String> folders) {
   }
   final out = <String, String>{};
   for (final twins in byName.values.where((l) => l.length > 1)) {
-    final names = [for (final f in twins) folderParts(folderParts(f).$2).$1];
-    final unique = names.toSet().length == names.length;
+    final parents = [for (final f in twins) folderParts(f).$2];
     for (final (i, f) in twins.indexed) {
-      out[f] = unique && names[i].isNotEmpty ? names[i] : folderParts(f).$2;
+      out[f] = _apart(parents[i], [
+        for (final (j, p) in parents.indexed)
+          if (j != i) p,
+      ]);
     }
   }
   return out;
+}
+
+/// The shortest run of [parent]'s trailing folders that none of [others]
+/// ends in; [parent] whole when each run is another's end.
+String _apart(String parent, List<String> others) {
+  String tail(String path, int n) {
+    if (path == '/') return path;
+    final parts = path.split('/');
+    return parts.sublist(parts.length - n.clamp(0, parts.length)).join('/');
+  }
+
+  if (parent == '/') return parent;
+  final count = parent.split('/').length;
+  for (var n = 1; n < count; n++) {
+    final mine = tail(parent, n);
+    if (!others.any((o) => tail(o, n) == mine)) return mine;
+  }
+  return parent;
 }
 
 /// A project's menu, its group's header's and its tile's in the project
@@ -217,7 +240,8 @@ List<MenuEntry> projectEntries({
 ];
 
 /// A group's header: the folder's name (its path in the tooltip; [twin]
-/// after it, muted, when another project has the same name), or "No
+/// before it as a path, "me/", at the regular weight, when another
+/// project has the same name), or "No
 /// folder" ('') for chats in scratch folders; after it a chevron button
 /// that collapses the group, shown as the + is or while it's collapsed,
 /// with the summary dot beside it then ([GroupHeader]); its Sort button
@@ -323,21 +347,19 @@ class _HeaderState extends State<_Header> {
   }
 
   Widget _name(NushiTheme theme, String name) {
-    final t = theme.t;
-    return Text.rich(
-      TextSpan(
-        text: name,
-        children: [
-          if (widget.twin.isNotEmpty)
-            TextSpan(
-              text: '  · ${widget.twin}',
-              style: theme.ui(t.textMuted, size: 11.5),
-            ),
-        ],
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+    final twin = widget.twin;
+    // A twin's parent as the path it is, before the name: "me/cubby",
+    // "~/kiln", "/kiln" (issue 119), regular weight so the name still
+    // reads first; the path gives way before the name does (PathName).
+    return PathName(
+      twin.isEmpty || twin.endsWith('/') ? twin : '$twin/',
+      name,
       style: GroupHeader.style(theme),
+      parentStyle: theme.ui(
+        theme.t.textMuted,
+        size: 11.5,
+        weight: FontWeight.w400,
+      ),
     );
   }
 }

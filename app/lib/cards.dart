@@ -262,7 +262,8 @@ class _PermissionCardState extends State<PermissionCard> {
     final pending = item.status == 'pending';
     final picked = item.options.where((o) => o.id == item.answer).firstOrNull;
     // A show call asks about a file or a page, a dev server tool about an
-    // entry: their raw tool names wouldn't say which.
+    // entry: their raw tool names wouldn't say which. Any other MCP call is
+    // titled as its call's row is, "search_issues (github)" (toolTitle).
     final shown = showPath(item);
     final page = showUrl(item);
     final server = serverTool(item);
@@ -271,7 +272,7 @@ class _PermissionCardState extends State<PermissionCard> {
       _ when page != null => 'Show $page',
       (_, _, final ask)? when server == 'preview_list' => ask,
       (_, _, final ask)? => '$ask ${serverName(item) ?? 'a server'}',
-      null => item.title,
+      null => toolTitle(item),
     };
     final runs =
         shown != null &&

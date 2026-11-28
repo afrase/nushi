@@ -1891,9 +1891,11 @@ class GetChatResponse extends $pb.GeneratedMessage {
   /// With `recent`: every file the items before `items` wrote or edited (a
   /// subagent's too), each once by the name the items give it, the one
   /// changed last first, 1000 at most (the ones changed last); a file a
-  /// later call deleted is left out. A client goes over the items it has
-  /// after these, as they load and as they come, for the chat's whole list
-  /// (issue #62). API 154.
+  /// later call deleted is left out. From API 156 it takes in the files
+  /// the workflows those items launched wrote (Workflow.written), placed
+  /// among the items' own by when they changed. A client goes over the
+  /// items it has after these, as they load and as they come, for the
+  /// chat's whole list (issue #62). API 154.
   @$pb.TagNumber(11)
   $pb.PbList<$core.String> get olderWritten => $_getList(10);
 }
@@ -2961,6 +2963,7 @@ class Agent extends $pb.GeneratedMessage {
     $core.bool? goAgentSwitch,
     $core.String? signIn,
     $core.String? expires,
+    McpShape? mcpShape,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -2979,6 +2982,7 @@ class Agent extends $pb.GeneratedMessage {
     if (goAgentSwitch != null) result.goAgentSwitch = goAgentSwitch;
     if (signIn != null) result.signIn = signIn;
     if (expires != null) result.expires = expires;
+    if (mcpShape != null) result.mcpShape = mcpShape;
     return result;
   }
 
@@ -3012,6 +3016,8 @@ class Agent extends $pb.GeneratedMessage {
     ..aOB(16, _omitFieldNames ? '' : 'goAgentSwitch')
     ..aOS(17, _omitFieldNames ? '' : 'signIn')
     ..aOS(18, _omitFieldNames ? '' : 'expires')
+    ..aOM<McpShape>(19, _omitFieldNames ? '' : 'mcpShape',
+        subBuilder: McpShape.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3066,7 +3072,7 @@ class Agent extends $pb.GeneratedMessage {
   void clearResume() => $_clearField(3);
 
   /// Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
-  /// and Ante's from API 80.
+  /// Ante's from API 80, PiG's from API 157.
   @$pb.TagNumber(4)
   $core.bool get mcp => $_getBF(3);
   @$pb.TagNumber(4)
@@ -3210,6 +3216,19 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasExpires() => $_has(15);
   @$pb.TagNumber(18)
   void clearExpires() => $_clearField(18);
+
+  /// What its MCP config has, which Settings › MCP servers offers by (API
+  /// 157); unset from an older daemon, where mcp_user_only says it.
+  @$pb.TagNumber(19)
+  McpShape get mcpShape => $_getN(16);
+  @$pb.TagNumber(19)
+  set mcpShape(McpShape value) => $_setField(19, value);
+  @$pb.TagNumber(19)
+  $core.bool hasMcpShape() => $_has(16);
+  @$pb.TagNumber(19)
+  void clearMcpShape() => $_clearField(19);
+  @$pb.TagNumber(19)
+  McpShape ensureMcpShape() => $_ensure(16);
 }
 
 /// An agent's adapter.
@@ -10328,10 +10347,12 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
   factory ListMcpServersResponse({
     $core.Iterable<McpServer>? servers,
     $core.String? checkError,
+    $core.bool? folderTrusted,
   }) {
     final result = ListMcpServersResponse._();
     if (servers != null) result.servers.addAll(servers);
     if (checkError != null) result.checkError = checkError;
+    if (folderTrusted != null) result.folderTrusted = folderTrusted;
     return result;
   }
 
@@ -10351,6 +10372,7 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
     ..pPM<McpServer>(1, _omitFieldNames ? '' : 'servers',
         subBuilder: McpServer.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'checkError')
+    ..aOB(3, _omitFieldNames ? '' : 'folderTrusted')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10389,6 +10411,18 @@ class ListMcpServersResponse extends $pb.GeneratedMessage {
   $core.bool hasCheckError() => $_has(1);
   @$pb.TagNumber(2)
   void clearCheckError() => $_clearField(2);
+
+  /// Whether the agent trusts the folder, so loads its project servers
+  /// (PiG's trust.json, as its servers' untrusted says); absent for an
+  /// agent with no folder trust of its own (Claude's, Ante's) (API 157).
+  @$pb.TagNumber(3)
+  $core.bool get folderTrusted => $_getBF(2);
+  @$pb.TagNumber(3)
+  set folderTrusted($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFolderTrusted() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFolderTrusted() => $_clearField(3);
 }
 
 class McpServer extends $pb.GeneratedMessage {
@@ -10403,6 +10437,8 @@ class McpServer extends $pb.GeneratedMessage {
     $core.bool? off,
     $core.String? offBy,
     $core.bool? approved,
+    $core.bool? untrusted,
+    $core.String? held,
   }) {
     final result = McpServer._();
     if (name != null) result.name = name;
@@ -10415,6 +10451,8 @@ class McpServer extends $pb.GeneratedMessage {
     if (off != null) result.off = off;
     if (offBy != null) result.offBy = offBy;
     if (approved != null) result.approved = approved;
+    if (untrusted != null) result.untrusted = untrusted;
+    if (held != null) result.held = held;
     return result;
   }
 
@@ -10441,6 +10479,8 @@ class McpServer extends $pb.GeneratedMessage {
     ..aOB(8, _omitFieldNames ? '' : 'off')
     ..aOS(9, _omitFieldNames ? '' : 'offBy')
     ..aOB(10, _omitFieldNames ? '' : 'approved')
+    ..aOB(11, _omitFieldNames ? '' : 'untrusted')
+    ..aOS(12, _omitFieldNames ? '' : 'held')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10565,6 +10605,168 @@ class McpServer extends $pb.GeneratedMessage {
   $core.bool hasApproved() => $_has(9);
   @$pb.TagNumber(10)
   void clearApproved() => $_clearField(10);
+
+  /// A project server the agent doesn't load because the folder isn't
+  /// trusted in it (PiG: until its trust.json, or defaultProjectTrust
+  /// "always", says so; trusted in pig itself, its start's prompt or
+  /// /trust). It hides no server of its name, and a check passes it by
+  /// (API 157).
+  @$pb.TagNumber(11)
+  $core.bool get untrusted => $_getBF(10);
+  @$pb.TagNumber(11)
+  set untrusted($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasUntrusted() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearUntrusted() => $_clearField(11);
+
+  /// Why its switch can't act here, in words for the switch's tooltip;
+  /// empty when it can. PiG's: "Set by this folder's .pig/mcp.json", on one
+  /// of yours whose "enabled" a trusted folder's file overrides (API 157).
+  @$pb.TagNumber(12)
+  $core.String get held => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set held($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasHeld() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearHeld() => $_clearField(12);
+}
+
+/// What an agent's MCP config has of Claude Code's model (API 157).
+class McpShape extends $pb.GeneratedMessage {
+  factory McpShape({
+    $core.Iterable<$core.String>? scopes,
+    $core.bool? offSwitch,
+    $core.bool? approval,
+    $core.bool? sse,
+    McpUserSwitch? userSwitch,
+    $core.Iterable<$core.String>? checkedScopes,
+    $core.bool? projectSwitchShared,
+  }) {
+    final result = McpShape._();
+    if (scopes != null) result.scopes.addAll(scopes);
+    if (offSwitch != null) result.offSwitch = offSwitch;
+    if (approval != null) result.approval = approval;
+    if (sse != null) result.sse = sse;
+    if (userSwitch != null) result.userSwitch = userSwitch;
+    if (checkedScopes != null) result.checkedScopes.addAll(checkedScopes);
+    if (projectSwitchShared != null)
+      result.projectSwitchShared = projectSwitchShared;
+    return result;
+  }
+
+  McpShape._();
+
+  factory McpShape.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      McpShape()..mergeFromBuffer(data, registry);
+  factory McpShape.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      McpShape()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'McpShape',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: McpShape.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'scopes')
+    ..aOB(2, _omitFieldNames ? '' : 'offSwitch')
+    ..aOB(3, _omitFieldNames ? '' : 'approval')
+    ..aOB(4, _omitFieldNames ? '' : 'sse')
+    ..aE<McpUserSwitch>(5, _omitFieldNames ? '' : 'userSwitch',
+        enumValues: McpUserSwitch.values)
+    ..pPS(6, _omitFieldNames ? '' : 'checkedScopes')
+    ..aOB(7, _omitFieldNames ? '' : 'projectSwitchShared')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  McpShape clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  McpShape copyWith(void Function(McpShape) updates) =>
+      super.copyWith((message) => updates(message as McpShape)) as McpShape;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use McpShape() / McpShape.new instead')
+  static McpShape create() => McpShape._();
+  static $pb.GeneratedMessage $_createMessage() => McpShape._();
+  @$core.override
+  McpShape createEmptyInstance() => McpShape._();
+  @$core.pragma('dart2js:noInline')
+  static McpShape getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<McpShape>(McpShape.$_createMessage);
+  static McpShape? _defaultInstance;
+
+  /// Where its servers are added and changed, in the order offered:
+  /// Claude's "user", "project", "local"; Ante's "user"; PiG's "user",
+  /// "project".
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get scopes => $_getList(0);
+
+  /// A server turns off and on (SetMcpServerOn): Claude's and PiG's
+  /// (PiG's by "enabled" in the file that has it); user_switch says where
+  /// it reaches for one of yours.
+  @$pb.TagNumber(2)
+  $core.bool get offSwitch => $_getBF(1);
+  @$pb.TagNumber(2)
+  set offSwitch($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOffSwitch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOffSwitch() => $_clearField(2);
+
+  /// A project's servers are approved one by one (Claude's .mcp.json, and
+  /// McpServer.approved); without it they load with the folder's trust in
+  /// the agent, and one not loaded is McpServer.untrusted.
+  @$pb.TagNumber(3)
+  $core.bool get approval => $_getBF(2);
+  @$pb.TagNumber(3)
+  set approval($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasApproval() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearApproval() => $_clearField(3);
+
+  /// It speaks the legacy SSE transport (Claude's).
+  @$pb.TagNumber(4)
+  $core.bool get sse => $_getBF(3);
+  @$pb.TagNumber(4)
+  set sse($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSse() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSse() => $_clearField(4);
+
+  /// Where the switch on one of yours reaches: Claude's PROJECT, PiG's
+  /// EVERYWHERE (API 157).
+  @$pb.TagNumber(5)
+  McpUserSwitch get userSwitch => $_getN(4);
+  @$pb.TagNumber(5)
+  set userSwitch(McpUserSwitch value) => $_setField(5, value);
+  @$pb.TagNumber(5)
+  $core.bool hasUserSwitch() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearUserSwitch() => $_clearField(5);
+
+  /// The scopes only the check fills, whose servers no file of the
+  /// agent's gives: Claude's "plugin" and "claudeai" (API 157).
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get checkedScopes => $_getList(5);
+
+  /// A project server's switch writes the project's own file, which
+  /// everyone on the repository shares (PiG's .pig/mcp.json); false: a
+  /// file of yours alone (Claude's .claude/settings.local.json, kept out of
+  /// git) (API 157).
+  @$pb.TagNumber(7)
+  $core.bool get projectSwitchShared => $_getBF(6);
+  @$pb.TagNumber(7)
+  set projectSwitchShared($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasProjectSwitchShared() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearProjectSwitchShared() => $_clearField(7);
 }
 
 class AddMcpServerRequest extends $pb.GeneratedMessage {
@@ -13202,8 +13404,9 @@ class ChatRelatedWorktrees extends $pb.GeneratedMessage {
   $pb.PbList<RelatedWorktree> get worktrees => $_getList(0);
 }
 
-/// A worktree of the chat's repository that one of its subagents works in.
-/// Paths and branches are as git lists them, which an agent can write.
+/// A worktree of the chat's repository that one of its subagents, or of a
+/// workflow's, works in. Paths and branches are as git lists them, which an
+/// agent can write.
 class RelatedWorktree extends $pb.GeneratedMessage {
   factory RelatedWorktree({
     $core.String? path,
@@ -13214,6 +13417,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     $core.String? state,
     $core.bool? merged,
     $core.bool? pullMerged,
+    $core.String? runId,
   }) {
     final result = RelatedWorktree._();
     if (path != null) result.path = path;
@@ -13224,6 +13428,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     if (state != null) result.state = state;
     if (merged != null) result.merged = merged;
     if (pullMerged != null) result.pullMerged = pullMerged;
+    if (runId != null) result.runId = runId;
     return result;
   }
 
@@ -13248,6 +13453,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'state')
     ..aOB(7, _omitFieldNames ? '' : 'merged')
     ..aOB(8, _omitFieldNames ? '' : 'pullMerged')
+    ..aOS(9, _omitFieldNames ? '' : 'runId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13311,7 +13517,9 @@ class RelatedWorktree extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearLastHead() => $_clearField(4);
 
-  /// The tool call that started the subagent (Item.id).
+  /// The tool call that has it (Item.id): the Agent call that started the
+  /// subagent, or the Workflow call whose run claimed it (run_id set): its
+  /// launch, or a resume of it.
   @$pb.TagNumber(5)
   $core.String get callId => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -13354,6 +13562,19 @@ class RelatedWorktree extends $pb.GeneratedMessage {
   $core.bool hasPullMerged() => $_has(7);
   @$pb.TagNumber(8)
   void clearPullMerged() => $_clearField(8);
+
+  /// The run id of the workflow whose subagents work in it, when call_id is
+  /// a Workflow call; empty for a subagent's (API 158). A resumed run keeps
+  /// its id: the client finds the run's state on the latest Workflow item
+  /// with it.
+  @$pb.TagNumber(9)
+  $core.String get runId => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set runId($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasRunId() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearRunId() => $_clearField(9);
 }
 
 class GetRelatedWorktreeStatsRequest extends $pb.GeneratedMessage {
@@ -13480,6 +13701,13 @@ class GetRelatedWorktreeStatsResponse extends $pb.GeneratedMessage {
           GetRelatedWorktreeStatsResponse.$_createMessage);
   static GetRelatedWorktreeStatsResponse? _defaultInstance;
 
+  /// One for each of the chat's records of a path asked, in the order of
+  /// its list: a path can have several, a worktree removed and another made
+  /// there since (issue #118). The list only grows, but for a workflow's
+  /// removed record with nothing to show, left out while it is its path's
+  /// last (GetRelatedWorktrees): a record's place among its path's records
+  /// never changes, but for a hidden record forgotten past 256 (ADR 0081),
+  /// whose place a later record at its path takes.
   @$pb.TagNumber(1)
   $pb.PbList<RelatedWorktreeStats> get stats => $_getList(0);
 }
@@ -17183,8 +17411,8 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(17)
   void clearShow() => $_clearField(17);
 
-  /// The chat's related worktrees, all of them, when they changed; these
-  /// events have no seq (API 99).
+  /// The chat's related worktrees, all of them as GetRelatedWorktrees
+  /// sends them, when they changed; these events have no seq (API 99).
   @$pb.TagNumber(18)
   ChatRelatedWorktrees get relatedWorktrees => $_getN(17);
   @$pb.TagNumber(18)
@@ -18211,6 +18439,7 @@ class Workflow extends $pb.GeneratedMessage {
     $fixnum.Int64? tokens,
     $core.Iterable<$core.int>? runningPhases,
     $core.Iterable<WorkflowPhase>? planned,
+    $core.Iterable<WrittenFile>? written,
   }) {
     final result = Workflow._();
     if (runId != null) result.runId = runId;
@@ -18232,6 +18461,7 @@ class Workflow extends $pb.GeneratedMessage {
     if (tokens != null) result.tokens = tokens;
     if (runningPhases != null) result.runningPhases.addAll(runningPhases);
     if (planned != null) result.planned.addAll(planned);
+    if (written != null) result.written.addAll(written);
     return result;
   }
 
@@ -18270,6 +18500,8 @@ class Workflow extends $pb.GeneratedMessage {
         19, _omitFieldNames ? '' : 'runningPhases', $pb.PbFieldType.K3)
     ..pPM<WorkflowPhase>(20, _omitFieldNames ? '' : 'planned',
         subBuilder: WorkflowPhase.$_createMessage)
+    ..pPM<WrittenFile>(21, _omitFieldNames ? '' : 'written',
+        subBuilder: WrittenFile.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18461,6 +18693,87 @@ class Workflow extends $pb.GeneratedMessage {
   /// 0. A phase leaves it for phases once reached. API 134.
   @$pb.TagNumber(20)
   $pb.PbList<WorkflowPhase> get planned => $_getList(18);
+
+  /// The files its agents wrote or edited with their file tools, each once,
+  /// the one changed last first, 1000 at most: by the rule a chat's own
+  /// calls have (a failed call counts for nothing), named as a chat's calls
+  /// name theirs (relative to the chat's folder when inside it), the
+  /// agent's paths as plain text. Kept up to date while it runs (read
+  /// every few seconds), read to the end once it ended. A shell command's
+  /// files aren't among them. Empty from a daemon below API 156.
+  @$pb.TagNumber(21)
+  $pb.PbList<WrittenFile> get written => $_getList(19);
+}
+
+/// A file a workflow's agents wrote: its path, and when the last call that
+/// changed it ended, in Unix milliseconds (0 when not known).
+class WrittenFile extends $pb.GeneratedMessage {
+  factory WrittenFile({
+    $core.String? path,
+    $fixnum.Int64? changed,
+  }) {
+    final result = WrittenFile._();
+    if (path != null) result.path = path;
+    if (changed != null) result.changed = changed;
+    return result;
+  }
+
+  WrittenFile._();
+
+  factory WrittenFile.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WrittenFile()..mergeFromBuffer(data, registry);
+  factory WrittenFile.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WrittenFile()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WrittenFile',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WrittenFile.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aInt64(2, _omitFieldNames ? '' : 'changed')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WrittenFile clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WrittenFile copyWith(void Function(WrittenFile) updates) =>
+      super.copyWith((message) => updates(message as WrittenFile))
+          as WrittenFile;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WrittenFile() / WrittenFile.new instead')
+  static WrittenFile create() => WrittenFile._();
+  static $pb.GeneratedMessage $_createMessage() => WrittenFile._();
+  @$core.override
+  WrittenFile createEmptyInstance() => WrittenFile._();
+  @$core.pragma('dart2js:noInline')
+  static WrittenFile getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WrittenFile>(
+          WrittenFile.$_createMessage);
+  static WrittenFile? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get changed => $_getI64(1);
+  @$pb.TagNumber(2)
+  set changed($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasChanged() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearChanged() => $_clearField(2);
 }
 
 /// A phase of a workflow: its title, the agent's line on it, and how many
@@ -20857,11 +21170,15 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
     $core.List<$core.int>? data,
     $core.bool? exited,
     $core.int? exitCode,
+    $fixnum.Int64? offset,
+    $fixnum.Int64? clearedAt,
   }) {
     final result = AttachTerminalResponse._();
     if (data != null) result.data = data;
     if (exited != null) result.exited = exited;
     if (exitCode != null) result.exitCode = exitCode;
+    if (offset != null) result.offset = offset;
+    if (clearedAt != null) result.clearedAt = clearedAt;
     return result;
   }
 
@@ -20882,6 +21199,8 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
         1, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
     ..aOB(2, _omitFieldNames ? '' : 'exited')
     ..aI(3, _omitFieldNames ? '' : 'exitCode')
+    ..aInt64(4, _omitFieldNames ? '' : 'offset')
+    ..aInt64(5, _omitFieldNames ? '' : 'clearedAt')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -20935,6 +21254,33 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
   $core.bool hasExitCode() => $_has(2);
   @$pb.TagNumber(3)
   void clearExitCode() => $_clearField(3);
+
+  /// The place of data's first byte: how many bytes the terminal had
+  /// printed before it, since it started (a restart starts again at 0).
+  /// On every message; on the last, the place after all it printed. The
+  /// first message's data starts where the kept output does, so its
+  /// offset is 0 until the terminal has printed more than it keeps. API
+  /// 159.
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get offset => $_getI64(3);
+  @$pb.TagNumber(4)
+  set offset($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOffset() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOffset() => $_clearField(4);
+
+  /// On the first message only, and only when the terminal was cleared
+  /// (ClearTerminal): the place of the latest clear. It may be before
+  /// offset, when the kept output no longer reaches back to it. API 159.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get clearedAt => $_getI64(4);
+  @$pb.TagNumber(5)
+  set clearedAt($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasClearedAt() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearClearedAt() => $_clearField(5);
 }
 
 class WriteTerminalRequest extends $pb.GeneratedMessage {
@@ -21049,6 +21395,122 @@ class WriteTerminalResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<WriteTerminalResponse>(
           WriteTerminalResponse.$_createMessage);
   static WriteTerminalResponse? _defaultInstance;
+}
+
+class ClearTerminalRequest extends $pb.GeneratedMessage {
+  factory ClearTerminalRequest({
+    $core.String? terminalId,
+    $fixnum.Int64? at,
+  }) {
+    final result = ClearTerminalRequest._();
+    if (terminalId != null) result.terminalId = terminalId;
+    if (at != null) result.at = at;
+    return result;
+  }
+
+  ClearTerminalRequest._();
+
+  factory ClearTerminalRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalRequest()..mergeFromBuffer(data, registry);
+  factory ClearTerminalRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTerminalRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTerminalRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'terminalId')
+    ..aInt64(2, _omitFieldNames ? '' : 'at')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalRequest copyWith(void Function(ClearTerminalRequest) updates) =>
+      super.copyWith((message) => updates(message as ClearTerminalRequest))
+          as ClearTerminalRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTerminalRequest() / ClearTerminalRequest.new instead')
+  static ClearTerminalRequest create() => ClearTerminalRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTerminalRequest._();
+  @$core.override
+  ClearTerminalRequest createEmptyInstance() => ClearTerminalRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTerminalRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTerminalRequest>(
+          ClearTerminalRequest.$_createMessage);
+  static ClearTerminalRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get terminalId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set terminalId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTerminalId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTerminalId() => $_clearField(1);
+
+  /// The place the client's screen had taken in when it was cleared: the
+  /// offset after the last byte it was given (AttachTerminalResponse's
+  /// offset). A negative one is ignored.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get at => $_getI64(1);
+  @$pb.TagNumber(2)
+  set at($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAt() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAt() => $_clearField(2);
+}
+
+class ClearTerminalResponse extends $pb.GeneratedMessage {
+  factory ClearTerminalResponse() => ClearTerminalResponse._();
+
+  ClearTerminalResponse._();
+
+  factory ClearTerminalResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalResponse()..mergeFromBuffer(data, registry);
+  factory ClearTerminalResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTerminalResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTerminalResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalResponse copyWith(
+          void Function(ClearTerminalResponse) updates) =>
+      super.copyWith((message) => updates(message as ClearTerminalResponse))
+          as ClearTerminalResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTerminalResponse() / ClearTerminalResponse.new instead')
+  static ClearTerminalResponse create() => ClearTerminalResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTerminalResponse._();
+  @$core.override
+  ClearTerminalResponse createEmptyInstance() => ClearTerminalResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTerminalResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTerminalResponse>(
+          ClearTerminalResponse.$_createMessage);
+  static ClearTerminalResponse? _defaultInstance;
 }
 
 class ResizeTerminalRequest extends $pb.GeneratedMessage {
@@ -37760,7 +38222,10 @@ class NushiServiceApi {
   /// looked at now: its head is recorded, and one that went stays as
   /// "removed". GetDiff and GetFolderStatus read one by its path, against
   /// its base_commit; once it's removed, GetDiff in the chat's folder with
-  /// since and commit, while git keeps the commit. ADR 0081. API 99.
+  /// since and commit, while git keeps the commit. ADR 0081. API 99. A
+  /// workflow's removed record with nothing to show (no commit of its own)
+  /// is left out while it is its path's last record, and sent again, in
+  /// its place, once a later record is made at its path (API 158).
   $async.Future<GetRelatedWorktreesResponse> getRelatedWorktrees(
           $pb.ClientContext? ctx, GetRelatedWorktreesRequest request) =>
       _client.invoke<GetRelatedWorktreesResponse>(ctx, 'NushiService',
@@ -37807,7 +38272,10 @@ class NushiServiceApi {
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
   /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
   /// refused for it. Login and Logout are refused only when that Ante has no
-  /// sign-in for MCP servers (before 0.2.15).
+  /// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+  /// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+  /// until PiG trusts the folder), checked by `pig mcp list --json` in the
+  /// folder and signed in to by `pig mcp login`; McpShape says what it has.
   $async.Future<ListMcpServersResponse> listMcpServers(
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',
@@ -37837,9 +38305,13 @@ class NushiServiceApi {
   /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
   /// project's .claude/settings.local.json). A user or local server: as the
   /// agent's own switch does, asked of the agent (Claude: /mcp in a
-  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-  /// any other scope (Claude's plugins' servers and claude.ai connectors)
-  /// and by an agent with no off switch.
+  /// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+  /// 157): "enabled" in the file that has the server, so one of yours is on
+  /// or off everywhere (McpShape.user_switch); refused, with
+  /// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+  /// it. Refused for any other scope (Claude's plugins' servers and
+  /// claude.ai connectors) and by an agent with no off switch. These
+  /// changes and the sign-ins are the Mac's app's alone (macOnly).
   $async.Future<SetMcpServerOnResponse> setMcpServerOn(
           $pb.ClientContext? ctx, SetMcpServerOnRequest request) =>
       _client.invoke<SetMcpServerOnResponse>(ctx, 'NushiService',
@@ -37933,7 +38405,10 @@ class NushiServiceApi {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again.
+  /// A client that falls far behind is cut off and attaches again. Each
+  /// message says where its data falls in all the terminal has printed
+  /// (offset), and the first where the terminal was cleared, if it was
+  /// (cleared_at; API 159).
   $async.Future<AttachTerminalResponse> attachTerminal(
           $pb.ClientContext? ctx, AttachTerminalRequest request) =>
       _client.invoke<AttachTerminalResponse>(ctx, 'NushiService',
@@ -37942,6 +38417,17 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, WriteTerminalRequest request) =>
       _client.invoke<WriteTerminalResponse>(ctx, 'NushiService',
           'WriteTerminal', request, WriteTerminalResponse());
+
+  /// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  /// the first message of each later attach gives as cleared_at, so the
+  /// client clears again there (issue #122). The terminal keeps the latest
+  /// place: an older one is ignored, one past its output taken as its end.
+  /// The place goes when the terminal closes or restarts, with its output.
+  /// API 159.
+  $async.Future<ClearTerminalResponse> clearTerminal(
+          $pb.ClientContext? ctx, ClearTerminalRequest request) =>
+      _client.invoke<ClearTerminalResponse>(ctx, 'NushiService',
+          'ClearTerminal', request, ClearTerminalResponse());
   $async.Future<ResizeTerminalResponse> resizeTerminal(
           $pb.ClientContext? ctx, ResizeTerminalRequest request) =>
       _client.invoke<ResizeTerminalResponse>(ctx, 'NushiService',

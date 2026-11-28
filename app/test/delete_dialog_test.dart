@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -117,6 +118,26 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
     expect(find.text('Deleting…'), findsOneWidget);
+    held.complete(DeleteChatResponse());
+    await tester.pumpAndSettle();
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('Delete keeps its width while it reads Deleting…, so Cancel '
+      'beside it stays put', (tester) async {
+    final (fake, d) = await _open(tester, []);
+    final held = Completer<DeleteChatResponse>();
+    fake.answer = (input) => input is DeleteChatRequest ? held.future : null;
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Delete'));
+    final cancel = tester.getRect(button('Cancel'));
+    await render(tester, find.byType(Dialog), 'busy_delete_chat_idle');
+    await tester.tap(button('Delete'));
+    await tester.pump();
+    expect(tester.getRect(button('Deleting…')), rest);
+    await render(tester, find.byType(Dialog), 'busy_delete_chat_busy');
+    expect(tester.getRect(button('Cancel')), cancel);
     held.complete(DeleteChatResponse());
     await tester.pumpAndSettle();
     await closeView(tester, d);

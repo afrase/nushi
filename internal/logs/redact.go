@@ -1,18 +1,11 @@
 package logs
 
 import (
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/afrase/nushi/internal/secrets"
 )
-
-// secretNames are NAME=value or "name": "value" pairs whose name says
-// secret, in a line (an agent's stderr above all), masked after the
-// shapes every secret mask knows (internal/secrets). Broader than a tool
-// call's input's rule: a log line isn't code.
-var secretNames = regexp.MustCompile(`((?i)\b[\w.-]*(?:key|token|secret|passw(?:or)?d|credential)[\w.-]*"?\s*[:=]\s*"?)[^\s"',;]{4,}`)
 
 var (
 	maskMu sync.RWMutex
@@ -30,12 +23,17 @@ func Mask(secret string) {
 	maskMu.Unlock()
 }
 
-// Redact replaces what looks like a secret in s with [redacted].
+// Redacted stands in for a secret in the log.
+const Redacted = "[redacted]"
+
+// Redact replaces what looks like a secret in s with Redacted: the exact
+// secrets Mask was given, then, on what that leaves, the shapes and the
+// rule for names (secrets.Names), as origin/main did.
 func Redact(s string) string {
 	maskMu.RLock()
 	for _, m := range masked {
-		s = strings.ReplaceAll(s, m, "[redacted]")
+		s = strings.ReplaceAll(s, m, Redacted)
 	}
 	maskMu.RUnlock()
-	return secrets.Mask(s, "[redacted]", secretNames)
+	return secrets.Mask(s, Redacted, secrets.Names)
 }

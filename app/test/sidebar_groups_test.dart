@@ -14,6 +14,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'sidebar_fixture.dart';
 
 /// Four projects, newest chat first: parcel-poc (one chat waiting on you,
@@ -258,8 +259,11 @@ void main() {
         chat('w', 'claude', 'Ship it', folder: '/Users/me/work/cubby', age: 7),
       ],
     );
-    expect(find.text('cubby  · me'), findsOneWidget);
-    expect(find.text('cubby  · work'), findsOneWidget);
+    // The parent before the name, two texts side by side (PathName).
+    expect(find.text('me/'), findsOneWidget);
+    expect(find.text('work/'), findsOneWidget);
+    expect(find.text('cubby'), findsNWidgets(2));
+    await render(tester, find.byType(MaterialApp).first, 'sidebar_twins_dark');
     expect(find.text('parcel-poc'), findsOneWidget); // no twin: the name
     expect(find.text('needs you'), findsNothing);
     expect(
@@ -269,9 +273,16 @@ void main() {
       ),
       findsOneWidget,
     );
+    // Parents of one name: the shortest run of trailing folders no other
+    // twin's parent ends in (issue 119).
     expect(twinParents(['/a/x/app', '/b/x/app', '/c/web']), {
-      '/a/x/app': '/a/x',
-      '/b/x/app': '/b/x',
+      '/a/x/app': 'a/x',
+      '/b/x/app': 'b/x',
+    });
+    // One parent the end of another's: the whole path tells it apart.
+    expect(twinParents(['/x/app', '/a/x/app']), {
+      '/x/app': '/x',
+      '/a/x/app': 'a/x',
     });
     // A project in the home folder: its parent "~" has no parent of its
     // own (this threw in the sidebar's build).

@@ -858,6 +858,51 @@ func TestStoppingAWorkflow(t *testing.T) {
 	}
 }
 
+// A run judged ended with no snapshot (its task's word, its agent gone)
+// is read once more as ended, so its agents still shown running are read
+// to their end: what they wrote last, and the worktrees their sidecars
+// named last, are on the ended run.
+func TestARunEndedWithNoSnapshotIsReadOnceMore(t *testing.T) {
+	read := func(w model.Workflow) (model.Workflow, error) {
+		ending := w.State.Ended()
+		w, _ = runningAs(w) // no snapshot: the files say it runs
+		w.Written = []model.WrittenFile{{Path: "first.md"}}
+		w.Worktrees = []model.WorkflowWorktree{{Path: "/repo/wt1"}}
+		if ending {
+			w.Written = append([]model.WrittenFile{{Path: "last.md"}}, w.Written...)
+			w.Worktrees = append(w.Worktrees, model.WorkflowWorktree{Path: "/repo/wt2"})
+		}
+		return w, nil
+	}
+	written := func(w *model.Workflow) string {
+		var out []string
+		for _, f := range w.Written {
+			out = append(out, f.Path)
+		}
+		for _, wt := range w.Worktrees {
+			out = append(out, wt.Path)
+		}
+		return strings.Join(out, ",")
+	}
+	f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, read)
+	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "running" })
+	stoppedBy(f.agent, workflowTask("killed", ""), workflowTask("stopped", "Ask four helpers"))
+	testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
+	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == model.RunStopped })
+	if w := workflowOf(f.c); written(w) != "last.md,first.md,/repo/wt1,/repo/wt2" {
+		t.Errorf("ended on its task: %q", written(w))
+	}
+	synctest.Test(t, func(t *testing.T) {
+		f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, read)
+		synctest.Wait()
+		f.agent.quit()
+		synctest.Wait()
+		if w := workflowOf(f.c); w.State != model.RunStopped || written(w) != "last.md,first.md,/repo/wt1,/repo/wt2" {
+			t.Errorf("ended with its agent: %s %q", w.State, written(w))
+		}
+	})
+}
+
 // The agent's process ending has its runs read at once. In a bubble whose
 // clock never moves: no poll reads it.
 func TestAnAgentQuittingPokesTheWorkflow(t *testing.T) {

@@ -22,7 +22,7 @@ import 'harness.dart';
 // newest output under the block, and the output in the box at its end.
 
 const _run = 'Run, and send its output to Claude with your next message';
-const _cancel = 'Running — click to cancel';
+const _cancel = 'Running, click to cancel';
 const _prompt = '\x1b]133;A\x1b\\> \x1b]133;B\x1b\\';
 
 const _message =
@@ -225,7 +225,7 @@ void main() {
           ))
             t.data,
         ].join(),
-        'Output of python3 -m tennis.server · exit 0 · 2 lines',
+        'Output of python3 -m tennis.serverexit 0, 2 lines',
       );
       await tester.pumpAndSettle(); // the box's line grown in
       await expectLater(

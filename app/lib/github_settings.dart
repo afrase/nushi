@@ -54,7 +54,7 @@ String budgetLine(GitHubHost h, DateTime now) {
       .map((b) => DateTime.fromMillisecondsSinceEpoch(b.resetMs.toInt()))
       .firstOrNull;
   final mins = reset?.difference(now).inMinutes;
-  return 'Left this hour: ${parts.join(' · ')}'
+  return 'Left this hour: ${parts.join(', ')}'
       '${mins != null && mins >= 0 ? ' (GraphQL resets in ${mins}m)' : ''}';
 }
 
@@ -259,7 +259,7 @@ AccountRow _hostRow(
   final token = [
     if (kind.isNotEmpty) kind[0].toUpperCase() + kind.substring(1),
     if (h.scopes.isNotEmpty) 'scopes ${h.scopes.join(', ')}',
-  ].join(' · ');
+  ].join(' with ');
   return AccountRow(
     icon: Icons.merge_type,
     title: h.host,
@@ -270,7 +270,7 @@ AccountRow _hostRow(
         (h.problem, t.crashed)
       else
         (
-          [who ?? 'Checking…', if (from.isNotEmpty) from].join(' · '),
+          [who ?? 'Checking…', if (from.isNotEmpty) from].join(', '),
           t.textSecondary,
         ),
       if (budget.isNotEmpty) (budget, t.textMuted),

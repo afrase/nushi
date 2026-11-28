@@ -133,7 +133,7 @@ Rather press Enter for new lines? Turn on **Enter starts a new line** in **Setti
 
 You don't have to click the box first. Start typing anywhere in the chat and the letters go into the box. (A menu, a dialog or another text field keeps what you type.)
 
-- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
+- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture. If the agent can't take pictures, Nushi says so and leaves the picture out.
 - **Mention a file**: type `@` and pick one.
 - **Slash commands**: type `/` to see the agent's commands.
 
@@ -182,13 +182,13 @@ Each step the agent takes (a tool call) has a row that ends with how long it ran
 - Calls from before Nushi saw the chat (resumed from a terminal, or replayed by the agent) have no time.
 - A call still running when the turn ends stops counting there.
 
-A call to an MCP server's tool reads as the server and the tool, such as **github · search_issues**, in Claude and Codex chats alike. Click it to see what the agent sent (**Input**) and what came back (**Output**). Calls made while an older Nushi ran show as the agent named them until Nushi restarts on its own.
+A call to an MCP server's tool reads as the tool and then its server in brackets, such as **search_issues (github)**, in Claude and Codex chats alike. Click it to see what the agent sent (**Input**) and what came back (**Output**). Calls made while an older Nushi ran show as the agent named them until Nushi restarts on its own.
 
-A subagent is a helper the agent starts for part of a task. Its row shows how many tools it used and the time it actually worked, such as **6 tools · 3m 12s**. Its clock stops while it waits for a message. Once a Claude subagent is done, its row also shows the tokens it used, before the time: **39 tools · 182k tokens · 7m 55s**, then a check mark. Other agents don't report tokens, so their subagents show only the tools and the time. No cost shows: Claude counts a subagent's cost in the chat's total, not on its own.
+A subagent is a helper the agent starts for part of a task. Its row shows how many tools it used and the time it actually worked, such as **6 tools, 3m 12s**. Its clock stops while it waits for a message. Once a Claude subagent is done, its row also shows the tokens it used, before the time: **39 tools, 182k tokens, 7m 55s**, then a check mark. Other agents don't report tokens, so their subagents show only the tools and the time. No cost shows: Claude counts a subagent's cost in the chat's total, not on its own.
 
 ## Follow the agent's plan
 
-When the agent keeps a to-do list, its plan stays over the box until every step is done, even after the turn ends. It shows "Plan · 2 of 5 done", a progress bar, and the steps, with a dot on the one being worked on.
+When the agent keeps a to-do list, its plan stays over the box until every step is done, even after the turn ends. It shows "Plan 2 of 5 done", a progress bar, and the steps, with a dot on the one being worked on.
 
 - **To make it one line**, click the plan's bottom line (or press Enter on it). Collapsed, it shows the count and the step being worked on. Click it again to see every step.
 - Your choice holds for every chat, and after you quit.
@@ -318,8 +318,8 @@ The button is greyed out while the agent works or waits on you; it works once th
 Press ⌘F in a chat to find text in it, all of it, even the part of a long chat you haven't scrolled up to yet.
 
 1. Press **⌘F**. The find bar opens at the chat's top right.
-2. Type. The bar counts the matches in the whole chat ("2 of 9").
-3. Press ⏎ (or ↓) for the next match, ⇧⏎ (or ↑) for the one before. Past the last it goes round to the first.
+2. Type. It goes to the newest match, the one nearest the end, and counts the matches in the whole chat from there ("1 of 9").
+3. Press ⏎ (or ↑) for the next older match, ⇧⏎ (or ↓) for the next newer one. Past the oldest it goes round to the newest.
 4. Press **Esc** to close it.
 
 A match further up than what's loaded takes a moment: Nushi loads that part of the chat and goes to it. It finds in what the chat shows (messages, thoughts, tool rows and their output), not in diffs, plans or images, and ignores case.

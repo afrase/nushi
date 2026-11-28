@@ -51,11 +51,11 @@ IconData fileKindIcon(String name) {
   };
 }
 
-/// What a file card says under the name: its kind and size ("PDF · 1.2 MB").
+/// What a file card says under the name: its kind and size ("PDF, 1.2 MB").
 String fileCardDetail(AttachedFile f) {
   final ext = f.name.contains('.') ? f.name.split('.').last.toUpperCase() : '';
   final kind = ext.isEmpty || ext.length > 5 ? 'File' : ext;
-  return f.size < 0 ? kind : '$kind · ${diskSize(f.size)}';
+  return f.size < 0 ? kind : '$kind, ${diskSize(f.size)}';
 }
 
 /// The box's card of an attached file: its kind's icon, its name and its

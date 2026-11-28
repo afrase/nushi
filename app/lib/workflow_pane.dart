@@ -300,7 +300,7 @@ class _PlannedRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    ' · ${plannedWords(live: live)}',
+                    ' ${plannedWords(live: live)}',
                     maxLines: 1,
                     style: theme.ui(t.textMuted, size: 12),
                   ),
@@ -407,9 +407,8 @@ class _AgentRow extends StatelessWidget {
             SizedBox(
               width: 14,
               child: Center(
-                child: a.state == 'running'
-                    ? const RunningDot()
-                    : TaskMark(a.state),
+                // One TaskMark, so its check draws itself as it ends.
+                child: TaskMark(a.state, dot: a.state == 'running'),
               ),
             ),
             Expanded(
@@ -585,7 +584,7 @@ class _AgentStepsState extends State<_AgentSteps> {
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
             child: updatedText(
               context,
-              "Couldn't refresh · ${errorText(error)}",
+              '$couldNotRefresh: ${errorText(error)}',
               failed: true,
             ),
           ),
@@ -646,7 +645,7 @@ class _AgentHead extends StatelessWidget {
                   if (_agentTime(a) case final time when time.isNotEmpty) time,
                   if (a.toolCalls > 0)
                     '${a.toolCalls} tool call${a.toolCalls == 1 ? '' : 's'}',
-                ].join('  ·  '),
+                ].join(', '),
                 style: small,
               ),
             ),

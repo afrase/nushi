@@ -134,6 +134,9 @@ class PullThreadState extends State<PullThread> {
         if (folds)
           Button(
             label: _open ? 'Hide' : 'Show',
+            // The same width either way, so it and the pills before it
+            // stay put as it's pressed.
+            roomFor: const ['Show', 'Hide'],
             kind: ButtonKind.quiet,
             onPressed: () => setState(() => _open = !_open),
           ),
@@ -146,7 +149,9 @@ class PullThreadState extends State<PullThread> {
         color: t.base,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
-      padding: EdgeInsets.fromLTRB(12, _open ? 8 : 3, 8, _open ? 10 : 3),
+      // Its head's row is as high from the top folded or open, so Show,
+      // turning into Hide, stays where it was pressed.
+      padding: EdgeInsets.fromLTRB(12, 3, 8, _open ? 10 : 3),
       child: !_open
           ? SizedBox(height: ControlSize.regular.height, child: head)
           : Column(

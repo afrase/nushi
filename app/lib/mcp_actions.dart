@@ -13,11 +13,11 @@ import 'package:nushi/widgets.dart';
 
 /// What can be done to a server, on its row: its on/off switch for the
 /// project (a project server's Approve and Reject while it waits for
-/// approval), "Log in" when it needs a sign-in, and a menu with Edit…,
-/// Remove… and, for a server with a URL, Log out. An agent whose servers
-/// are yours only has no switch. Whether the agent can sign in or out is
-/// the daemon's to say: needs_auth offers Log in, and a Log out it can't do
-/// fails with its error.
+/// approval, for an agent whose shape has approval), "Log in" when it
+/// needs a sign-in, and a menu with Edit…, Remove… and, for a server with
+/// a URL, Log out. An agent whose shape has no off switch has no switch.
+/// Whether the agent can sign in or out is the daemon's to say: needs_auth
+/// offers Log in, and a Log out it can't do fails with its error.
 class McpActions extends StatefulWidget {
   const new(this.list, this.server, {super.key});
 
@@ -46,7 +46,7 @@ class _McpActionsState extends State<McpActions> {
   Future<void> _setOn(bool on) => _do(() => setServerOn(list, server, on: on));
 
   Future<void> _remove() async {
-    final (scope, about) = scopes[server.scope]!;
+    final (scope, about) = scopeOf(list.agent, server.scope);
     final ok = await confirm(
       context,
       'Remove ${server.name}?',
@@ -126,6 +126,7 @@ class _McpActionsState extends State<McpActions> {
             ),
           ),
         if (project &&
+            list.shape.approval &&
             server.state == 'pending' &&
             !server.off &&
             !server.approved) ...[
@@ -170,18 +171,28 @@ Future<void> setServerOn(
 /// approval, a user or local one as /mcp does (ADR 0050).
 const switchable = {'project', 'user', 'local'};
 
-/// What turns a server on or off, and for where: a switch, "in this
-/// project" beside it ([label]), for the scopes Nushi can; otherwise a
+/// What turns a server on or off, and for where: a switch, with where it
+/// reaches beside it ([label]): "in this project", or "in every folder"
+/// for one of yours whose agent's switch is its own flag in your file
+/// (McpShape.user_switch, PiG's), for the scopes Nushi can; otherwise a
 /// note that only the agent in a terminal does (its own command, as
-/// [agentWords] names it); nothing for an agent whose servers are yours
-/// only, which can't be turned off. A change reaches a chat when it
-/// restarts.
+/// [agentWords] names it); nothing for an agent whose shape has no off
+/// switch, and an empty place for a server the agent doesn't load
+/// (untrusted). A switch set in another file (off_by) is drawn off with
+/// the reason as its tooltip; one the daemon says can't act here (held)
+/// too, with no words of where it reaches (its row says why). On the
+/// page the words sit in a slot of the longest's width, so the switches,
+/// and the state pills before them, line up down the page whatever the
+/// words or the agent. A change reaches a chat when it restarts.
 class McpSwitch extends StatelessWidget {
   const new(this.list, this.server, {super.key, this.label = true});
 
   final McpServers list;
   final McpServer server;
   final bool label;
+
+  /// The words a switch's slot is as wide as the longest of.
+  static const _words = ['in this project', 'in every folder'];
 
   Future<void> _set({required bool on}) async {
     await setServerOn(list, server, on: on);
@@ -193,7 +204,13 @@ class McpSwitch extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
     final title = agentTitle(list.agent);
-    if (list.userOnly) return const SizedBox.shrink(); // no off switch
+    if (!list.shape.offSwitch) return const SizedBox.shrink();
+    final slot = label ? _slot(context, muted) : 0.0;
+    // One the agent doesn't load: its row says why, and there's nothing to
+    // turn off until the folder is trusted. Its place stays.
+    if (server.untrusted) {
+      return SizedBox(width: label ? 14 + slot + Toggle.size.width : 0);
+    }
     if (!switchable.contains(server.scope)) {
       final command = agentWords(list.agent).mcpCommand;
       final withIt = command == null ? '' : ' with $command';
@@ -212,14 +229,28 @@ class McpSwitch extends StatelessWidget {
         ),
       );
     }
+    final held = server.held.isNotEmpty;
     final elsewhere = server.offBy.isNotEmpty;
-    final tip = elsewhere
+    final everywhere =
+        server.scope == 'user' &&
+        list.shape.userSwitch == McpUserSwitch.MCP_USER_SWITCH_EVERYWHERE;
+    final now = server.off ? 'Off' : 'On';
+    const restart = 'Chats pick up a change when they restart.';
+    final file = server.source.isEmpty ? 'its file' : tildePath(server.source);
+    final tip = held
+        ? server.held
+        : elsewhere
         ? 'Turned off in ${tildePath(server.offBy)}; turn it on there.'
+        : everywhere
+        ? '$now in every folder, for you only: set in $file. $restart'
+        // A project server's switch whose file everyone on the
+        // repository shares (McpShape.project_switch_shared, PiG's).
+        : server.scope == 'project' && list.shape.projectSwitchShared
+        ? '$now in this project, for everyone on it: set in $file. $restart'
         : server.scope == 'project' && server.state == 'pending' && !server.off
         ? 'Approved. $title in a terminal uses it once you trust the folder '
               'there.'
-        : '${server.off ? 'Off' : 'On'} in this project. Chats pick up a '
-              'change when they restart.';
+        : '$now in this project. $restart';
     return tooltip(
       context,
       tip,
@@ -229,11 +260,43 @@ class McpSwitch extends StatelessWidget {
           if (label)
             Padding(
               padding: const EdgeInsets.only(left: 6, right: 8),
-              child: Text('in this project', style: muted),
+              child: SizedBox(
+                width: slot,
+                child: Text(
+                  held
+                      ? ''
+                      : everywhere
+                      ? 'in every folder'
+                      : 'in this project',
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  style: muted,
+                ),
+              ),
             ),
-          SettingsSwitch(value: !server.off, run: elsewhere ? null : _set),
+          SettingsSwitch(
+            value: !server.off,
+            run: held || elsewhere ? null : _set,
+          ),
         ],
       ),
     );
+  }
+
+  /// The slot's width: the longest of [_words] in [style], as a Text
+  /// draws it here (over the inherited style, as Text merges it).
+  static double _slot(BuildContext context, TextStyle style) {
+    final drawn = DefaultTextStyle.of(context).style.merge(style);
+    var width = 0.0;
+    for (final w in _words) {
+      final p = TextPainter(
+        text: TextSpan(text: w, style: drawn),
+        textDirection: TextDirection.ltr,
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      width = width < p.width ? p.width : width;
+      p.dispose();
+    }
+    return width.ceilToDouble();
   }
 }

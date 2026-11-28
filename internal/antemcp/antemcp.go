@@ -277,9 +277,9 @@ func (Ante) SetOn(context.Context, string, string, string, bool) error {
 	return errors.New("Ante can't turn a server off: remove it instead")
 }
 
-// UserOnly is true: yours are all it reads, and it has no off switch
+// Shape is yours alone: all it reads, with no off switch or legacy SSE
 // (mcp.Config).
-func (Ante) UserOnly() bool { return true }
+func (Ante) Shape() model.MCPShape { return model.MCPShape{Scopes: []string{"user"}} }
 
 // ChecksInFolder is false: Check runs `ante serve` in an empty temp
 // folder (ante.CheckMCP), never in the folder named (mcp.Config).

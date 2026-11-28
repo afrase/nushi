@@ -185,7 +185,7 @@ class PullComments extends StatelessWidget {
         CommentBox(
           draft: githubDraft(p.item.ref, 'comment'),
           hint: 'Leave a comment',
-          note: me.isEmpty ? 'Markdown' : 'Markdown · posts to GitHub as $me',
+          note: me.isEmpty ? 'Markdown' : 'Markdown, posts to GitHub as $me',
           onPost: (text) async {
             await daemon.client.addGitHubComment(
               AddGitHubCommentRequest(
@@ -245,6 +245,7 @@ class PullComments extends StatelessWidget {
 /// short, after a blank line, with dots between its parts or money, tokens
 /// or a duration in it.
 final _numbers = RegExp(
+  // design: a dot in a bot's own text, not ours
   r'(\$\d|\btokens?\b|\b\d+m\s?\d+s\b|·.*·)',
   caseSensitive: false,
 );
@@ -377,8 +378,7 @@ class _CommentCardState extends State<_CommentCard> {
                         ),
                         if (c.bot) const TextSpan(text: '  bot'),
                         TextSpan(
-                          text:
-                              ' $verb · ${agoAt(c.createdMs.toInt(), clock())}',
+                          text: ' $verb ${agoAt(c.createdMs.toInt(), clock())}',
                         ),
                         if (folds && !_open)
                           TextSpan(text: '  ${commentSummary(c.body)}'),
@@ -393,6 +393,9 @@ class _CommentCardState extends State<_CommentCard> {
                 if (folds)
                   Button(
                     label: _open ? 'Hide' : 'Show',
+                    // The same width either way, so it and the summary
+                    // beside it stay put as it's pressed.
+                    roomFor: const ['Show', 'Hide'],
                     kind: ButtonKind.quiet,
                     onPressed: () => setState(() => _open = !_open),
                   ),
@@ -407,8 +410,8 @@ class _CommentCardState extends State<_CommentCard> {
             Padding(
               padding: const EdgeInsets.fromLTRB(44, 0, 16, 6),
               child: Text(
-                'On an older commit ($short): some findings may be done '
-                '· comment /review for a fresh one',
+                'On an older commit ($short): some findings may be done. '
+                'Comment /review for a fresh one.',
                 style: theme.ui(t.textMuted, size: 12),
               ),
             ),

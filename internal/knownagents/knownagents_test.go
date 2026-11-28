@@ -190,9 +190,17 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	}
 }
 
+// mcpShapes are what each agent's MCP config has, which the app offers by.
+var mcpShapes = map[string]model.MCPShape{
+	"claude": {Scopes: []string{"user", "project", "local"}, Switch: true, UserSwitch: model.SwitchProject, Approval: true, SSE: true,
+		Checked: []string{"plugin", "claudeai"}},
+	"ante": {Scopes: []string{"user"}},
+	"pig":  {Scopes: []string{"user", "project"}, Switch: true, UserSwitch: model.SwitchEverywhere, ProjectShared: true},
+}
+
 // What the app goes by instead of an agent's name is each agent's own:
-// Claude's built-in skills, plugins and links, and Ante's plain MCP
-// servers.
+// Claude's built-in skills, plugins and links, and each agent's MCP
+// config's shape.
 func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 	for _, a := range All("", nil) {
 		claudes := a.Agent.Name == "claude"
@@ -202,9 +210,12 @@ func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 		if builtIn != claudes || plugins != claudes || linker != claudes {
 			t.Errorf("%s: built in %v, plugins %v, links %v", a.Agent.Name, builtIn, plugins, linker)
 		}
+		if _, ok := mcpShapes[a.Agent.Name]; ok != (a.MCP != nil) {
+			t.Errorf("%s: MCP servers shown %v, want %v", a.Agent.Name, a.MCP != nil, ok)
+		}
 		if a.MCP != nil {
-			if got, want := a.MCP(nil).UserOnly(), a.Agent.Name == "ante"; got != want {
-				t.Errorf("%s: user only: %v", a.Agent.Name, got)
+			if got, want := a.MCP(nil).Shape(), mcpShapes[a.Agent.Name]; !reflect.DeepEqual(got, want) {
+				t.Errorf("%s: MCP shape %+v, want %+v", a.Agent.Name, got, want)
 			}
 		}
 	}
@@ -235,7 +246,7 @@ func TestCodexFollowsItsGoAgentSetting(t *testing.T) {
 	for _, a := range All("", func(name string) bool { return on && name == "codex" }) {
 		found = append(found, a.Agent)
 	}
-	svc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
+	svc := agents.New(found, func(context.Context, string, []string, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	if r, err := svc.Run("codex"); err != nil || r.Program != "/adapter/codex-acp" || r.Node != filepath.Join(bin, "node") {
 		t.Errorf("off: %+v, %v", r, err)
 	}
@@ -256,3 +267,33 @@ func (setUp) Installed(_, _, bin string) (version, program string) {
 	return "1.0.0", "/adapter/" + bin
 }
 func (setUp) Remove(string) error { return nil }
+
+// PiG's version on the Agents page is its own, read as its bridge reads
+// it (`pig version` when --version names only the Pi it ports); plain
+// Pi's is its --version, as for the other agents.
+func TestPiGReadsItsOwnVersion(t *testing.T) {
+	var pig, plain Agent
+	for _, a := range All(t.TempDir(), nil) {
+		switch a.Agent.Name {
+		case "pig":
+			pig = a
+		case "pi":
+			plain = a
+		}
+	}
+	if plain.Agent.Version != nil {
+		t.Error("plain Pi has a version reader of its own")
+	}
+	run := func(_ []string, args ...string) ([]byte, error) {
+		if len(args) == 1 && args[0] == "version" {
+			return []byte("pig: 0.8.0\nupstream pi: 1.6.0\n"), nil
+		}
+		return []byte("1.6.0\n"), nil
+	}
+	if pig.Agent.Version == nil {
+		t.Fatal("PiG has no version reader")
+	}
+	if got := pig.Agent.Version(run); got != "0.8.0" {
+		t.Errorf("PiG's version = %q", got)
+	}
+}

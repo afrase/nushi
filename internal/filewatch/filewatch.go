@@ -116,11 +116,16 @@ func Check(root, rel string) error {
 // root.
 func Exists(root, rel string) bool { return Check(root, rel) == nil }
 
-// Read reads rel inside root. A missing file or one that isn't a regular
-// file is Missing; a path that leads outside root is an error.
+// Read reads rel inside root. A missing file, one whose root is gone (a
+// worktree removed since an agent wrote in it) or one that isn't a
+// regular file is Missing; a path that leads outside root is an error.
 func Read(root, rel string) (File, error) {
 	f := File{Path: filepath.Join(root, rel)}
 	r, err := os.OpenRoot(root)
+	if errors.Is(err, fs.ErrNotExist) {
+		f.Missing = true
+		return f, nil
+	}
 	if err != nil {
 		return f, err
 	}

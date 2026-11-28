@@ -275,7 +275,9 @@ func TestEnvFallsBackToTheLoginShell(t *testing.T) {
 		timeout time.Duration
 		want    string
 	}{
-		{"sleep 300", 500 * time.Millisecond, "zsh took over 500ms"},
+		// The plain login shell must print inside the cap the hang is cut
+		// at, beside every other package's tests: far above a slow start.
+		{"sleep 300", 10 * time.Second, "zsh took over 10s"},
 		{"exit 3", time.Minute, "zsh exited with status 3 before printing its environment"},
 	} {
 		Timeout = c.timeout

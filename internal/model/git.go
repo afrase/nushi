@@ -39,7 +39,7 @@ type AgentWorktree struct {
 }
 
 // RelatedWorktree is a worktree of the chat's repository that one of its
-// subagents worked in. It stays after the worktree goes, as what was last
+// subagents, or of a workflow's, worked in. It stays after the worktree goes, as what was last
 // seen of it. Path and Branch are as git lists them, which an agent can
 // write: they are data.
 type RelatedWorktree struct {
@@ -51,9 +51,14 @@ type RelatedWorktree struct {
 	// diff once the worktree and its branch are gone, while git keeps the
 	// commit.
 	LastHead string `json:",omitempty"`
-	// CallID is the tool call that started the subagent.
+	// CallID is the tool call that has it: the Agent call that started the
+	// subagent, or the Workflow call whose run claimed it, its launch or a
+	// resume of it.
 	CallID string
-	State  RelatedState
+	// RunID is the run id of the workflow whose subagents work in it, when
+	// CallID is a Workflow call; "" for a subagent's (ADR 0081).
+	RunID string `json:",omitempty"`
+	State RelatedState
 	// Merged says git shows LastHead on the chat's branch or its base, and
 	// it has commits of its own. git can't see a squash merge.
 	Merged bool `json:",omitempty"`
@@ -64,6 +69,22 @@ type RelatedWorktree struct {
 	// One still open is asked again at later looks.
 	PullMerged bool `json:",omitempty"`
 	PullAsked  bool `json:",omitempty"`
+	// RemovedAfter is, once it is removed, the last of the chat's tool
+	// calls that could have named its worktree before it went (the item's
+	// ID): only calls after it can own a worktree made again at its path
+	// (issue #118). "" for one removed before Nushi kept this, or before
+	// any call.
+	RemovedAfter string `json:",omitempty"`
+	// RemovedAt is when the look that took RemovedAfter read the chat's
+	// calls (Unix nanoseconds; 0 for one taken before Nushi kept this): a
+	// call up to RemovedAfter that hadn't ended by then counts as after it.
+	RemovedAt int64 `json:",omitempty"`
+	// Made is when its worktree's .git file last changed, as a look first
+	// saw it (Unix nanoseconds; 0 not yet seen): a look that finds another
+	// time finds another worktree made at the path, though none saw it
+	// go, which a branch switched in it doesn't change (a move back or a
+	// repair does, and the rule for one made again keeps it the same).
+	Made int64 `json:",omitempty"`
 }
 
 // RelatedState says whether a related worktree is still there.

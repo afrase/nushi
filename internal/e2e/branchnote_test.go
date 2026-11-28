@@ -54,7 +54,12 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 		}
 		return out
 	}
-	const told = " ·\u00a0told\u00a0the\u00a0agent" // kept whole where the line wraps
+	// told ends a line once the agent was told, kept whole where the line
+	// wraps; oldTold is the ending a line stored before issue 119 has.
+	const (
+		told    = ",\u00a0told\u00a0the\u00a0agent"
+		oldTold = " ·\u00a0told\u00a0the\u00a0agent"
+	)
 	note := func(from, to string) string {
 		return `<nushi-branch-renamed from="` + from + `" to="` + to + `"/>`
 	}
@@ -117,6 +122,25 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	// Pending over a restart; the replayed messages are the user's own.
 	rename(idMany, "me/three")
 	d.stop()
+	// The lines told so far as an older daemon stored them, with the old
+	// ending, and the pending one ending so too: each is read as told, so
+	// none gains a second ending (the pending rename is still told, by the
+	// worktree's Told, not by its line).
+	items := filepath.Join(dataDir, "transcripts", idMany, "items.jsonl")
+	kept, err := os.ReadFile(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := bytes.Count(kept, []byte(told)); n != 2 {
+		t.Fatalf("told lines stored: %d\n%s", n, kept)
+	}
+	kept = bytes.ReplaceAll(kept, []byte(told), []byte(oldTold))
+	if kept = bytes.Replace(kept, []byte(`to me/three"`), []byte(`to me/three`+oldTold+`"`), 1); bytes.Count(kept, []byte(oldTold)) != 3 {
+		t.Fatalf("the pending line isn't stored as expected:\n%s", kept)
+	}
+	if err := os.WriteFile(items, kept, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	// A name git wouldn't take (a session file edited) isn't told.
 	file := filepath.Join(dataDir, "sessions", idBack+".json")
 	b, err := os.ReadFile(file)
@@ -144,7 +168,11 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	if turn(idBack, "checked"); !slices.Equal(last(idBack), []string{"checked"}) {
 		t.Errorf("a name git wouldn't take: %q", last(idBack))
 	}
-	if got := lines(idMany); len(got) != 3 || !strings.HasSuffix(got[2], "me/three"+told) {
-		t.Errorf("after a restart, the lines: %q", got)
+	if got, want := lines(idMany), []string{
+		"Branch renamed to me/one" + oldTold,
+		"Branch renamed to me/two" + oldTold,
+		"Branch renamed to me/three" + oldTold,
+	}; !slices.Equal(got, want) {
+		t.Errorf("after a restart, the lines: %q, want %q", got, want)
 	}
 }

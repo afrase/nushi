@@ -274,6 +274,7 @@ abstract class _PullEdit<T extends StatefulWidget> extends State<T> {
       ),
       Button(
         label: saving ? 'Saving…' : 'Save',
+        roomFor: const ['Saving…'],
         hint: part == PullPart.description ? cmdEnterLabel : '',
         kind: ButtonKind.primary,
         onPressed: saving ? null : save,
@@ -348,7 +349,7 @@ class _PullDescriptionState extends _PullEdit<PullDescription> {
             theme,
             note: widget.me.isEmpty
                 ? 'Markdown'
-                : 'Markdown · saves to GitHub as ${widget.me}',
+                : 'Markdown, saves to GitHub as ${widget.me}',
           ),
         ],
       );
@@ -486,6 +487,7 @@ class _PullTitleState extends _PullEdit<PullTitle> {
             ),
             Button(
               label: saving ? 'Saving…' : 'Save',
+              roomFor: const ['Saving…'],
               kind: ButtonKind.primary,
               onPressed: saving ? null : save,
             ),

@@ -153,3 +153,214 @@ List<TextSpan> spansOf(Tokens t, String line, Uint32List? spans) {
   if (at < line.length) out.add(TextSpan(text: line.substring(at)));
   return out;
 }
+
+/// A find's match in a line, by character, and whether it's the current
+/// one (`preview_find.dart`'s `LineHit`).
+typedef Hit = ({int start, int end, bool now});
+
+/// [runs], a line's text in styled runs from its start, split where each
+/// of [hits] (a find's matches in it, by character) starts and ends, a
+/// hit's part drawn in [ink] of its run's colour ([plain] where the run
+/// has none of its own): code keeps its contrast on the hit's fill, as on
+/// a diff's tint (ADR 0086's amendment, issue 117). A line's spans are
+/// built as it is, so this is once per line and query, not per frame.
+List<TextSpan> onHits(
+  List<TextSpan> runs,
+  List<Hit> hits, {
+  required Color plain,
+  required Color Function(Color color, {required bool now}) ink,
+}) {
+  if (hits.isEmpty) return runs;
+  return [
+    for (final (text, style, hit) in _pieces(runs, hits))
+      if (hit == null)
+        TextSpan(text: text, style: style)
+      else
+        switch ((
+          style?.color ?? plain,
+          ink(style?.color ?? plain, now: hit.now),
+        )) {
+          (final was, final drawn) when was == drawn => TextSpan(
+            text: text,
+            style: style,
+          ),
+          (_, final drawn) => TextSpan(
+            text: text,
+            style: (style ?? const TextStyle()).copyWith(color: drawn),
+          ),
+        },
+  ];
+}
+
+/// [runs] as they are drawn again over a selection ([hits] the find's
+/// matches in the line, which are painted over the selection): each part
+/// in [ink] of its colour ([plain] where it has none) on the selection's
+/// fill, or a hit's over it, and clear where that is its own colour, as
+/// what reads isn't drawn again. Null when nothing changes.
+List<TextSpan>? overSelected(
+  List<TextSpan> runs,
+  List<Hit> hits, {
+  required Color plain,
+  required Color Function(Color color, Hit? hit) ink,
+}) {
+  var any = false;
+  final out = <TextSpan>[];
+  for (final (text, style, hit) in _pieces(runs, hits)) {
+    final color = style?.color ?? plain;
+    final drawn = ink(color, hit);
+    if (drawn != color) any = true;
+    out.add(
+      TextSpan(
+        text: text,
+        style: (style ?? const TextStyle()).copyWith(
+          // design: clear, not a colour: what reads isn't drawn again
+          color: drawn == color ? const Color(0x00000000) : drawn,
+        ),
+      ),
+    );
+  }
+  return any ? out : null;
+}
+
+/// [runs] in pieces, split where each of [hits] starts and ends: each
+/// piece's text, its run's style and the hit it's in, if any. [hits] are
+/// in order and apart, as a find gives them (`hitsIn`): one walk forward
+/// over them, so a long line with a hit every few characters costs as
+/// many steps as it has pieces.
+Iterable<(String, TextStyle?, Hit?)> _pieces(
+  List<TextSpan> runs,
+  List<Hit> hits,
+) => _split(
+  runs,
+  hits,
+  (h) => h.start,
+  (h) => h.end,
+).map((p) => (p.text, p.style, p.inside));
+
+/// [runs] split at the edges of [stretches] (in order and apart), as
+/// [_pieces] for any kind of stretch: each piece's text, its run's style,
+/// the stretch it's in.
+Iterable<({String text, TextStyle? style, S? inside})> _split<S>(
+  List<TextSpan> runs,
+  List<S> stretches,
+  int Function(S) start,
+  int Function(S) end,
+) sync* {
+  var at = 0;
+  var next = 0; // the first stretch that may still end after [from]
+  for (final run in runs) {
+    final text = run.text ?? '';
+    final runEnd = at + text.length;
+    var from = at;
+    while (from < runEnd) {
+      while (next < stretches.length && end(stretches[next]) <= from) {
+        next++;
+      }
+      // The stretch [from] is in, or the next one's start.
+      final s = next < stretches.length && start(stretches[next]) < runEnd
+          ? stretches[next]
+          : null;
+      final inside = s != null && start(s) <= from;
+      final to = s == null
+          ? runEnd
+          : inside
+          ? min(end(s), runEnd)
+          : min(start(s), runEnd);
+      yield (
+        text: text.substring(from - at, to - at),
+        style: run.style,
+        inside: inside ? s : null,
+      );
+      from = to;
+    }
+    at = runEnd;
+  }
+}
+
+/// A stretch of a line on a fill painted under its code: from `start` to
+/// `end`, by character.
+typedef Filled = ({int start, int end, Color fill});
+
+/// [runs], a line's text in styled runs from its start, its parts on
+/// [filled] (in order and apart) drawn in [ink] of their colour ([plain]
+/// where a run has none of its own) on that fill: the file editor's, whose
+/// re_editor paints its selection and a find's hits under the spans it's
+/// given (issue 117). A part whose ink is its own colour stays in its
+/// run, unsplit; a run no fill reaches is itself, untouched, so a long
+/// line costs what its fills cover; and a line whose code all reads on
+/// its fills is `runs` itself, so re_editor keeps the paragraph it laid
+/// out for them.
+List<TextSpan> onFills(
+  List<TextSpan> runs,
+  List<Filled> filled, {
+  required Color plain,
+  required Color Function(Color color, Color fill) ink,
+}) {
+  if (filled.isEmpty) return runs;
+  final out = <TextSpan>[];
+  var changed = false;
+  var at = 0;
+  var next = 0; // the first stretch that may still end after [at]
+  for (final run in runs) {
+    final text = run.text ?? '';
+    final runEnd = at + text.length;
+    while (next < filled.length && filled[next].end <= at) {
+      next++;
+    }
+    if (next == filled.length || filled[next].start >= runEnd) {
+      out.add(run);
+      at = runEnd;
+      continue;
+    }
+    final color = run.style?.color ?? plain;
+    final pieces = <TextSpan>[];
+    // The run's text in its own colour, since its last part that isn't.
+    final same = StringBuffer();
+    void keep() {
+      if (same.isEmpty) return;
+      pieces.add(TextSpan(text: same.toString(), style: run.style));
+      same.clear();
+    }
+
+    var from = at;
+    var k = next;
+    while (from < runEnd) {
+      while (k < filled.length && filled[k].end <= from) {
+        k++;
+      }
+      // The stretch [from] is in, or the next one's start.
+      final f = k < filled.length && filled[k].start < runEnd
+          ? filled[k]
+          : null;
+      final inside = f != null && f.start <= from;
+      final to = f == null
+          ? runEnd
+          : inside
+          ? min(f.end, runEnd)
+          : min(f.start, runEnd);
+      final piece = text.substring(from - at, to - at);
+      final drawn = inside ? ink(color, f.fill) : color;
+      if (drawn == color) {
+        same.write(piece);
+      } else {
+        keep();
+        pieces.add(
+          TextSpan(
+            text: piece,
+            style: (run.style ?? const TextStyle()).copyWith(color: drawn),
+          ),
+        );
+      }
+      from = to;
+    }
+    if (pieces.isEmpty) {
+      out.add(run);
+    } else {
+      keep();
+      out.addAll(pieces);
+      changed = true;
+    }
+    at = runEnd;
+  }
+  return changed ? out : runs;
+}

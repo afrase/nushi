@@ -17,6 +17,7 @@ Jira is the first integration with a UI of its own in Nushi: lists, an issue vie
 - Images in an issue come from its attachments, fetched by the daemon with the token; a URL in an issue's text is never fetched.
 - Data Center, OAuth (or Rovo MCP's public-client OAuth) and webhooks are later adapters, not in the code.
 - 2026-11-24: "while the Jira view shows" means seen: the list and the open issue poll only while Nushi's window is in front (`viewPoll`, as ADR 0046's views), and the list not while the issue covers it; one catch-up ask as the window comes back. A failed quiet poll keeps the last answer, its line saying "Couldn't refresh · as of 3m ago".
+- 2026-11-26: a failed quiet poll's line reads "Couldn't refresh, as of 3m ago": no dot between a line's parts (issue 119).
 
 ## Alternatives considered
 - `go-atlassian` or `go-jira`: much more than Nushi uses, and the search endpoint Jira moved to is new in them; the client is about 830 lines.

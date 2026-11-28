@@ -121,8 +121,10 @@ class IssueLines extends StatelessWidget {
                         ),
                       )
                     : editingBranch
-                    ? SizedBox(
-                        height: 22,
+                    // As the Tap's padding, so the branch keeps its
+                    // place and the row its height as it's edited.
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         child: InlineEdit(
                           text: issue.branch,
                           onDone: onBranch,

@@ -162,7 +162,7 @@ class ApprovalsList extends StatelessWidget {
                   ),
                   Expanded(
                     child: Text(
-                      r.codeOwner ? '$words · code owner' : words,
+                      r.codeOwner ? '$words, code owner' : words,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.ui(

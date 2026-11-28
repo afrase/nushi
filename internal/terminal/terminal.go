@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/proctree"
 )
 
@@ -58,6 +59,9 @@ type Terminal struct {
 
 	mu      sync.Mutex
 	output  []byte // the last output, about scrollback bytes of it
+	emitted int64  // every byte of output so far: output ends at this place
+	cleared int64  // the place of the latest clear, while clears says there is one
+	clears  bool
 	subs    map[*sub]struct{}
 	program string          // the foreground program's command line, if not the shell
 	code    int             // the exit code, once done (-1: killed by a signal, or by Close on Windows)
@@ -93,6 +97,7 @@ func (t *Terminal) emit(b []byte) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.output = append(t.output, b...)
+	t.emitted += int64(len(b))
 	if len(t.output) > 2*scrollback {
 		cut := len(t.output) - scrollback
 		if i := bytes.IndexByte(t.output[cut:], '\n'); i >= 0 && i < 4096 {
@@ -330,15 +335,28 @@ func (t *Terminal) Output() []byte {
 }
 
 // Follow calls fn with the output kept so far (possibly empty), then with
-// new output as it comes, until the program exits, stop is closed, fn
-// returns false, or the client falls too far behind. It says whether the
-// client kept up: false when it fell too far behind and was dropped, its
+// new output as it comes, as FollowAt does, without the places.
+func (t *Terminal) Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool) {
+	return t.FollowAt(stop, func(o model.TerminalOutput) bool { return fn(o.Data) })
+}
+
+// FollowAt calls fn with the output kept so far (possibly empty) and the
+// place of the latest clear, then with new output as it comes, each piece
+// with its place, until the program exits, stop is closed, fn returns
+// false, or the client falls too far behind. It says whether the client
+// kept up: false when it fell too far behind and was dropped, its
 // output's tail never given it, so its caller doesn't tell it the
 // program's end as if it had all of it.
-func (t *Terminal) Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool) {
+func (t *Terminal) FollowAt(stop <-chan struct{}, fn func(model.TerminalOutput) bool) (kept bool) {
 	s := &sub{wake: make(chan struct{}, 1)}
 	t.mu.Lock()
-	replay := bytes.Clone(t.output)
+	first := model.TerminalOutput{At: t.emitted - int64(len(t.output)), Data: bytes.Clone(t.output), Cleared: -1}
+	if t.clears {
+		first.Cleared = t.cleared
+	}
+	// What emit adds to s.pending from now on follows on from here: the
+	// pieces' places are counted by this goroutine alone.
+	next := t.emitted
 	t.subs[s] = struct{}{}
 	t.mu.Unlock()
 	defer func() {
@@ -346,7 +364,10 @@ func (t *Terminal) Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool
 		delete(t.subs, s)
 		t.mu.Unlock()
 	}()
-	if !fn(replay) {
+	if first.Data == nil {
+		first.Data = []byte{}
+	}
+	if !fn(first) {
 		return true
 	}
 	for {
@@ -359,16 +380,39 @@ func (t *Terminal) Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool
 		case <-s.wake:
 		}
 		t.mu.Lock()
-		next, dropped := s.pending, s.dropped
+		pending, dropped := s.pending, s.dropped
 		s.pending = nil
 		t.mu.Unlock()
 		if dropped {
 			return false
 		}
-		if len(next) > 0 && !fn(next) || exited {
+		if len(pending) > 0 {
+			piece := model.TerminalOutput{At: next, Data: pending, Cleared: -1}
+			next += int64(len(pending))
+			if !fn(piece) {
+				return true
+			}
+		}
+		if exited {
 			return true
 		}
 	}
+}
+
+// Clear keeps at as the place of the terminal's clear (a client's ⌘K,
+// issue #122), which FollowAt gives each client that attaches after: the
+// latest place only, so one before the place kept (another device's older
+// clear) is ignored, and one past the output so far is taken as its end.
+// A negative place is ignored. The place goes with the terminal, as its
+// output does.
+func (t *Terminal) Clear(at int64) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	at = min(at, t.emitted)
+	if at < 0 || t.clears && at <= t.cleared {
+		return
+	}
+	t.cleared, t.clears = at, true
 }
 
 // Close hangs up: everything running on the terminal gets SIGHUP, and what

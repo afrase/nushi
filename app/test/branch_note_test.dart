@@ -14,8 +14,9 @@ const _repo = '/Users/me/nushi';
 const _branch = 'nushi/bump-go-to-1-27-3-and-fix-the-flaky-tests';
 const _renamed = 'Branch renamed to $_branch';
 
-/// As the daemon adds it: no-break spaces keep it whole where it wraps.
-const _told = ' ·\u00a0told\u00a0the\u00a0agent';
+/// As the daemon adds it, after a comma (issue 119): no-break spaces
+/// keep it whole where it wraps.
+const _told = ',\u00a0told\u00a0the\u00a0agent';
 
 /// A worktree chat whose branch Nushi named after its first turn: before
 /// the next prompt, and once it went with the note.

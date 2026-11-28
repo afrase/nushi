@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/bundled_daemon.dart';
-import 'package:nushi/controls.dart' show Toggle;
+import 'package:nushi/controls.dart' show Button, Toggle;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -39,6 +39,8 @@ DaemonSettings _settings(Daemon d) {
 Future<void> _nothing() async {}
 
 void main() {
+  setUpAll(loadFonts);
+
   test("a daemon build's time", () {
     expect(buildTime('1234-1761555000000'), isNotNull);
     expect(
@@ -94,7 +96,7 @@ void main() {
     await tester.pumpWidget(
       themed(LogsSection(daemon: d, settings: _settings(d))),
     );
-    expect(find.text('Version 1.2.0 · API $apiVersion'), findsOneWidget);
+    expect(find.text('Version 1.2.0, API $apiVersion'), findsOneWidget);
     d.dispose();
   });
 
@@ -129,6 +131,55 @@ void main() {
     expect(restartRow(), isFalse);
     d.dispose();
   });
+
+  testWidgets('Restart keeps its place and width while it reads '
+      'Restarting…', (tester) async {
+    fakeInstall.daemon = '/opt/nushi/lib/nushid';
+    final d = await _section(tester, FakeDaemon([]));
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Restart'));
+    Object? failed;
+    unawaited(
+      d.restartDaemon().then((_) {}, onError: (Object e) => failed = e),
+    );
+    await tester.pump();
+    expect(tester.getRect(button('Restarting…')), rest);
+    // The fake daemon never stops: the restart gives up.
+    await tester.pump(const Duration(seconds: 11));
+    await tester.pumpAndSettle();
+    expect(failed, isA<StateError>());
+    expect(tester.getRect(button('Restart')), rest);
+    d.dispose();
+  });
+
+  for (final size in const [Size(1700, 1000), Size(720, 900)]) {
+    renderTest('Logs & advanced, Restart and Restarting…, at '
+        '${size.width.round()} wide', (tester) async {
+      for (final b in Brightness.values) {
+        fakeInstall.daemon = '/opt/nushi/lib/nushid';
+        final d = await pumpSettingsApp(
+          tester,
+          settingsFake(),
+          SettingsSection.logs,
+          size: size,
+          brightness: b,
+        );
+        final name = 'settings_logs_restart_${size.width.round()}_${b.name}';
+        await render(tester, find.byType(MaterialApp), name);
+        Object? failed;
+        unawaited(
+          d.restartDaemon().then((_) {}, onError: (Object e) => failed = e),
+        );
+        await tester.pump();
+        await render(tester, find.byType(MaterialApp), '${name}_restarting');
+        await tester.pump(const Duration(seconds: 11));
+        await tester.pumpAndSettle();
+        expect(failed, isA<StateError>());
+        await closeView(tester, d);
+      }
+    }, variant: onMac);
+  }
 
   testWidgets('no switch until the daemon says', (tester) async {
     final asked = Completer<GetSettingsResponse>();

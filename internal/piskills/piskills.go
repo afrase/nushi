@@ -88,8 +88,7 @@ func walkTop(folder, top string) string {
 
 // settings is the part of a Pi settings file read here.
 type settings struct {
-	Skills              []string `json:"skills"`
-	DefaultProjectTrust string   `json:"defaultProjectTrust"`
+	Skills []string `json:"skills"`
 }
 
 func (k Skills) userSettings() string { return filepath.Join(k.AgentDir(), "settings.json") }
@@ -103,22 +102,6 @@ func readSettings(file string) (settings, error) {
 	var s settings
 	err := jsonsettings.Read(file, &s)
 	return s, err
-}
-
-// trusted says Pi loads folder's own skills: the nearest decision in its
-// trust.json for the folder (its real path) or one above it, else your
-// settings' defaultProjectTrust "always".
-func (k Skills) trusted(folder string, user settings) bool {
-	var decisions map[string]bool
-	_ = jsonsettings.Read(filepath.Join(k.AgentDir(), "trust.json"), &decisions) // unreadable: no decisions
-	for dir := realpath.Of(folder); ; dir = filepath.Dir(dir) {
-		if v, ok := decisions[dir]; ok {
-			return v
-		}
-		if dir == filepath.Dir(dir) {
-			return user.DefaultProjectTrust == "always"
-		}
-	}
 }
 
 // off says a settings file's skills list turns off the skill in dir:
@@ -152,7 +135,7 @@ func (k Skills) List(_ context.Context, folder string) (model.Skills, error) {
 	if err := cmp.Or(uerr, perr); err != nil {
 		out.NoSwitch = err.Error()
 	}
-	trust := k.trusted(folder, user)
+	trust := k.Trusts(folder)
 	seen := map[string]bool{}
 	for _, r := range k.roots(folder) {
 		for _, f := range skillfile.List(r.path) {

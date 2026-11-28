@@ -9,6 +9,8 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_select.dart';
+import 'package:nushi/terminal_session.dart';
 import 'package:nushi/terminal_tabs.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
@@ -62,8 +64,12 @@ class TerminalScreen extends StatelessWidget {
     for (final MapEntry(:key, :value) in appKeys.entries)
       if (terminalPasses(key)) key: value,
     terminalCopyKey: CopySelectionTextIntent.copy,
+    // Nushi's keys replace the package's, ⌘A with them.
+    terminalSelectAllKey: const SelectAllTextIntent(
+      SelectionChangedCause.keyboard,
+    ),
     terminalPasteKey: const PasteTextIntent(SelectionChangedCause.keyboard),
-    terminalClearKey: VoidCallbackIntent(s.terminal.clear),
+    terminalClearKey: VoidCallbackIntent(s.clear),
     newTerminalKey: VoidCallbackIntent(
       () => tryOrShow(context, () => terms.open(info.chatId)),
     ),
@@ -105,40 +111,49 @@ class TerminalScreen extends StatelessWidget {
             ]),
             builder: (context, _) => Stack(
               children: [
-                TerminalView(
-                  s.terminal,
+                TerminalSelect(
                   key: ObjectKey(s.terminal),
+                  terminal: s.terminal,
                   controller: s.controller,
-                  scrollController: s.scroll,
-                  focusNode: s.focus,
-                  autofocus: true,
-                  theme: terminalTheme(t),
-                  textStyle: terminalStyle(),
-                  padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
-                  cursorType: TerminalCursorType.verticalBar,
-                  cursorBlink: true,
-                  keyboardAppearance: t.brightness,
-                  shortcuts: _keys(context, s),
-                  onKeyEvent: (_, event) => _interruptWithSelection(event, s),
-                  readOnly: info.exited,
-                  // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
-                  // link's real target, else the URL or file under the
-                  // pointer.
-                  onTapUp: (_, at) {
-                    if (cmdPressed()) {
-                      unawaited(
-                        openLink(
-                          context,
-                          clickTarget(s.terminal, at),
-                          info.folder,
-                          showChange,
-                        ),
-                      );
-                    }
-                  },
-                  onHover: (_, at) =>
-                      s.hoveredLink.value = s.terminal.hyperlinkAt(at),
-                  onExit: (_) => s.hoveredLink.value = null,
+                  ended: info.exited,
+                  builder: (context, view, click) => TerminalView(
+                    s.terminal,
+                    key: view,
+                    controller: s.controller,
+                    scrollController: s.scroll,
+                    focusNode: s.focus,
+                    autofocus: true,
+                    theme: terminalTheme(t),
+                    textStyle: terminalStyle(),
+                    padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
+                    cursorType: TerminalCursorType.verticalBar,
+                    cursorBlink: true,
+                    keyboardAppearance: t.brightness,
+                    shortcuts: _keys(context, s),
+                    onKeyEvent: (_, event) => _interruptWithSelection(event, s),
+                    readOnly: info.exited,
+                    // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
+                    // link's real target, else the URL or file under the
+                    // pointer. Any other click is for selecting
+                    // (Shift+click).
+                    onTapUp: (_, at) {
+                      if (!cmdPressed()) {
+                        click(at);
+                      } else {
+                        unawaited(
+                          openLink(
+                            context,
+                            clickTarget(s.terminal, at),
+                            info.folder,
+                            showChange,
+                          ),
+                        );
+                      }
+                    },
+                    onHover: (_, at) =>
+                        s.hoveredLink.value = s.terminal.hyperlinkAt(at),
+                    onExit: (_) => s.hoveredLink.value = null,
+                  ),
                 ),
                 // A link's text can say anything: its target shows here.
                 ValueListenableBuilder(
@@ -238,8 +253,10 @@ TerminalTheme terminalTheme(Tokens t, {Color? cursor}) {
     brightMagenta: a.brightMagenta,
     brightCyan: a.brightCyan,
     brightWhite: a.brightWhite,
+    // xterm draws every hit's text in the one colour: it reads on both
+    // fills, and the current one stands plainly off the rest.
     searchHitBackground: t.needsSoft,
-    searchHitBackgroundCurrent: t.needs,
-    searchHitForeground: t.text,
+    searchHitBackgroundCurrent: t.searchHitCurrent,
+    searchHitForeground: t.searchHitInk,
   );
 }

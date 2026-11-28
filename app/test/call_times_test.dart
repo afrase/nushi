@@ -100,7 +100,7 @@ Future<void> _window(
   expect(find.text('12s'), findsWidgets); // the run's and the running call's
   expect(find.text('1m 04s'), findsOne); // the run's span
   expect(
-    find.textContaining('48.1k tokens · 3m 12s', findRichText: true),
+    find.textContaining('48.1k tokens, 3m 12s', findRichText: true),
     findsOne,
   );
   expectTextInside(tester, size.width);
@@ -284,15 +284,15 @@ void main() {
     viewport(tester, const Size(800, 400));
     // A stopped one keeps its word; a done one has none (its check).
     final done = subagentsOf(_items()).single;
-    expect(subagentStatesNarrow(done), ['48.1k tokens · 3m 12s', '3m 12s']);
+    expect(subagentStatesNarrow(done), ['48.1k tokens, 3m 12s', '3m 12s']);
     final sub = (
       call: done.call.deepCopy()..subagent.state = 'stopped',
       items: done.items,
     );
     final states = subagentStatesNarrow(sub);
     expect(states, [
-      'stopped · 48.1k tokens · 3m 12s',
-      '48.1k tokens · 3m 12s',
+      'stopped, 48.1k tokens, 3m 12s',
+      '48.1k tokens, 3m 12s',
       '3m 12s',
     ]);
     final width = ValueNotifier(419.0);
@@ -313,7 +313,7 @@ void main() {
     );
     final seen = <String>{};
     // The word goes whole: in the room a third of the line gives, never
-    // "stopped · 48.1k tokens · 3m 1…".
+    // "stopped, 48.1k tokens, 3m 1…".
     for (var w = 419.0; w >= 200; w -= 1) {
       width.value = w;
       await tester.pump();
@@ -334,11 +334,10 @@ void main() {
       seen.add(text);
     }
     expect(seen, contains('3m 12s')); // narrower still, the time alone
-    // Wide, the word stands apart, whole.
+    // Wide, the whole of it, one way as narrow (issue 119).
     width.value = 600;
     await tester.pump();
-    expect(find.text('stopped'), findsOne);
-    expect(find.text('· 48.1k tokens · 3m 12s'), findsOne);
+    expect(find.text('stopped, 48.1k tokens, 3m 12s'), findsOne);
   });
 
   for (final (size, label) in [

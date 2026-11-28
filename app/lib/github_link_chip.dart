@@ -183,7 +183,7 @@ class _GitHubLinkChipState extends State<GitHubLinkChip> {
                 ),
               ),
               if (it != null && it.title.isNotEmpty) ...[
-                Text(' · ', style: theme.ui(t.textMuted, size: 12)),
+                const SizedBox(width: 5),
                 Flexible(
                   child: Text(
                     it.title,

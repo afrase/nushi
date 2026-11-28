@@ -187,7 +187,7 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
-  testWidgets('⏎ goes on to the next match in the same long message', (
+  testWidgets('⏎ goes on to the older match in the same long message', (
     tester,
   ) async {
     final d = await _app(tester, [
@@ -195,25 +195,117 @@ void main() {
       ...longChat('a', turns: 4),
     ]);
     await _type(tester, 'needle');
+    _inView(tester, 'needle', n: 1);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    _inView(tester, 'needle', n: 1);
+    _inView(tester, 'needle');
     await closeView(tester, d);
   }, variant: onMac);
 
-  testWidgets('⇧⏎ from the first match goes round to the last, far below', (
+  testWidgets('a chat at its end with a word in its last message and far '
+      'above: typing makes the last one current and moves nothing', (
+    tester,
+  ) async {
+    final d = await _app(tester, [
+      agentSays('top', 'The needle is here, far above.'),
+      ...longChat('a', turns: 30),
+      agentSays('end', 'And the needle again, just now.'),
+    ]);
+    final s = _scroll(tester);
+    expect(s.pixels, s.maxScrollExtent, reason: 'it opens at its end');
+    final before = s.pixels;
+    await _type(tester, 'needle');
+    expect(d.chats['c']!.find.current, startsWith('end '));
+    expect(find.text('1 of 2'), findsOne);
+    expect(s.pixels, before, reason: 'no jump up the chat');
+    _inView(tester, 'needle again');
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  // Each way the query changes while it has matches: none of them takes
+  // the view up the chat, the newest match current throughout.
+  for (final (how, first, then) in [
+    ('its case alone', 'needle', ['Needle']),
+    ('a letter more', 'needl', ['needle']),
+    ('a letter fewer', 'needle', ['needl']),
+    ('cleared and typed again', 'needle', ['', 'needle']),
+  ]) {
+    testWidgets('a chat at its end: the query changing by $how keeps the '
+        'newest match current and moves nothing', (tester) async {
+      final d = await _app(tester, [
+        agentSays('top', 'The needle is here, far above.'),
+        ...longChat('a', turns: 30),
+        agentSays('end', 'And the needle again, just now.'),
+      ]);
+      final s = _scroll(tester);
+      final before = s.pixels;
+      await _type(tester, first);
+      expect(d.chats['c']!.find.current, startsWith('end '));
+      expect(s.pixels, before);
+      final field = find.descendant(
+        of: find.byType(FindBar),
+        matching: find.byType(EditableText),
+      );
+      for (final q in then) {
+        await tester.enterText(field, q);
+        await tester.pump(ChatFind.pause);
+        await tester.pumpAndSettle();
+        expect(s.pixels, before, reason: '"$q": no jump up the chat');
+      }
+      expect(d.chats['c']!.find.current, startsWith('end '));
+      expect(find.text('1 of 2'), findsOne);
+      _inView(tester, 'needle again');
+      await closeView(tester, d);
+    }, variant: onMac);
+  }
+
+  for (final b in Brightness.values) {
+    for (final width in [1700.0, 720.0]) {
+      renderTest('renders: the newest match current (${b.name}, $width)', (
+        tester,
+      ) async {
+        final d = await _app(tester, [
+          agentSays('top', 'The needle is here, far above.'),
+          ...longChat('a', turns: 12),
+          agentSays('end', 'And the needle again, just now.'),
+        ]);
+        viewport(tester, Size(width, 900), brightness: b);
+        await tester.pumpAndSettle();
+        await _type(tester, 'needle');
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'find-newest-${b.name}-${width.toInt()}',
+        );
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
+  }
+
+  testWidgets('⏎ from the newest goes up through each older match, '
+      'counted 1, 2, 3, and from the oldest round to the newest, far below', (
     tester,
   ) async {
     final d = await _app(tester, [
       agentSays('top', 'A needle at the top.'),
-      ...longChat('a', turns: 30),
+      ...longChat('a', turns: 15),
+      agentSays('mid', 'A needle halfway.'),
+      ...longChat('b', turns: 15),
       agentSays('end', 'A needle at the end.'),
     ]);
     await _type(tester, 'needle');
-    _inView(tester, 'needle');
-    await press(tester, LogicalKeyboardKey.enter, shift: true);
-    expect(find.text('2 of 2'), findsOne);
+    expect(find.text('1 of 3'), findsOne);
     _inView(tester, 'needle at the end');
+    for (final (count, where) in [
+      ('2 of 3', 'needle halfway'),
+      ('3 of 3', 'needle at the top'),
+      ('1 of 3', 'needle at the end'),
+    ]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.text(count), findsOne, reason: '⏎ goes older');
+      _inView(tester, where);
+    }
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -306,7 +398,9 @@ void main() {
       agentSays('end', 'A needle at the end.'),
     ]);
     await _type(tester, 'needle');
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter); // up to the top
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.enter, shift: true); // and back
     await tester.pumpAndSettle();
     final s = _scroll(tester);
     expect(s.pixels, s.maxScrollExtent, reason: 'the last match is at the end');

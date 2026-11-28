@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/background_tasks_widget.dart';
+import 'package:nushi/chat_files.dart' show fileChanged;
+import 'package:nushi/clock.dart';
 import 'package:nushi/context_report.dart';
 import 'package:nushi/controls.dart' show Button;
 import 'package:nushi/details_panel.dart';
@@ -196,6 +198,11 @@ void main() {
   testWidgets('artifacts: five, their kind on the right, then Show more', (
     tester,
   ) async {
+    // The made-up files are on no disk: each changed a minute ago, so none
+    // is a "Gone" row in its kind's place.
+    final was = fileChanged;
+    fileChanged = (_) => clock().subtract(const Duration(minutes: 1));
+    addTearDown(() => fileChanged = was);
     final (d, _) = await railApp(
       tester,
       size: const Size(1700, 1400),

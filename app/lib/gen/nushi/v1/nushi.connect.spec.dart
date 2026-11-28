@@ -689,7 +689,10 @@ abstract final class NushiService {
   /// looked at now: its head is recorded, and one that went stays as
   /// "removed". GetDiff and GetFolderStatus read one by its path, against
   /// its base_commit; once it's removed, GetDiff in the chat's folder with
-  /// since and commit, while git keeps the commit. ADR 0081. API 99.
+  /// since and commit, while git keeps the commit. ADR 0081. API 99. A
+  /// workflow's removed record with nothing to show (no commit of its own)
+  /// is left out while it is its path's last record, and sent again, in
+  /// its place, once a later record is made at its path (API 158).
   static const getRelatedWorktrees = connect.Spec(
     '/$name/GetRelatedWorktrees',
     connect.StreamType.unary,
@@ -742,7 +745,10 @@ abstract final class NushiService {
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
   /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
   /// refused for it. Login and Logout are refused only when that Ante has no
-  /// sign-in for MCP servers (before 0.2.15).
+  /// sign-in for MCP servers (before 0.2.15). PiG's (API 157): yours in its
+  /// agent folder's mcp.json and the folder's own .pig/mcp.json (untrusted
+  /// until PiG trusts the folder), checked by `pig mcp list --json` in the
+  /// folder and signed in to by `pig mcp login`; McpShape says what it has.
   static const listMcpServers = connect.Spec(
     '/$name/ListMcpServers',
     connect.StreamType.unary,
@@ -782,9 +788,13 @@ abstract final class NushiService {
   /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
   /// project's .claude/settings.local.json). A user or local server: as the
   /// agent's own switch does, asked of the agent (Claude: /mcp in a
-  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
-  /// any other scope (Claude's plugins' servers and claude.ai connectors)
-  /// and by an agent with no off switch.
+  /// terminal, which it records in ~/.claude.json; ADR 0050). PiG's (API
+  /// 157): "enabled" in the file that has the server, so one of yours is on
+  /// or off everywhere (McpShape.user_switch); refused, with
+  /// McpServer.held's words, where a trusted folder's .pig/mcp.json holds
+  /// it. Refused for any other scope (Claude's plugins' servers and
+  /// claude.ai connectors) and by an agent with no off switch. These
+  /// changes and the sign-ins are the Mac's app's alone (macOnly).
   static const setMcpServerOn = connect.Spec(
     '/$name/SetMcpServerOn',
     connect.StreamType.unary,
@@ -904,7 +914,10 @@ abstract final class NushiService {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again.
+  /// A client that falls far behind is cut off and attaches again. Each
+  /// message says where its data falls in all the terminal has printed
+  /// (offset), and the first where the terminal was cleared, if it was
+  /// (cleared_at; API 159).
   static const attachTerminal = connect.Spec(
     '/$name/AttachTerminal',
     connect.StreamType.server,
@@ -917,6 +930,19 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.WriteTerminalRequest.new,
     nushiv1nushi.WriteTerminalResponse.new,
+  );
+
+  /// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  /// the first message of each later attach gives as cleared_at, so the
+  /// client clears again there (issue #122). The terminal keeps the latest
+  /// place: an older one is ignored, one past its output taken as its end.
+  /// The place goes when the terminal closes or restarts, with its output.
+  /// API 159.
+  static const clearTerminal = connect.Spec(
+    '/$name/ClearTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.ClearTerminalRequest.new,
+    nushiv1nushi.ClearTerminalResponse.new,
   );
 
   static const resizeTerminal = connect.Spec(

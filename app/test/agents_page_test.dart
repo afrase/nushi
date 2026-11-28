@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:fixnum/fixnum.dart';
 
+import 'package:flutter/material.dart' show Dialog;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/agents_page.dart';
@@ -121,14 +124,14 @@ void main() {
 
   testWidgets('each agent as found, and what can be done', (tester) async {
     final (_, d) = await _settings(tester);
-    expect(find.text('2.1.310 · /opt/homebrew/bin/claude'), findsOneWidget);
+    expect(find.text('2.1.310, /opt/homebrew/bin/claude'), findsOneWidget);
     expect(find.text('Not signed in'), findsOneWidget);
     expect(find.text('Set up'), findsNothing); // Claude needs none
     expect(find.text('Adapter 2.2.1'), findsOneWidget);
     expect(find.text('Update to 2.2.2'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
     expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
-    expect(find.text('0.5.3 · /Users/me/.local/bin/pig'), findsOneWidget);
+    expect(find.text('0.5.3, /Users/me/.local/bin/pig'), findsOneWidget);
     expect(find.text('Not installed'), findsOneWidget);
     d.dispose();
   });
@@ -172,6 +175,66 @@ void main() {
     expect(fake.setUp, isEmpty);
     d.dispose();
   });
+
+  testWidgets('Remove keeps its place and width while it reads Removing…', (
+    tester,
+  ) async {
+    final (fake, d) = await _settings(tester);
+    final held = Completer<RemoveAgentResponse>();
+    fake.on((input) => input is RemoveAgentRequest ? held.future : null);
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Remove'));
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove').last);
+    await tester.pump();
+    expect(tester.getRect(button('Removing…')), rest);
+    held.complete(RemoveAgentResponse());
+    await tester.pumpAndSettle();
+    expect(fake.removed, ['codex']);
+    expect(tester.getRect(button('Remove')), rest);
+    d.dispose();
+  });
+
+  // The set-up sheet's Set up and Update keep their width while they
+  // read Setting up… or Updating…, so Cancel beside them stays put.
+  for (final (row, idle, busy) in [
+    ('Set up', 'Set up', 'Setting up…'),
+    ('Update to 2.2.2', 'Update', 'Updating…'),
+  ]) {
+    testWidgets('the sheet’s $idle keeps its width while it reads $busy', (
+      tester,
+    ) async {
+      final (fake, d) = await _settings(tester, codexSetUp: idle != 'Set up');
+      final held = Completer<SetUpAgentResponse>();
+      fake.on((input) => input is SetUpAgentRequest ? held.future : null);
+      await tester.tap(find.text(row));
+      await tester.pumpAndSettle();
+      // The sheet's: the last, after the row's own.
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label).last;
+      final rest = tester.getRect(button(idle));
+      final cancel = tester.getRect(button('Cancel'));
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_agent_sheet_${idle.split(' ').first.toLowerCase()}_idle',
+      );
+      await tester.tap(button(idle));
+      await tester.pump();
+      expect(tester.getRect(button(busy)), rest);
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_agent_sheet_${idle.split(' ').first.toLowerCase()}_busy',
+      );
+      expect(tester.getRect(button('Cancel')), cancel);
+      held.complete(SetUpAgentResponse());
+      await tester.pumpAndSettle();
+      d.dispose();
+    });
+  }
 
   testWidgets("Codex's Go agent: the switch sets it, and Codex then needs "
       'no adapter; off again, it does', (tester) async {

@@ -217,9 +217,9 @@ class _GitHubFilesState extends State<GitHubFiles> {
                   ),
                 for (final (i, f) in files.indexed) ...[
                   if (i == 0 && withThreads > 0)
-                    _group(theme, 'With unresolved threads · $withThreads'),
+                    _group(theme, 'With unresolved threads', withThreads),
                   if (i == withThreads && withThreads > 0)
-                    _group(theme, 'The rest · ${files.length - withThreads}'),
+                    _group(theme, 'The rest', files.length - withThreads),
                   _fileRow(theme, f),
                 ],
                 if (widget.pull.changedFiles > files.length)
@@ -265,10 +265,24 @@ class _GitHubFilesState extends State<GitHubFiles> {
     );
   }
 
-  Widget _group(NushiTheme theme, String name) => Padding(
+  /// A group's name and its count after it, the count at the regular
+  /// weight, as a twin project's parent in the sidebar.
+  Widget _group(NushiTheme theme, String name, int count) => Padding(
     padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
-    child: Text(
-      name,
+    child: Text.rich(
+      TextSpan(
+        text: name,
+        children: [
+          TextSpan(
+            text: ' $count',
+            style: theme.ui(
+              theme.t.textMuted,
+              size: 11.5,
+              weight: FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
       style: theme.ui(theme.t.textMuted, size: 11.5, weight: FontWeight.w600),
     ),
   );
@@ -446,9 +460,9 @@ class _DraftCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Your review, not sent · '
+                  'Your review on '
                   '${d.startLine > 0 ? 'lines ${d.startLine}–' : 'line '}'
-                  '${d.line}',
+                  '${d.line}, not sent',
                   style: theme.ui(t.link, size: 11.5),
                 ),
               ),

@@ -63,7 +63,7 @@ func TestClaudeParity(t *testing.T) {
 			workflowsEnded(t, dir, want)
 			answeredAtResult(t, recorded)
 			switch filepath.Base(dir) {
-			case "workflow", "workflow-stop", "workflow-resume", "workflow-resume-load":
+			case "workflow", "workflow-stop", "workflow-resume", "workflow-resume-load", "workflow-worktree", "workflow-worktree-bash":
 				launchedARun(t, want)
 			case "refusal": // claude answered on its fallback model, which the option shows
 				if m := want[0].Model; m != "claude-opus-4-8" {

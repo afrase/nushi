@@ -192,6 +192,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         ),
         Button(
           label: _busy ? 'Submitting…' : 'Submit review',
+          roomFor: const ['Submitting…', 'Submit review'],
           kind: ButtonKind.primary,
           onPressed: _busy ? null : _submit,
         ),

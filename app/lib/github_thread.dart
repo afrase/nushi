@@ -123,7 +123,7 @@ class _ThreadCardState extends State<ThreadCard> {
     final where = x.onFile
         ? 'On the file'
         : x.outdated
-        ? 'Outdated · was line ${x.originalLine}'
+        ? 'Outdated, was line ${x.originalLine}'
         : x.startLine > 0 && x.startLine != x.line
         ? 'Lines ${x.startLine}–${x.line}'
         : 'Line ${x.line}';
@@ -148,9 +148,9 @@ class _ThreadCardState extends State<ThreadCard> {
                   child: Text(
                     [
                       where,
-                      if (x.resolved) 'Resolved',
+                      if (x.resolved) 'resolved',
                       if (!_open) folded,
-                    ].join(' · '),
+                    ].join(', '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.ui(

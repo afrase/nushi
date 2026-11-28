@@ -98,7 +98,7 @@ void main() {
     final (fake, d) = await _open(tester);
     expect(find.text('acme.atlassian.net'), findsOneWidget);
     // Who the token is beside its email, and its state in a pill.
-    expect(find.text('Test User · me@acme.com'), findsOneWidget);
+    expect(find.text('Test User, me@acme.com'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('account-state-acme.atlassian.net')),
@@ -107,7 +107,7 @@ void main() {
       findsOne,
     );
     expect(find.textContaining('The token expires in'), findsOneWidget);
-    expect(find.text('me@side.dev · scoped token'), findsOneWidget);
+    expect(find.text('me@side.dev, scoped token'), findsOneWidget);
     expect(find.textContaining('needs your OK to read'), findsOneWidget);
     // Only the site that works is checked with Jira.
     expect(fake.calls.whereType<CheckJiraSiteRequest>().map((r) => r.site), [
@@ -274,7 +274,7 @@ void main() {
       DateTime(2027, 1, 2),
     );
     expect(find.text('new.atlassian.net'), findsOneWidget);
-    expect(find.textContaining('Test User · '), findsOneWidget);
+    expect(find.textContaining('Test User, '), findsOneWidget);
     expect(find.text('Add a site'), findsOneWidget);
     d.dispose();
   });

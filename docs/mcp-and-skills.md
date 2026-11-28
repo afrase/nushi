@@ -2,9 +2,9 @@
 
 ## MCP servers
 
-Settings › MCP servers (also a chat's ⋯ › MCP servers…, or the palette) lists the servers Claude uses in a folder, by scope, each with its state.
+Settings › MCP servers (also a chat's ⋯ › MCP servers…, or the palette) lists the servers Claude, Ante and PiG use in a folder, by scope, each with its state.
 
-**Switches.** Each user, project and local server has a switch, "in this project":
+**Switches.** Claude's user, project and local servers each have a switch, "in this project" (PiG's are below; Ante has none):
 
 - A **project** server's switch approves or rejects its `.mcp.json` entry, in the project's `.claude/settings.local.json`.
 - A **user or local** server is turned off as `/mcp` does it in a terminal, by Claude itself, so the terminal sees it too ([ADR 0050](adr/0050-mcp-servers-off-through-claudes-own-toggle.md)).
@@ -19,6 +19,15 @@ A server that's off stays listed, dimmed. A running chat keeps its servers until
 - No switch, since Ante has no off: remove one instead.
 - A server that asks for a sign-in (HTTP 401) shows "Needs login" with **Log in**, which runs Ante's own command and waits for the browser. Ante keeps the token. **⋯ › Log out** forgets it. Both take Ante 0.2.15 or later; on an older one the row stays "Failed to connect" and Log out fails, saying to update Ante.
 - A change applies to new Ante sessions, or a running chat's Reload.
+
+**PiG's servers** are listed under PiG (Add server ▾ › For PiG…), as PiG keeps them ([facts](facts/pig.md)):
+
+- **User**: yours, in `mcp.json` in PiG's agent folder (`~/.pig/agent`, or `$PIG_CODING_AGENT_DIR`). **Project**: the folder's own `.pig/mcp.json` (that folder's only, not a parent's), which, once loaded, wins over one of yours of the same name. Nushi writes each file itself, a server at a time, keeping the keys it doesn't show (`exposure`, `timeout`, `oauth`…).
+- PiG loads a project's servers only once you've trusted the folder in PiG (its prompt when `pig` starts there in a terminal, or `/trust`); until then each says "Folder not trusted" and has no switch, and one line under the Project group says how to trust it (there before the folder has a server too, and the add form says it as well). Nushi asks PiG's `trust.json`, so these follow PiG's own answer. Nushi can't trust a folder for PiG.
+- stdio or HTTP; PiG doesn't speak SSE.
+- The switch is PiG's own `enabled`, written in the file that has the server, and only when you flip it: on one of yours, "in every folder", in your own `mcp.json` (for you only, no trust needed); on a project server, "in this project", in the folder's `.pig/mcp.json`, which everyone on the repository shares. Nushi writes no override entries; where a trusted folder's file overrides one of yours, that row shows what holds there, its switch greyed out in its place with no words beside it, and a line under the row says why ("Set by this folder's .pig/mcp.json").
+- **Check again** runs `pig mcp list --json` in the folder, which starts every server. **Log in** and **⋯ › Log out** run `pig mcp login` and `pig mcp logout`; PiG keeps the token.
+- A change applies to new PiG sessions, or a running chat's Reload.
 
 **The other agents' servers** aren't listed: change them with the agent itself.
 

@@ -85,7 +85,8 @@ Decoration? _ring(
 /// content is centred.
 /// [wrap]: on a phone, a long label wraps to three lines, the button
 /// growing, rather than being cut (a permission's option says what it
-/// allows).
+/// allows). [roomFor]: labels it keeps room for, so it is as wide as the
+/// widest of them and its own.
 class Button extends StatelessWidget {
   const new({
     required this.label,
@@ -99,11 +100,18 @@ class Button extends StatelessWidget {
     this.menu = false,
     this.wrap = false,
     this.focusNode,
+    this.roomFor = const [],
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool wrap;
+
+  /// Labels it keeps room for, the widest of them and [label] setting its
+  /// width: one whose label changes as it's pressed (Restart, then
+  /// Restarting…) doesn't change width, and a column of buttons with
+  /// different labels (a menu's Sleep and Restart) shares one width.
+  final List<String> roomFor;
 
   /// Its focus, for a view that moves the keyboard to it; its own
   /// without one.
@@ -128,13 +136,39 @@ class Button extends StatelessWidget {
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
     final corners = BorderRadius.circular(size.radius);
-    final text = Text(
+    final shown = Text(
       label,
       style: style,
       maxLines: lines,
       overflow: TextOverflow.ellipsis,
       textAlign: lines > 1 ? TextAlign.center : null,
     );
+    // The labels it keeps room for are laid out with its own and never
+    // shown: an IndexedStack is as large as its largest child and paints
+    // only the one it shows, so they're unseen, unheard, out of the
+    // pointer's and the focus's reach, and off stage to a test's finders
+    // (a test that looks for "Copied" finds it only once it's shown). The
+    // label it shows needs no copy (a RunButton's running label, as it
+    // runs).
+    final room = [
+      for (final l in roomFor)
+        if (l != label) l,
+    ];
+    final text = room.isEmpty
+        ? shown
+        : IndexedStack(
+            alignment: Alignment.center,
+            children: [
+              shown,
+              for (final l in room)
+                Text(
+                  l,
+                  style: style,
+                  maxLines: lines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          );
     return Pressable(
       onTap: onPressed,
       autofocus: autofocus,

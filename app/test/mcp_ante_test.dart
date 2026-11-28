@@ -258,10 +258,15 @@ void main() {
     await tester.pumpAndSettle();
     var told = 0;
     list.addListener(() => told++);
-    expect(list.userOnly, isFalse);
-    agentList.value = {'ante': Agent(name: 'ante', mcpUserOnly: true)};
+    expect(list.userOnly, isTrue); // the narrowest shape until it's known
+    agentList.value = {
+      'ante': Agent(
+        name: 'ante',
+        mcpShape: McpShape(scopes: ['user', 'project']),
+      ),
+    };
     expect(told, 1);
-    expect(list.userOnly, isTrue);
+    expect(list.userOnly, isFalse);
     await closeView(tester, d);
   });
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' show BoxHeightStyle;
@@ -10,6 +11,7 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/line_changes.dart';
+import 'package:nushi/line_search.dart';
 import 'package:nushi/menu.dart' show MenuEntry;
 import 'package:nushi/preview_find.dart';
 import 'package:nushi/preview_text.dart';
@@ -17,12 +19,18 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/source_menu.dart';
 import 'package:nushi/source_spans.dart';
 import 'package:nushi/syntax.dart';
+import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/whitespace_marks.dart';
 
 part 'source_view_find.dart';
 part 'source_view_lines.dart';
+part 'source_view_marks.dart';
+part 'source_view_menu.dart';
+part 'source_view_scroll.dart';
+part 'source_view_text.dart';
+part 'source_view_views.dart';
 
 /// A line shows this many characters at most (a minified file's one line).
 const _maxLine = 5000;
@@ -91,16 +99,19 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
   String _text = '';
 
   /// The find's matches in the lines (`source_view_find.dart`), for the
-  /// lowered query [_looked]; each line's, by its index; the last ask for
-  /// the current one that was brought into view; whether the text starts
-  /// below the bar, for a match at its very top; the line numbers' width
-  /// when unwrapped, which stays over the lines.
-  List<_Hit> _hits = const [];
-  Map<int, List<int>> _hitsByLine = const {};
+  /// lowered query [_looked], and the search that finds them; the last ask
+  /// for the current one that was brought into view; whether the text
+  /// starts below the bar, for a match at its very top; the line numbers'
+  /// width when unwrapped, which stays over the lines.
+  PackedHits _hits = PackedHits();
+  final _search = LineSearch();
   String _looked = '';
   int _shownAsk = -1;
   bool _roomAbove = false;
   double _numbers = 0;
+
+  @override
+  LaterFind makeFind() => LaterFind()..onBeyond = _beyond;
 
   @override
   void findChanged() {
@@ -117,6 +128,7 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
   List<Uint32List?>? _spans;
   int _reads = 0; // a highlight lands only for the latest read
   int? _columns; // the widest line's, worked out when first unwrapped
+  double _lineHeight = 0; // a line's, as last built
   Indents? _indents; // each line's indent, worked out when guides show
   List<MarkCell?> _cells = const []; // each line's change mark
   int _markings = 0; // marks land only for the latest base and text
@@ -165,6 +177,8 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
 
   @override
   void dispose() {
+    // A search still going would tell the find, disposed below.
+    _search.cancel();
     _down.dispose();
     _across.dispose();
     _wholeWrapped.dispose();
@@ -186,7 +200,9 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
     _indents = null;
     _mark();
     _blame();
-    // The find looks in the new text, once this build is done.
+    // The find looks in the new text once this build is done. A search in
+    // the old one needs no cancel: no slice of it can run before the frame
+    // ends, and the look then drops it.
     if (find?.query != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _look(_looked);
@@ -261,488 +277,12 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
     }
   }
 
-  /// Line [i]'s Blame cell, [look]'s width.
-  Widget _blameCell(int i, BlameLook look) => SelectionContainer.disabled(
-    child: BlameCellView(
-      cell: _blamed.elementAtOrNull(i),
-      look: look,
-      line: _lineHeight,
-      divider: i > 0,
-      onOpen: widget.blame!.onOpen,
-    ),
-  );
-
-  /// The laid-out lines of the list [wrapped] or not, while it shows.
-  RenderSliverMultiBoxAdaptor? _sliver({required bool wrapped}) {
-    RenderSliverMultiBoxAdaptor? found;
-    void visit(RenderObject o) {
-      if (found != null) return;
-      if (o is RenderSliverMultiBoxAdaptor) {
-        found = o;
-      } else {
-        o.visitChildren(visit);
-      }
-    }
-
-    final list = wrapped ? _wrapped : _runOn;
-    if (list.currentContext?.findRenderObject() case final root?) {
-      visit(root);
-    }
-    return found;
-  }
-
-  /// The line at the top of the list [wrapped] or not: the one across its
-  /// top edge, or the next when less than half of it shows.
-  int _topLine({required bool wrapped}) {
-    final s = _sliver(wrapped: wrapped);
-    if (s == null || s.firstChild == null) return 0;
-    final top = s.constraints.scrollOffset;
-    for (var c = s.firstChild; c != null; c = s.childAfter(c)) {
-      final bottom = s.childScrollOffset(c)! + c.size.height;
-      if (bottom > top) {
-        final next =
-            bottom - top < c.size.height / 2 && s.childAfter(c) != null;
-        return s.indexOf(c) + (next ? 1 : 0);
-      }
-    }
-    return 0;
-  }
-
-  /// A new list for the other wrapping, scrolled to the line on top now:
-  /// unwrapped, each line is one high, so it starts there; wrapped, from
-  /// there as a guess, then onto the line once it's laid out.
-  void _keepTopLine() {
-    final line = _topLine(wrapped: !widget.wrap);
-    final old = _down;
-    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
-    _down = ScrollController(
-      initialScrollOffset: line == 0 ? 0 : _top + line * _lineHeight,
-    );
-    if (widget.wrap && line > 0) _showLine(line, 30);
-  }
-
-  double get _top => _pad.top;
-
-  /// The view's padding, with room above the text for the find bar while
-  /// a match at the very top needs it.
-  EdgeInsets get _pad {
-    final pad = widget.padding ?? EdgeInsets.zero;
-    return _roomAbove ? pad.copyWith(top: pad.top + FindBar.height) : pad;
-  }
-
-  double _lineHeight = 0;
-
-  void _showLine(int line, int tries) =>
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final s = _sliver(wrapped: true);
-        if (!mounted || !_down.hasClients || s == null || tries == 0) return;
-        final p = _down.position;
-        for (var c = s.firstChild; c != null; c = s.childAfter(c)) {
-          if (s.indexOf(c) == line) {
-            return p.jumpTo(
-              min(_top + s.childScrollOffset(c)!, p.maxScrollExtent),
-            );
-          }
-        }
-        // Not laid out: the lines above wrap, so it's further on.
-        final first = s.firstChild == null ? 0 : s.indexOf(s.firstChild!);
-        p.jumpTo(p.pixels + (first > line ? -1 : 1) * p.viewportDimension);
-        _showLine(line, tries - 1);
-      });
-
-  /// The widest line's room in columns, as near as cheaply known: a wide
-  /// character (CJK, an emoji's halves) counts as two, a tab to its stop,
-  /// a cut line its note.
-  int get _widest => _columns ??= _lines.fold<int>(0, (widest, line) {
-    final n = min(line.length, _maxLine);
-    final note = line.length > _maxLine ? 24 : 0;
-    final most = line.contains('\t') ? widget.tabSize : 2;
-    if (most * n + note <= widest) return widest;
-    var w = 0;
-    for (var i = 0; i < n; i++) {
-      final c = line.codeUnitAt(i);
-      w += c == 0x09
-          ? tabColumns(w, widget.tabSize)
-          : c >= 0x1100 && (c < 0xD800 || c > 0xDFFF)
-          ? 2
-          : 1;
-    }
-    return max(widest, w + note);
-  });
-
-  /// Line [i]'s [child] with its change mark over its first [cell]
-  /// points, its bar [bar] in, when it has one.
-  Widget _marked(
-    int i, {
-    required double cell,
-    required double bar,
-    required Widget child,
-  }) {
-    final mark = _cells.elementAtOrNull(i);
-    if (mark == null) return child;
-    return Stack(
-      children: [
-        child,
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: cell,
-          child: ChangeMark(cell: mark, barX: bar),
-        ),
-      ],
-    );
-  }
-
-  /// The line (from 0) at [at] on the screen, of those laid out: the one
-  /// across it, else the nearest.
-  int _lineAt(Offset at) {
-    final s = _sliver(wrapped: widget.wrap);
-    if (s == null) return 0;
-    var last = 0;
-    for (var c = s.firstChild; c != null; c = s.childAfter(c)) {
-      last = s.indexOf(c);
-      if (at.dy < c.localToGlobal(Offset.zero).dy + c.size.height) break;
-    }
-    return last;
-  }
-
-  /// The right-click menu's rows, for a press at [at].
-  List<MenuEntry> _menuAt(Offset at, SourceActions menu) {
-    final whole = widget.wrap ? _wholeWrapped : _wholeRunOn;
-    // As copying it gives it.
-    final selected = whole.getSelectedContent()?.plainText ?? '';
-    final box = _content.currentContext?.findRenderObject() as RenderBox?;
-    final local = whole.firstAt(_lineHeight);
-    final top = local == null || box == null ? null : box.localToGlobal(local);
-    final first = selected.isEmpty
-        ? null
-        : whole.all
-        ? 1
-        : top == null
-        ? null
-        : _lineAt(top) + 1;
-    return menu.entries(
-      context,
-      selected: selected,
-      first: first,
-      clicked: _lineAt(at) + 1,
-      onFind: find?.open,
-    );
-  }
-
-  /// A list's selection area, its menu inside it when it has one, so its
-  /// right-click is the menu's.
-  Widget _selectable(_Whole whole, Widget child) => SelectionArea(
-    key: identical(whole, _wholeWrapped) ? _areaWrapped : _areaRunOn,
-    child: SelectionContainer(
-      delegate: whole,
-      child: switch (widget.menu) {
-        // The selection's points are in its place, which [_content]'s is.
-        final menu? => KeyedSubtree(
-          key: _content,
-          child: SourceMenu(entries: (at) => _menuAt(at, menu), child: child),
-        ),
-        null => child,
-      },
-    ),
-  );
-
   @override
   Widget build(BuildContext context) =>
       FindFrame(find: find, child: _view(context));
 
   Widget _view(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final colors = findColors(t);
-    final style = theme.code(t.text, size: 12);
-    final gutter = theme.code(t.textMuted, size: 12);
-    final digits = '${_lines.length}'.length;
-    // Measured as a Text draws it, over the DefaultTextStyle: its letter
-    // spacing widens each character, and the run-on width must hold them.
-    final zero = TextPainter(
-      text: TextSpan(
-        text: '0',
-        style: DefaultTextStyle.of(context).style.merge(style),
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    final char = zero.width;
-    _lineHeight = zero.height;
-    zero.dispose();
-    // The letter spacing every character has, a tab's too; and the
-    // strut that holds a line's height when a tab's font is larger.
-    final drawn = DefaultTextStyle.of(context).style.merge(style);
-    final spacing = drawn.letterSpacing ?? 0;
-    final strut = StrutStyle.fromTextStyle(drawn, forceStrutHeight: true);
-    TextSpan text(int i) {
-      final whole = _lines[i];
-      final cut = whole.length > _maxLine;
-      final line = cut ? whole.substring(0, _maxLine) : whole;
-      return TextSpan(
-        style: style,
-        children: [
-          // An empty text can't be selected, so its break wouldn't copy.
-          if (line.isEmpty) const TextSpan(text: _blank),
-          ...tabStops(
-            spansOf(t, line, _spans?.elementAtOrNull(i)),
-            fontSize: style.fontSize!,
-            column: char,
-            tabSize: widget.tabSize,
-            spacing: spacing,
-          ),
-          if (cut)
-            TextSpan(
-              text: ' … (${whole.length - _maxLine} more)',
-              style: gutter,
-            ),
-        ],
-      );
-    }
-
-    String number(int i) => '${i + 1}'.padLeft(digits);
-    // Indent guides, a level's columns apart (the file's own, [indents]).
-    final counted = widget.guides
-        ? (_indents ??= indents(_lines, widget.tabSize))
-        : null;
-    final step = (counted?.unit ?? widget.tabSize) * char;
-    int level(int i) => counted?.levels[i] ?? 0;
-    // Scrolled past the end, the last line can come to the top.
-    EdgeInsets padded(double viewport) {
-      final pad = _pad;
-      if (!widget.pastEnd) return pad;
-      return pad.copyWith(
-        bottom: pastEndPadding(
-          viewport,
-          _lineHeight,
-          top: pad.top,
-          bottom: pad.bottom,
-        ),
-      );
-    }
-
-    // The Blame gutter, left of the numbers, while on; its width set by
-    // the pane's.
-    final scaler = MediaQuery.textScalerOf(context);
-    BlameLook? lookIn(double pane) => widget.blame == null
-        ? null
-        : BlameLook(context, pane: pane, scaler: scaler);
-    if (widget.wrap) {
-      Widget blamed(int i, Widget line, {required BlameLook? look}) =>
-          look == null
-          ? line
-          : Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(left: look.width + blameGap),
-                  child: line,
-                ),
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: look.width,
-                  child: _blameCell(i, look),
-                ),
-              ],
-            );
-      return _selectable(
-        _wholeWrapped,
-        LayoutBuilder(
-          builder: (context, box) {
-            final look = lookIn(box.maxWidth);
-            return ListView.builder(
-              key: _wrapped,
-              controller: _down,
-              padding: padded(box.maxHeight),
-              itemCount: _lines.length,
-              itemBuilder: (context, i) => blamed(
-                look: look,
-                i,
-                _marked(
-                  i,
-                  cell: digits * char + markGap + markBar + markRoom,
-                  bar: digits * char + markGap,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SelectionContainer.disabled(
-                        child: Padding(
-                          padding: const EdgeInsets.only(
-                            right: markGap + markBar + markRoom,
-                          ),
-                          child: Text(number(i), style: gutter),
-                        ),
-                      ),
-                      Expanded(
-                        child: _Line(
-                          LineHits(
-                            hits: _lineHits(i),
-                            colors: colors,
-                            child: Text.rich(
-                              text(i),
-                              strutStyle: strut,
-                              selectionColor: Colors.transparent,
-                            ),
-                          ),
-                          whole: _lines[i],
-                          column: char,
-                          level: level(i),
-                          step: step,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      );
-    }
-    final pad = _pad;
-    return LayoutBuilder(
-      builder: (context, box) {
-        final look = lookIn(box.maxWidth);
-        final blameWidth = look == null ? 0.0 : look.width + blameGap;
-        // The numbers' column, the view's inset with them: it stays as
-        // the lines scroll under it, over them in the view's color.
-        final numbers = _numbers =
-            pad.left +
-            blameWidth +
-            digits * char +
-            markGap +
-            markBar +
-            markRoom +
-            1;
-        final width = numbers + _widest * char + pad.right;
-        return MacScrollbar(
-          controller: _down,
-          notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
-          child: MacScrollbar(
-            controller: _across,
-            notificationPredicate: (n) =>
-                n.depth == 0 && n.metrics.axis == Axis.horizontal,
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context)
-                  .copyWith(scrollbars: false),
-              child: _selectable(
-                _wholeRunOn,
-                SingleChildScrollView(
-                  controller: _across,
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: max(box.maxWidth, width),
-                    child: ListView.builder(
-                      key: _runOn,
-                      controller: _down,
-                      padding: EdgeInsets.only(
-                        top: pad.top,
-                        bottom: padded(box.maxHeight).bottom,
-                      ),
-                      itemExtent: _lineHeight,
-                      itemCount: _lines.length,
-                      itemBuilder: (context, i) => Stack(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(left: numbers),
-                            child: _Line(
-                              LineHits(
-                                hits: _lineHits(i),
-                                colors: colors,
-                                child: Text.rich(
-                                  text(i),
-                                  softWrap: false,
-                                  strutStyle: strut,
-                                  selectionColor: Colors.transparent,
-                                ),
-                              ),
-                              whole: _lines[i],
-                              column: char,
-                              level: level(i),
-                              step: step,
-                            ),
-                          ),
-                          Positioned(
-                            left: 0,
-                            top: 0,
-                            bottom: 0,
-                            width: numbers,
-                            child: SelectionContainer.disabled(
-                              child: ListenableBuilder(
-                                listenable: _across,
-                                builder: (context, child) =>
-                                    Transform.translate(
-                                      offset: Offset(
-                                        _across.hasClients ? _across.offset : 0,
-                                        0,
-                                      ),
-                                      child: child,
-                                    ),
-                                child: ColoredBox(
-                                  color: t.base,
-                                  child: look == null
-                                      ? _marked(
-                                          i,
-                                          cell: numbers,
-                                          bar:
-                                              pad.left +
-                                              digits * char +
-                                              markGap,
-                                          child: Padding(
-                                            padding: EdgeInsets.only(
-                                              left: pad.left,
-                                            ),
-                                            child: Text(
-                                              number(i),
-                                              style: gutter,
-                                              softWrap: false,
-                                            ),
-                                          ),
-                                        )
-                                      : Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: [
-                                            SizedBox(width: pad.left),
-                                            SizedBox(
-                                              width: look.width,
-                                              child: _blameCell(i, look),
-                                            ),
-                                            const SizedBox(width: blameGap),
-                                            Expanded(
-                                              child: _marked(
-                                                i,
-                                                cell:
-                                                    numbers -
-                                                    pad.left -
-                                                    blameWidth,
-                                                bar: digits * char + markGap,
-                                                child: Text(
-                                                  number(i),
-                                                  style: gutter,
-                                                  softWrap: false,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    final d = _Drawn(this, context);
+    return widget.wrap ? _wrappedView(d) : _runOnView(d);
   }
 }

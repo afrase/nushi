@@ -87,13 +87,11 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResp
 			case <-time.After(2 * time.Second):
 			}
 		}
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if err != nil {
-			s.endLocked(t, nil, err)
+			s.end(t, nil, err)
 			return
 		}
-		s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
+		s.end(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
 	}()
 	res := <-t.result
 	return res.resp, res.err

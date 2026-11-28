@@ -129,7 +129,7 @@ void main() {
   testWidgets('a running turn’s plan is pinned, a line in its place in the '
       'transcript', (tester) async {
     final (d, _) = await _app(tester);
-    expect(_pinned('Plan · 2 of 4 done'), findsOneWidget);
+    expect(_pinned('Plan 2 of 4 done'), findsOneWidget);
     expect(_pinned('A cursor in store.ListPosts'), findsOneWidget);
     expect(_inTranscript('shown over the box'), findsOneWidget);
     // The card is the pinned one only: no duplicate of its steps.
@@ -149,18 +149,18 @@ void main() {
     );
     await _settle(tester);
     expect(d.chats['c']!.busy, isFalse);
-    expect(_pinned('Plan · 2 of 4 done'), findsOneWidget);
+    expect(_pinned('Plan 2 of 4 done'), findsOneWidget);
 
     _item(fake, _done(runningPlan()));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     // Its last check draws where it is first.
-    expect(_pinned('Plan · 4 of 4 done'), findsOneWidget);
+    expect(_pinned('Plan 4 of 4 done'), findsOneWidget);
     await tester.pump(CheckPainter.drawFor + Motion.standard);
     await _settle(tester);
     expect(find.byType(PinnedPlan), findsOneWidget);
     expect(_pinned('Plan'), findsNothing);
-    expect(_inTranscript('Plan · 4 of 4 done'), findsOneWidget);
+    expect(_inTranscript('Plan 4 of 4 done'), findsOneWidget);
     expect(_inTranscript('shown over the box'), findsNothing);
     expect(find.text('A cursor in store.ListPosts'), findsOneWidget);
     await closeView(tester, d);
@@ -182,10 +182,10 @@ void main() {
       at: planItems().length + 1,
     );
     await _settle(tester);
-    expect(_pinned('Plan · 0 of 2 done'), findsOneWidget);
+    expect(_pinned('Plan 0 of 2 done'), findsOneWidget);
     expect(_pinned('Write the changelog'), findsOneWidget);
     // The old one, pinned no longer, is a card where it was made.
-    expect(_inTranscript('Plan · 2 of 4 done'), findsOneWidget);
+    expect(_inTranscript('Plan 2 of 4 done'), findsOneWidget);
     expect(_inTranscript('A cursor in store.ListPosts'), findsOneWidget);
     expect(_inTranscript('shown over the box'), findsOneWidget);
     await closeView(tester, d);
@@ -200,7 +200,7 @@ void main() {
       idle: true,
     );
     expect(_pinned('Plan'), findsNothing);
-    expect(_inTranscript('Plan · 4 of 4 done'), findsOneWidget);
+    expect(_inTranscript('Plan 4 of 4 done'), findsOneWidget);
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -224,7 +224,7 @@ void main() {
     // Another chat's plan shows collapsed too.
     d.select('d');
     await _settle(tester);
-    expect(_pinned('Plan · 3 of 12 done'), findsOneWidget);
+    expect(_pinned('Plan 3 of 12 done'), findsOneWidget);
     expect(_pinned('Step 1 of the long plan'), findsNothing);
 
     // From the keyboard: the line takes the focus and Enter opens it.
@@ -304,7 +304,7 @@ void main() {
     expect(tester.getRect(shows).top, before);
     await _settle(tester);
     expect(anchor, findsOneWidget);
-    expect(_inTranscript('Plan · 4 of 4 done'), findsOneWidget);
+    expect(_inTranscript('Plan 4 of 4 done'), findsOneWidget);
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -319,7 +319,7 @@ void main() {
     _item(fake, _done(runningPlan()));
     await tester.pump();
     expect(_pinned('Plan'), findsNothing);
-    expect(_inTranscript('Plan · 4 of 4 done'), findsOneWidget);
+    expect(_inTranscript('Plan 4 of 4 done'), findsOneWidget);
     await closeView(tester, d);
   }, variant: onMac);
 

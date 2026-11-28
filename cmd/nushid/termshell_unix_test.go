@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 func TestShellArgv(t *testing.T) {
@@ -42,7 +44,7 @@ func TestShellStarterRunsACommand(t *testing.T) {
 	var out strings.Builder
 	done := make(chan struct{})
 	go func() {
-		sh.Follow(nil, func(b []byte) bool { out.Write(b); return true })
+		sh.FollowAt(nil, func(o model.TerminalOutput) bool { out.Write(o.Data); return true })
 		close(done)
 	}()
 	select {
@@ -74,7 +76,7 @@ func TestACommandsTerminalHasNoPager(t *testing.T) {
 	var out strings.Builder
 	done := make(chan struct{})
 	go func() {
-		sh.Follow(nil, func(b []byte) bool { out.Write(b); return true })
+		sh.FollowAt(nil, func(o model.TerminalOutput) bool { out.Write(o.Data); return true })
 		close(done)
 	}()
 	select {

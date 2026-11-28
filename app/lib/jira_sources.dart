@@ -126,7 +126,7 @@ class JiraSources extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    '${site.boardName} · $sprint',
+                    '${site.boardName}, $sprint',
                     style: theme.ui(t.textMuted, size: 12),
                   ),
           ),

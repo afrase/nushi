@@ -16,13 +16,13 @@ import 'package:nushi/theme/theme.dart';
 /// The chat's plan pinned over the composer (ADR 0135): [pinnedPlan], on a
 /// card the composer's width, so where the agent is in it is always in
 /// sight however far its card in the transcript has scrolled. Its summary
-/// line is the card's foot: "Plan · 1 of 3 done", collapsed the running
+/// line is the card's foot: "Plan 1 of 3 done", collapsed the running
 /// step's dot and words too, the thin bar and a chevron at the line's end,
 /// which never moves, since the steps open above it. The whole line is the
 /// button; collapsed or not is the app's ([planCollapsed]), on the phone
 /// the screen's (collapsed as it opens). Open, the steps scroll inside
 /// it past about 40% of the window's height or eight steps. In a narrow
-/// column the count is short ("Plan · 1/3"), and collapsed the bar gives
+/// column the count is short ("Plan 1/3"), and collapsed the bar gives
 /// its room to the step's words.
 ///
 /// It grows in as a plan is pinned and folds away once it's pinned no

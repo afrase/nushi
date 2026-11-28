@@ -3,7 +3,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+part 'mark_ink.dart';
 part 'marks.dart';
+part 'selection_ink.dart';
 
 /// Where a [WidgetSpan] sits in a paragraph's plain text.
 const _placeholder = '￼';
@@ -95,6 +97,14 @@ class TextMark {
 /// Matches are found after a frame, in the entries that were laid out again:
 /// [onFound] gets all of them then, in reading order.
 class TextMarks {
+  /// Marks drawn by [ink] where a [Marks] names its background (a code
+  /// block's): see [MarkInk].
+  new({this.ink});
+
+  /// How a run's colour is drawn on a mark under a [Marks] that names its
+  /// background; null: as it is.
+  final MarkInk? ink;
+
   String _query = '';
   Color _hit = const Color(0x00000000);
   Color _now = const Color(0x00000000);

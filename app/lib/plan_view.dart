@@ -8,7 +8,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The agent's plan as a checklist on a card (ADR 0111), ticked off as the
-/// agent works (the fluidity review's idea 16): "Plan · 2 of 4 done" and
+/// agent works (the fluidity review's idea 16): "Plan 2 of 4 done" and
 /// that count as a thin bar at the card's top right. A step done while the
 /// chat is open draws its check ([CheckPainter]) as its words dim; the
 /// running step is a dot of the accent in a soft halo, its words medium,
@@ -95,7 +95,7 @@ class _PlanViewState extends State<PlanView> {
           spacing: 10,
           children: [
             Icon(Icons.checklist, size: 15, color: t.textMuted),
-            Expanded(child: PlanTitle(plan, more: ' · shown over the box')),
+            Expanded(child: PlanTitle(plan, more: ', shown over the box')),
           ],
         ),
       );
@@ -133,8 +133,8 @@ class _PlanViewState extends State<PlanView> {
 int planDone(List<PlanEntry> plan) =>
     plan.where((e) => e.status == 'completed').length;
 
-/// "Plan · 2 of 4 done", the plan's name and count on one line, cut short
-/// at its end; [short], "Plan · 2/4", for a narrow line; [more] after it,
+/// "Plan 2 of 4 done", the plan's name and count on one line, cut short
+/// at its end; [short], "Plan 2/4", for a narrow line; [more] after it,
 /// muted as the count.
 class PlanTitle extends StatelessWidget {
   const new(this.plan, {super.key, this.short = false, this.more = ''});
@@ -157,8 +157,8 @@ class PlanTitle extends StatelessWidget {
           ),
           TextSpan(
             text: short
-                ? ' · $done/${plan.length}$more'
-                : ' · $done of ${plan.length} done$more',
+                ? ' $done/${plan.length}$more'
+                : ' $done of ${plan.length} done$more',
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:nushi/agents.dart' show agentTitle;
 import 'package:nushi/chat.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
@@ -85,8 +86,9 @@ Future<List<XFile>> Function() pickFiles = () =>
     openFiles(confirmButtonText: 'Attach');
 
 /// Attaches what ⌘V pastes beside its text: the clipboard's files, or else
-/// its image when the agent takes images ([Native.clipboard]). Returns
-/// what wasn't attached, or ''.
+/// its image when the agent takes images ([Native.clipboard]; an asleep
+/// chat's daemon says what its agent took when it last ran). Returns what
+/// wasn't attached, or '': an image the agent doesn't take is said so.
 Future<String> pasteFiles(ChatState chat, {required int api}) =>
     chat.draft.images.track(() async {
       final paths = await native.clipboard.files();
@@ -95,13 +97,15 @@ Future<String> pasteFiles(ChatState chat, {required int api}) =>
           for (final p in paths) XFile(p),
         ], api: api);
       }
-      if (chat.canImages) {
-        if (await native.clipboard.image() case final image?) {
-          if (_sent(chat.draft) + maxImageBytes > maxUploadTotal) {
-            return 'the picture pasted: $_tooMuch';
-          }
-          await chat.draft.images.add(image);
+      if (await native.clipboard.image() case final image?) {
+        if (!chat.canImages) {
+          return "the picture pasted: ${agentTitle(chat.agent)} doesn't "
+              'take images';
         }
+        if (_sent(chat.draft) + maxImageBytes > maxUploadTotal) {
+          return 'the picture pasted: $_tooMuch';
+        }
+        await chat.draft.images.add(image);
       }
       return '';
     });

@@ -89,6 +89,10 @@ mixin FindInSlot<T extends StatefulWidget> on State<T> {
   /// What the find changing does: it looks again, or steps.
   void findChanged();
 
+  /// The view's find, made once a slot is above it.
+  @protected
+  PreviewFind makeFind() => PreviewFind();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -97,7 +101,7 @@ mixin FindInSlot<T extends StatefulWidget> on State<T> {
     _leave();
     _slot = slot;
     if (slot != null) {
-      final f = _find ??= PreviewFind()..addListener(findChanged);
+      final f = _find ??= makeFind()..addListener(findChanged);
       slot.view = f;
     }
   }
@@ -248,24 +252,38 @@ class LineHits extends SingleChildRenderObjectWidget {
     required this.colors,
     required Widget super.child,
     super.key,
+    this.inSightAcross = false,
   });
 
   final List<LineHit> hits;
   final FindColors colors;
 
+  /// Whether it paints only the matches in sight across: for a line
+  /// that is painted again as it scrolls sideways (a read-only source's
+  /// unwrapped line, its numbers moving with the scroll).
+  final bool inSightAcross;
+
+  /// The matches painted since a test last set it to 0.
+  @visibleForTesting
+  static int painted = 0;
+
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderLineHits(hits, colors);
+      _RenderLineHits(hits, colors, inSightAcross: inSightAcross);
 
   @override
   void updateRenderObject(BuildContext context, RenderObject renderObject) =>
       (renderObject as _RenderLineHits)
         ..hits = hits
-        ..colors = colors;
+        ..colors = colors
+        ..inSightAcross = inSightAcross;
 }
 
 class _RenderLineHits extends RenderProxyBox {
-  new(this._hits, this._colors);
+  new(this._hits, this._colors, {required this.inSightAcross});
+
+  /// As [LineHits.inSightAcross].
+  bool inSightAcross;
 
   List<LineHit> _hits;
   List<LineHit> get hits => _hits;
@@ -298,6 +316,41 @@ class _RenderLineHits extends RenderProxyBox {
     return found;
   }
 
+  /// The part of [p]'s text the clips above leave in sight across, a
+  /// character more each side: an unwrapped long line's matches past the
+  /// view's edges cost a box each to paint for nothing. All of it unless
+  /// [inSightAcross], for a few matches, or a paragraph of more than one
+  /// row: a list doesn't paint a line again as it scrolls up or down, so
+  /// a tall wrapped line's rows coming into sight would come unmarked.
+  (int, int) _shownText(RenderParagraph p) {
+    const all = (0, 1 << 30);
+    if (!inSightAcross || _hits.length < 8) return all;
+    // The clips of the boxes above, each in their own place, then here.
+    final toHere = Matrix4.identity();
+    Rect? shown;
+    RenderObject child = this;
+    for (var up = parent; up != null; child = up, up = up.parent) {
+      up.applyPaintTransform(child, toHere);
+      final clip = up.describeApproximatePaintClip(child);
+      if (clip == null) continue;
+      final back = Matrix4.tryInvert(toHere);
+      if (back == null) return all;
+      final here = MatrixUtils.transformRect(back, clip);
+      shown = shown?.intersect(here) ?? here;
+    }
+    if (shown == null) return all;
+    final at = MatrixUtils.transformPoint(p.getTransformTo(this), Offset.zero);
+    final left = shown.left - at.dx;
+    final right = shown.right - at.dx;
+    if (left <= 0 && right >= p.size.width) return all;
+    final row = p.getFullHeightForCaret(const TextPosition(offset: 0));
+    if (p.size.height >= row * 2) return all;
+    final y = p.size.height / 2;
+    final first = p.getPositionForOffset(Offset(left, y)).offset;
+    final last = p.getPositionForOffset(Offset(right, y)).offset;
+    return (first - 1, last + 1);
+  }
+
   @override
   void paint(PaintingContext context, Offset offset) {
     final p = _hits.isEmpty ? null : _paragraph();
@@ -310,7 +363,10 @@ class _RenderLineHits extends RenderProxyBox {
         ..color = _colors.edge
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
+      final (from, to) = _shownText(p);
       for (final h in _hits) {
+        if (h.end < from || h.start > to) continue;
+        LineHits.painted++;
         final fill = Paint()..color = h.now ? _colors.now : _colors.hit;
         final boxes = hitBoxes(p, h.start, h.end);
         if (boxes.isEmpty) {

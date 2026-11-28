@@ -1,0 +1,7 @@
+{"type":"launched"}
+{"type":"started","key":"v2:4fb3c5f10eb58b87e17bc198876ccf4874437aa82b466c93234a985c33895539","agentId":"adb0c2988da5b0dba","label":"commit","phase":"Work"}
+{"type":"result","key":"v2:4fb3c5f10eb58b87e17bc198876ccf4874437aa82b466c93234a985c33895539","agentId":"adb0c2988da5b0dba","result":"Committed.","remoteControlDeviceReport":false,"toolsUsed":["Bash","Write"],"sessionId":"bcb60653-7af2-4ead-a863-8bbd845e896b"}
+{"type":"started","key":"v2:a650846804f9e0266bde664d4c1137c674000093e3aec278afdbb420426f17c4","agentId":"a50fd5b50c2d6db5a","label":"nothing","phase":"Work"}
+{"type":"result","key":"v2:a650846804f9e0266bde664d4c1137c674000093e3aec278afdbb420426f17c4","agentId":"a50fd5b50c2d6db5a","result":"Nothing changed.","remoteControlDeviceReport":false,"toolsUsed":["Bash"],"sessionId":"bcb60653-7af2-4ead-a863-8bbd845e896b"}
+{"type":"started","key":"v2:6219cc50adce911acbbeec9ad6879496984c3718bd702305e36af35d93fea3c8","agentId":"af7b5fbb9ab96b518","label":"file","phase":"Work"}
+{"type":"result","key":"v2:6219cc50adce911acbbeec9ad6879496984c3718bd702305e36af35d93fea3c8","agentId":"af7b5fbb9ab96b518","result":"Left a file.","remoteControlDeviceReport":false,"toolsUsed":["Bash","Write"],"sessionId":"bcb60653-7af2-4ead-a863-8bbd845e896b"}

@@ -170,9 +170,9 @@ void main() {
   testWidgets("each state's one cue under the row's title", (tester) async {
     for (final (state, cue) in [
       ('failing', 'changes requested'),
-      ('ready', 'Ready to merge'),
-      ('merged', 'Merged into main'),
-      ('closed', 'Closed without merging'),
+      ('ready', 'ready to merge'),
+      ('merged', 'merged into main'),
+      ('closed', 'closed without merging'),
     ]) {
       final (d, _) = await openPullTab(
         tester,

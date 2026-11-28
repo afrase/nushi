@@ -83,7 +83,7 @@ class ChatPull extends ChangeNotifier {
   DateTime? get readAt => keptAt ?? _wholeAt;
 
   /// The last ask for the tab's pull request failed: what shows is from
-  /// [readAt] ("Couldn't refresh · as of 2m ago"), [error] says why.
+  /// [readAt] ("Couldn't refresh, as of 2m ago"), [error] says why.
   bool failed = false;
 
   /// What was read last of the linked pull request, until it's asked.
@@ -211,7 +211,7 @@ class ChatPull extends ChangeNotifier {
   }
 
   /// When it was last looked for and how often, as the widget's tooltip
-  /// says it: "Checked 20 s ago · every minute". Its rows' items are the
+  /// says it: "Checked 20 s ago, every minute". Its rows' items are the
   /// chats' states' when those ask for them.
   String get checkedText {
     final states = PullStates.of(daemon);
@@ -407,7 +407,7 @@ class ChatPull extends ChangeNotifier {
     });
   }
 
-  /// An ask starts: the tab says so ("· refreshing") once [asking] is
+  /// An ask starts: the tab says so (", refreshing") once [asking] is
   /// set, after the frame when one is being built (an ask starts in a
   /// pane's initState, [follow]).
   void _started() => scheduleMicrotask(notifyListeners);

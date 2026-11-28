@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart' show Button, MenuIcon;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_comments.dart';
 import 'package:nushi/pull_thread_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -73,6 +75,7 @@ void main() {
     WidgetTester tester,
     GitHubPull p, {
     CommentFilter start = CommentFilter.all,
+    Tokens tokens = Tokens.dark,
   }) async {
     var filter = start;
     sent = [];
@@ -81,6 +84,7 @@ void main() {
     final keys = <String, GlobalKey<PullThreadState>>{};
     await tester.pumpWidget(
       themed(
+        tokens: tokens,
         SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: SendToAgent(
@@ -184,6 +188,70 @@ void main() {
       findsOneWidget,
     );
     d.dispose();
+  });
+
+  // Show turns into Hide without moving: it keeps its width, so the ⋯
+  // after it and the summary before it stay put.
+  testWidgets("a bot's Show keeps its width as it reads Hide, and the ⋯ "
+      'beside it stays put', (tester) async {
+    final p = overviewPull()
+      ..conversation.add(
+        GitHubComment(
+          id: 'IC_bot',
+          author: 'preview-bot',
+          bot: true,
+          body: 'Deployed a preview.\n\nIt lives at preview.example.dev.',
+          url: 'https://github.com/example/app/pull/7#issuecomment-1',
+          createdMs: msAgo(const Duration(minutes: 5)),
+        ),
+      );
+    for (final b in renderThemes) {
+      final d = await comments(
+        tester,
+        p,
+        tokens: b == Brightness.dark ? Tokens.dark : Tokens.light,
+      );
+      // The newest, so the first Show, in the first card's head.
+      final show = find
+          .byWidgetPredicate((w) => w is Button && w.label == 'Show')
+          .first;
+      // The card's head: the Row with the author's line and the buttons.
+      final row = find
+          .ancestor(
+            of: find.textContaining('preview-bot', findRichText: true).first,
+            matching: find.byWidgetPredicate((w) => w is Row && w.spacing == 8),
+          )
+          .first;
+      final more = find.descendant(of: row, matching: find.byType(MenuIcon));
+      final card = find.ancestor(of: row, matching: find.byType(DecoratedBox));
+      final at = tester.getRect(show);
+      final menu = tester.getRect(more);
+      final summary = tester.getRect(
+        find.descendant(
+          of: row,
+          matching: find.textContaining('preview-bot', findRichText: true),
+        ),
+      );
+      await render(tester, card.first, 'press_bot_comment_show_${b.name}');
+      await tester.tap(show);
+      await tester.pumpAndSettle();
+      final hide = find.byWidgetPredicate(
+        (w) => w is Button && w.label == 'Hide',
+      );
+      expect(tester.getRect(hide), at);
+      expect(tester.getRect(more), menu);
+      expect(
+        tester.getRect(
+          find.descendant(
+            of: row,
+            matching: find.textContaining('preview-bot', findRichText: true),
+          ),
+        ),
+        summary,
+      );
+      await render(tester, card.first, 'press_bot_comment_hide_${b.name}');
+      d.dispose();
+    }
   });
 
   testWidgets('a comment posted lands at the top of the list, right under '

@@ -99,6 +99,53 @@ func TestContextSkipsAListItCantRead(t *testing.T) {
 	}
 }
 
+// An answer that leaves the conversation out still has its row, at
+// nothing, where claude puts it (before the buffer and the free space): the
+// app counts what the conversation holds from the agent's usage, and only
+// into a category that is the conversation, so without one the widget's
+// rows came to less than its total (a live chat, 2026-11-27). An answer
+// without categories gets none.
+func TestContextKeepsARowForTheConversation(t *testing.T) {
+	answer := json.RawMessage(`{"categories":[
+		{"id":"system_prompt","name":"System prompt","tokens":2200,"kind":"used"},
+		{"id":"system_tools_deferred","name":"System tools (deferred)","tokens":20100,"kind":"deferred","isDeferred":true},
+		{"id":"autocompact_buffer","name":"Autocompact buffer","tokens":33000,"kind":"buffer"},
+		{"id":"free_space","name":"Free space","tokens":964800,"kind":"free"}],"maxTokens":1000000}`)
+	got, err := Harness{}.Context(context.Background(), answering(t, answer), "s1")
+	want := []model.ContextCategory{
+		{Name: "System prompt", Tokens: 2200, Percent: 0.22},
+		{Name: "System tools", Tokens: 20100, Percent: 2.01, Kind: "deferred"},
+		{Name: "Messages", Part: model.PartMessages},
+		{Name: "Autocompact buffer", Tokens: 33000, Percent: 3.3, Part: model.PartBuffer},
+		{Name: "Free space", Tokens: 964800, Percent: 96.48, Kind: "free"},
+	}
+	if err != nil || !reflect.DeepEqual(got.Categories, want) {
+		t.Errorf("Context = %+v, %v; want %+v", got.Categories, err, want)
+	}
+
+	// With nothing after it to come before, it is the last.
+	answer = json.RawMessage(`{"categories":[{"id":"skills","name":"Skills","tokens":40,"kind":"used"}],"maxTokens":1000}`)
+	got, err = Harness{}.Context(context.Background(), answering(t, answer), "s1")
+	want = []model.ContextCategory{{Name: "Skills", Tokens: 40, Percent: 4}, {Name: "Messages", Part: model.PartMessages}}
+	if err != nil || !reflect.DeepEqual(got.Categories, want) {
+		t.Errorf("Context = %+v, %v; want %+v", got.Categories, err, want)
+	}
+
+	// One that has it keeps it as claude gave it, once.
+	answer = json.RawMessage(`{"categories":[{"id":"messages","name":"Messages","tokens":0,"kind":"used"},
+		{"id":"free_space","name":"Free space","tokens":1000,"kind":"free"}],"maxTokens":1000}`)
+	got, err = Harness{}.Context(context.Background(), answering(t, answer), "s1")
+	want = []model.ContextCategory{{Name: "Messages", Part: model.PartMessages}, {Name: "Free space", Tokens: 1000, Percent: 100, Kind: "free"}}
+	if err != nil || !reflect.DeepEqual(got.Categories, want) {
+		t.Errorf("Context = %+v, %v; want %+v", got.Categories, err, want)
+	}
+
+	got, err = Harness{}.Context(context.Background(), answering(t, json.RawMessage(`{"categories":[],"maxTokens":1000}`)), "s1")
+	if err != nil || len(got.Categories) != 0 {
+		t.Errorf("Context of an answer without categories = %+v, %v; want none", got.Categories, err)
+	}
+}
+
 // Only the categories and the window are read: a field Nushi doesn't read
 // that claude retypes can't fail the card.
 func TestContextIgnoresAFieldItDoesntRead(t *testing.T) {

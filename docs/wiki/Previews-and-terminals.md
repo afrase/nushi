@@ -12,7 +12,7 @@ When the agent writes a document, page, image or diagram, its row in the chat ha
 
 Other ways to open a file:
 
-- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made, in a long chat the early ones too. Click one to open it.
+- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made, in a long chat the early ones too. Files a Claude workflow's agents wrote are there as well; the pointer over one names the workflow that changed it last. Click one to open it. Files made by a shell command aren't listed, nor files whose folder is gone, such as a worktree removed since; a file deleted from a folder that's still there shows as **Gone**.
 - **Open file** (⌘P): type part of a name to open any file in the chat's folder, code included.
 - **Files** (⇧⌘E, or the folder button in the header): the open files on the left and a tree of the chat's folder on the right, as in Claude's desktop app. With nothing open it says **Open files appear here**. Files with changes have a dot (see below). Opening a file never moves the tree. To find a file anywhere in the folder, type in **Search files…** above the tree.
 
@@ -111,14 +111,14 @@ While you're editing, **Cut** and **Paste** are there too. Copy, Cut and Quote i
 
 ## Find in a file
 
-Press ⌘F with a file in the Files pane to find text in it, the same way you find in the chat. Click in the file first: ⌘F finds in whatever has the focus, so with the message box focused it finds in the chat.
+Press ⌘F with a file in the Files pane to find text in it, the same way you find in the chat, but from the top down. Click in the file first: ⌘F finds in whatever has the focus, so with the message box focused it finds in the chat.
 
 1. Click in the file, then press ⌘F. The find bar opens at the file's top right.
 2. Type. Every match is marked, the current one in the accent, and the bar counts them ("2 of 7", or "None").
 3. Press ⏎ for the next match and ⇧⏎ for the one before. The file scrolls to each one.
 4. Press Esc to close the bar.
 
-It works in rendered Markdown, in a CSV's table (its header too; a match hidden past a cell's "…" marks the whole cell), in a file you're editing, and in one that shows read-only. It finds in every line or row, not just those on screen.
+It works in rendered Markdown, in a CSV's table (its header too; a match hidden past a cell's "…" marks the whole cell), in a file you're editing, and in one that shows read-only. It finds in every line or row, not just those on screen. In a large read-only file the count goes 10,000 at a time ("1 of 10,000+"), ⏎ and ⇧⏎ still reach every match, and every match on screen is still marked.
 
 On the Mac it works in an HTML page and a browser tab too: click in the page, then press ⌘F. It finds the text you can see on the page; Esc puts you back where you were: in the page, or in the address bar if you pressed ⌘F there. On Linux and Windows a page has no find of its own yet. SVG, PDF and diagram previews have none.
 
@@ -161,7 +161,11 @@ In the chat, your message shows each command it carried as a card with its exit.
 
 ## Good to know
 
-- ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F.
+- To copy more than fits on the screen, drag past the terminal's top or bottom edge and hold the mouse there: it keeps scrolling, faster the further past you go, and the selection keeps its start. Move back inside or let go to stop. Press ⌘C to copy it.
+- Or click where the text starts, scroll to where it ends, and Shift+click there. Shift+click also grows a selection you already have: a click after its start moves its end there, and one before its start moves its start, keeping the rest. After a double-click it grows by whole words, after a triple-click by whole lines.
+- ⌘A (Ctrl+Shift+A on Linux) selects everything in the terminal, scrollback included.
+- ⌘K (Ctrl+Shift+K on Linux) clears the terminal, as in Terminal. What you cleared stays cleared when Nushi restarts or reconnects.
+- ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F. As in the chat, it starts at the latest match ("1 of 5"): ⏎ goes up to older output and ⇧⏎ back down.
 - Restarting the daemon closes your terminals. Archiving or deleting a chat also closes its terminals.
 - On Linux, HTML pages, SVG, PDFs and browser tabs show a placeholder with an **Open in** button for your default browser. Mermaid diagrams show as source, in files and in messages.
 - Some files are read-only in the Files pane, for example files over 1 MB or files you don't have permission to write. The reason shows above the text.

@@ -3,12 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart' show runName;
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -18,7 +20,7 @@ import 'package:nushi/workflows.dart';
 /// A workflow where its call is in the transcript (ADR 0127): a row on the
 /// subagents' soft tint, as a subagent's, no outline, that says each
 /// thing once (#103): its name, then where it is and how long, live
-/// ("Review 5/7 · 3 running · 4m 12s"), in a subagent row's order, at the
+/// ("Review 5/7, 3 running, 4m 12s"), in a subagent row's order, at the
 /// line's end. Narrow, the state takes a line of its own. How a run that
 /// didn't end well ended has a line under it. Its chevron, at its start
 /// as a tool call's, opens it in place to its description and its phases
@@ -299,7 +301,8 @@ Widget workflowName(BuildContext context, Item call, {double size = 13}) {
           ),
         ),
         TextSpan(
-          text: w.name.isNotEmpty ? w.name : w.runId,
+          // The model's text: plain, as the Artifacts row's tooltip names it.
+          text: plainName(runName(w)),
           style: theme.ui(t.text, size: size),
         ),
       ],

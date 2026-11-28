@@ -125,3 +125,38 @@ func TestMcpHealthNotCheckedWhereNothingIsRemembered(t *testing.T) {
 		t.Fatalf("%d checks, check error %q", cfg.checks.Load(), resp.Msg.CheckError)
 	}
 }
+
+// untrustedOne is an agent's MCP config with a project server it doesn't
+// load (PiG's, in a folder it doesn't trust).
+type untrustedOne struct{ mcp.Config }
+
+func (untrustedOne) Servers(string) ([]model.MCPServer, error) {
+	return []model.MCPServer{{Name: "p", Scope: "project", Config: `{"command":"p"}`, Untrusted: true},
+		{Name: "u", Scope: "user", Config: `{"command":"u"}`, Held: "Set by this folder's .pig/mcp.json"}}, nil
+}
+
+func (untrustedOne) TrustsFolder(string) bool { return false }
+
+// A project server the agent doesn't load says so, a server whose switch
+// can't act says why, and the list says the agent doesn't trust the
+// folder; an agent with no folder trust says nothing of it (API 157).
+func TestAnUntrustedServerSaysSo(t *testing.T) {
+	st := store.New(t.TempDir())
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}}},
+		chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
+	c := client(t, New(Services{Chats: svc, MCP: map[string]*mcp.Service{"a": mcp.New("a", untrustedOne{}, nil)}}))
+	resp, err := c.ListMcpServers(t.Context(), connect.NewRequest(&nushiv1.ListMcpServersRequest{Folder: t.TempDir(), Agent: "a"}))
+	testcheck.NoErr(t, err)
+	if s := resp.Msg.Servers; len(s) != 2 || !s[0].Untrusted || s[1].Held != "Set by this folder's .pig/mcp.json" {
+		t.Errorf("servers %v", s)
+	}
+	if resp.Msg.FolderTrusted == nil || *resp.Msg.FolderTrusted {
+		t.Errorf("folder_trusted %v, want false", resp.Msg.FolderTrusted)
+	}
+	c = client(t, New(Services{Chats: svc, MCP: map[string]*mcp.Service{"a": mcp.New("a", &countedChecks{}, nil)}}))
+	resp, err = c.ListMcpServers(t.Context(), connect.NewRequest(&nushiv1.ListMcpServersRequest{Folder: t.TempDir(), Agent: "a"}))
+	testcheck.NoErr(t, err)
+	if resp.Msg.FolderTrusted != nil {
+		t.Errorf("an agent with no folder trust: folder_trusted %v", *resp.Msg.FolderTrusted)
+	}
+}

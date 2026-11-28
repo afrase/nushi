@@ -54,7 +54,7 @@ class RemovedChatsBar extends StatelessWidget {
           Expanded(
             child: tooltip(
               context,
-              [for (final r in removed) '${r.title} — ${tildePath(r.folder)}']
+              [for (final r in removed) '${r.title}, ${tildePath(r.folder)}']
                   .join('\n'),
               // Again once the agents are listed: their titles and why.
               ValueListenableBuilder(

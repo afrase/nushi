@@ -4,10 +4,93 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart';
 import 'harness.dart';
 
+/// A failed subagent that made two tool calls, read 48.1k tokens and
+/// worked 3m 12s.
+SubagentRun _failed() => (
+  call: Item(
+    id: 'a',
+    kind: ItemKind.ITEM_KIND_TOOL_CALL,
+    agent: 'Explore',
+    title: 'Find every caller of the parcel map',
+    status: 'failed',
+    subagent: Subagent(
+      state: 'failed',
+      worked: Int64(192500),
+      tokens: Int64(48120),
+    ),
+  ),
+  items: [
+    for (final id in ['s1', 's2'])
+      Item(
+        id: id,
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        title: 'Read parcel.go',
+        status: 'completed',
+      ),
+  ],
+);
+
 void main() {
+  setUpAll(loadFonts);
+
+  // Issue 119: one way wide as narrow, as the workflow's card says it:
+  // the state's words, then its tokens and time, joined by commas.
+  testWidgets('a subagent row says its parts one way, wide as narrow', (
+    tester,
+  ) async {
+    Future<List<String>> shown(double width) async {
+      await tester.pumpWidget(
+        themed(
+          SizedBox(
+            width: width,
+            child: SubagentLine(_failed(), ChatState('c', '/x'), still: true),
+          ),
+        ),
+      );
+      return [
+        for (final t in tester.widgetList<Text>(find.byType(Text)))
+          t.data ?? t.textSpan?.toPlainText() ?? '',
+      ];
+    }
+
+    // Wide, the whole of it in one text.
+    expect(await shown(900), contains('failed, 2 tools, 48.1k tokens, 3m 12s'));
+    // Narrow, the fullest that fits, the same way: its time and tokens
+    // last, never apart.
+    final narrow = await shown(380);
+    expect(narrow.where(subagentStatesNarrow(_failed()).contains), [
+      '48.1k tokens, 3m 12s',
+    ], reason: '$narrow');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  for (final b in Brightness.values) {
+    testWidgets('golden: a subagent row, wide (${b.name})', (tester) async {
+      viewport(tester, const Size(760, 80));
+      await tester.pumpWidget(
+        themed(
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SubagentLine(_failed(), ChatState('c', '/x'), still: true),
+          ),
+          tokens: b == Brightness.dark ? Tokens.dark : Tokens.light,
+          still: true,
+          banner: false,
+        ),
+      );
+      await expectLater(
+        find.byType(SubagentLine),
+        matchesGoldenFile('goldens/subagent_row_wide_${b.name}.png'),
+      );
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   testWidgets('a subagent line keeps its state at the end, by its mark', (
     tester,
   ) async {

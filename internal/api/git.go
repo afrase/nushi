@@ -170,7 +170,7 @@ func relatedProto(list []model.RelatedWorktree) []*nushiv1.RelatedWorktree {
 	out := make([]*nushiv1.RelatedWorktree, 0, len(list))
 	for _, r := range list {
 		out = append(out, &nushiv1.RelatedWorktree{Path: r.Path, Branch: r.Branch, BaseCommit: r.BaseCommit,
-			LastHead: r.LastHead, CallId: r.CallID, State: string(r.State), Merged: r.Merged, PullMerged: r.PullMerged})
+			LastHead: r.LastHead, CallId: r.CallID, State: string(r.State), Merged: r.Merged, PullMerged: r.PullMerged, RunId: r.RunID})
 	}
 	return out
 }
@@ -181,7 +181,7 @@ func (s *server) GetRelatedWorktreeStats(ctx context.Context, req *connect.Reque
 		return nil, refused(err)
 	}
 	resp := &nushiv1.GetRelatedWorktreeStatsResponse{}
-	for _, r := range list {
+	for _, r := range list { // in the list's order, which the app pairs a path's records by
 		if slices.Contains(req.Msg.Paths, r.Path) {
 			resp.Stats = append(resp.Stats, relatedStats(ctx, folder, r))
 		}

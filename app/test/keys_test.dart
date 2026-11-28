@@ -31,6 +31,7 @@ List<ShortcutActivator> get _toTerminal => appKeys.keys.toList();
 /// The terminal's own keys.
 const _terminalKeys = <ShortcutActivator>[
   terminalCopyKey,
+  terminalSelectAllKey,
   terminalPasteKey,
   terminalClearKey,
   newTerminalKey,
@@ -152,6 +153,7 @@ void main() {
       [for (final k in _terminalKeys) keyLabel(k)],
       [
         'Ctrl+Shift+C',
+        'Ctrl+Shift+A',
         'Ctrl+Shift+V',
         'Ctrl+Shift+K',
         'Ctrl+Shift+T',

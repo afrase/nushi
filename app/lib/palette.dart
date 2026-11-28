@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/picker.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
@@ -27,11 +28,16 @@ class PaletteRow {
     this.agent,
     this.icon = Icons.bolt,
     this.pinned = false,
+    this.cutFromStart = false,
   });
 
   final String id; // 'chat:<id>', 'act:<name>': what [recentRows] keeps
   final String title;
   final String detail; // a chat's folder, an action's key
+
+  /// Whether [detail], where it doesn't fit, is cut from its start (a
+  /// file's folder, whose end says most) rather than its end.
+  final bool cutFromStart;
   final String? agent; // a chat's: its mark in place of [icon]
   final IconData icon;
   final VoidCallback run;
@@ -88,7 +94,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
           detail: [
             'archived',
             if (!chat.scratch) baseName(chat.home),
-          ].join(' · '),
+          ].join(', '),
           agent: chat.agent,
         ),
   ];
@@ -111,13 +117,25 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
 /// opens in its preview.
 Future<void> showArtifacts(BuildContext context, ChatState chat) async {
   final a = chatArtifacts(chat);
-  PaletteRow row(String f) => PaletteRow(
-    'file:$f',
-    baseName(f),
-    () => chat.openInFiles(f),
-    detail: fileDetail(f, fileChanged(absoluteIn(chat.folder, f))),
-    icon: Icons.description_outlined,
-  );
+  PaletteRow row(String f) {
+    final changed = fileChanged(absoluteIn(chat.folder, f));
+    return PaletteRow(
+      'file:$f',
+      plainName(baseName(f)),
+      () => chat.openInFiles(f),
+      // Its folder and when it changed, or that it's gone, as the widget's
+      // row says it in its kind's place.
+      detail: plainName(
+        [
+          fileDetail(f, changed),
+          if (filesLooked && changed == null) 'Gone',
+        ].where((s) => s.isNotEmpty).join(', '),
+      ),
+      icon: Icons.description_outlined,
+      cutFromStart: true,
+    );
+  }
+
   final picked = await showDialog<PaletteRow>(
     context: context,
     routeSettings: Picker.artifacts.settings,
@@ -239,22 +257,30 @@ class Palette extends StatelessWidget {
                     child: AgentMark(r.agent!, size: 13),
                   ),
           ),
-          Expanded(
-            child: Text(
-              r.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.text),
+          // An action's key, in monospace, which has ⌘ and the other marks.
+          if (r.agent == null && r.icon == Icons.bolt) ...[
+            Expanded(
+              child: Text(
+                r.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(t.text),
+              ),
             ),
-          ),
-          if (r.detail.isNotEmpty) ...[
-            const SizedBox(width: 12),
-            // A key in monospace, which has ⌘ and the other marks.
-            if (r.agent == null && r.icon == Icons.bolt)
-              keyText(r.detail, theme.code(t.textMuted, size: 12))
-            else
-              Text(r.detail, style: theme.ui(t.textMuted, size: 12)),
-          ],
+            if (r.detail.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              keyText(r.detail, theme.code(t.textMuted, size: 12)),
+            ],
+          ] else
+            Expanded(
+              child: TitleThenDetail(
+                r.title,
+                r.detail,
+                titleStyle: theme.ui(t.text),
+                detailStyle: theme.ui(t.textMuted, size: 12),
+                cutFromStart: r.cutFromStart,
+              ),
+            ),
         ],
       ),
     );
@@ -419,4 +445,109 @@ class _PickBoxState<T extends Object> extends State<PickBox<T>> {
       ),
     );
   }
+}
+
+/// A row's [title] at its own width, and its [detail] at the row's end in
+/// the room left: the detail is what gives way, cut with an ellipsis (from
+/// its start with [cutFromStart], so a deep folder keeps its end), and
+/// left out when too little is left for it to say anything. A title
+/// wider than the row is cut at its end.
+class TitleThenDetail extends StatelessWidget {
+  const new(
+    this.title,
+    this.detail, {
+    required this.titleStyle,
+    required this.detailStyle,
+    super.key,
+    this.cutFromStart = false,
+  });
+
+  final String title;
+  final String detail;
+  final TextStyle titleStyle;
+  final TextStyle detailStyle;
+  final bool cutFromStart;
+
+  /// The gap between the two, and the least room the detail shows in.
+  static const gap = 12.0;
+  static const least = 32.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final base = DefaultTextStyle.of(context);
+    // Measured as a Text lays it out: over the default style, by its rules.
+    double width(String s, TextStyle style) {
+      final p = TextPainter(
+        text: TextSpan(text: s, style: base.style.merge(style)),
+        textDirection: direction,
+        textScaler: scaler,
+        textWidthBasis: base.textWidthBasis,
+        textHeightBehavior: base.textHeightBehavior,
+        maxLines: 1,
+      )..layout();
+      final w = p.width;
+      p.dispose();
+      return w.ceilToDouble();
+    }
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        final own = width(title, titleStyle);
+        final room = box.maxWidth - own - gap;
+        final shown = detail.isEmpty || room < least
+            ? ''
+            : cutFromStart
+            ? _fromStart(detail, room, (s) => width(s, detailStyle))
+            : detail;
+        final name = Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: titleStyle,
+        );
+        return Row(
+          children: [
+            // Its own width when the detail shows (a Flexible beside the
+            // Expanded detail would get only half the row).
+            if (shown.isEmpty)
+              Flexible(child: name)
+            else
+              SizedBox(width: own, child: name),
+            if (shown.isNotEmpty) ...[
+              const SizedBox(width: gap),
+              Expanded(
+                child: Text(
+                  shown,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: detailStyle,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// [s] as it fits in [room]: whole, or its longest end after an ellipsis.
+String _fromStart(String s, double room, double Function(String) width) {
+  if (width(s) <= room) return s;
+  final chars = s.characters.toList();
+  var lo = 0; // the most characters kept that fit, known so far
+  var hi = chars.length;
+  while (lo < hi) {
+    final mid = (lo + hi + 1) ~/ 2;
+    if (width('…${chars.skip(chars.length - mid).join()}') <= room) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return '…${chars.skip(chars.length - lo).join()}';
 }

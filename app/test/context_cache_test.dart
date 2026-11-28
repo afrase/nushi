@@ -42,6 +42,35 @@ void main() {
     );
   });
 
+  test('a conversation the agent left out of its answer, its row at '
+      'nothing, is counted from the usage: the rows come to the total', () {
+    final left = [
+      _c('System prompt', 4000),
+      _c('Skills', 6000),
+      _c('Tools', 30000, kind: 'deferred'),
+      _c('Messages', 0, part: 'messages'),
+      _c('Reserve', 40000, part: 'buffer'),
+      _c('Free space', 950000, kind: 'free'),
+    ];
+    final now = liveCategories(
+      left,
+      Usage(contextUsed: Int64(70000), contextSize: Int64(1000000)),
+    );
+    int of(String name) => now.firstWhere((c) => c.name == name).tokens.toInt();
+    expect(of('Messages'), 70000 - 4000 - 6000);
+    expect(of('Free space'), 1000000 - 70000 - 40000);
+    // What's in the window, the free space and the buffer with it, is the
+    // window; what's used of it is what the agent's usage says.
+    final inside = now.where((c) => c.kind != 'deferred');
+    expect(inside.fold(0, (n, c) => n + c.tokens.toInt()), 1000000);
+    expect(
+      inside
+          .where((c) => c.kind == '' && c.part != 'buffer')
+          .fold(0, (n, c) => n + c.tokens.toInt()),
+      70000,
+    );
+  });
+
   test('as asked, without usage or a category that is the conversation', () {
     expect(liveCategories(asked, Usage()), same(asked));
     // Named Messages, but no part: from a daemon older than parts.

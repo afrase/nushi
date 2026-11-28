@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -99,6 +100,9 @@ void startAfresh() {
     ..install = FakeAppInstall()
     ..desktop = FakeDesktop();
   phoneHost = macConventions;
+  // Every folder a test names is made up, so never on disk: each counts
+  // as there (a removed worktree's files listed), unless a test says not.
+  folderThere = (_) => true;
   // Nothing another test left in the process's data folder (pull
   // requests read, tile images, theme files, the app's log, a file a test
   // wrote…), so a new kind of file needs no line here: everything goes

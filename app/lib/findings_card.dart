@@ -14,7 +14,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// A code review's findings in the transcript: a header ("Review: 5
-/// findings · medium"), then a row for each, most severe first as the
+/// findings, medium effort"), then a row for each, most severe first as the
 /// agent gave them: its file and line (the last two segments; whole on
 /// hover), its short summary (else its summary) and its category. A row
 /// opens to its summary and how it fails; ↑↓ move between rows and ⏎
@@ -96,7 +96,7 @@ class _FindingsCardState extends State<FindingsCard> {
                   ),
                   if (level.isNotEmpty)
                     TextSpan(
-                      text: ' · $level',
+                      text: ', $level effort',
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                 ],
@@ -106,6 +106,8 @@ class _FindingsCardState extends State<FindingsCard> {
           if (widget.json != null)
             Button(
               label: _json ? 'Hide JSON' : 'Show JSON',
+              // The same width either way: it stays put as it's pressed.
+              roomFor: const ['Show JSON', 'Hide JSON'],
               onPressed: () => setState(() => _json = !_json),
             ),
         ],

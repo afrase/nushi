@@ -321,7 +321,7 @@ void main() {
     expect(find.text('tests/export/test_dst.py:88–97'), findsNothing);
     githubFindings.value = true;
     await tester.pumpAndSettle();
-    expect(find.text('2 unresolved · 1 finding'), findsOneWidget);
+    expect(find.text('2 unresolved, 1 finding'), findsOneWidget);
     expect(find.text('tests/export/test_dst.py:88–97'), findsOneWidget);
     expect(find.text('Send 7 to agent'), findsOneWidget);
     d.dispose();
@@ -337,8 +337,8 @@ void main() {
     final (d2, _) = await openPullTab(tester, old);
     expect(
       find.text(
-        'On an older commit (7d1e3aa): some findings may be done · comment '
-        '/review for a fresh one',
+        'On an older commit (7d1e3aa): some findings may be done. Comment '
+        '/review for a fresh one.',
       ),
       findsOneWidget,
     );
@@ -406,7 +406,7 @@ void main() {
       );
     final (d, _) = await openPullTab(tester, p);
     expect(find.text('Ready to merge'), findsOneWidget);
-    expect(find.text('1 approved · 1 awaited'), findsOneWidget);
+    expect(find.text('1 approved, 1 awaited'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('segment approvals')));
     await tester.pumpAndSettle();
     expect(find.text('field-data-team'), findsNWidgets(2)); // and the side's

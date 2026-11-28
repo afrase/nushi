@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"slices"
+	"reflect"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -52,12 +52,32 @@ func (builtInPlugins) SetPluginOn(context.Context, string, string, bool) error {
 func (builtInPlugins) Uninstall(context.Context, string, string) error         { return nil }
 func (builtInPlugins) PluginScope(string, model.Plugin) string                 { return "" }
 
+// shape is an agent's McpShape as testdata/agents.json says it.
+type shape struct {
+	Scopes        []string `json:"scopes"`
+	OffSwitch     bool     `json:"offSwitch"`
+	Approval      bool     `json:"approval"`
+	SSE           bool     `json:"sse"`
+	UserSwitch    string   `json:"userSwitch"`    // the enum's name, as protobuf's JSON spells it
+	CheckedScopes []string `json:"checkedScopes"` // never null: [] for none
+	ProjectShared bool     `json:"projectSwitchShared"`
+}
+
+func shapeOf(s *nushiv1.McpShape) *shape {
+	if s == nil {
+		return nil
+	}
+	return &shape{Scopes: s.Scopes, OffSwitch: s.OffSwitch, Approval: s.Approval, SSE: s.Sse,
+		UserSwitch: s.UserSwitch.String(), CheckedScopes: append([]string{}, s.CheckedScopes...), ProjectShared: s.ProjectSwitchShared}
+}
+
 // agentFacts is what testdata/agents.json says of each agent, in the order
 // ListAgents lists them: the facts the app's FakeDaemon lists them with.
 type agentFacts struct {
 	Name          string `json:"name"`
 	Title         string `json:"title"`
 	McpUserOnly   bool   `json:"mcpUserOnly"`
+	McpShape      *shape `json:"mcpShape"` // nil: Nushi shows none of its MCP servers
 	GoAgentSwitch bool   `json:"goAgentSwitch"`
 	SignIn        string `json:"signIn"`
 	Expires       string `json:"expires"`
@@ -85,7 +105,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 		}
 	}
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
-	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
+	agentSvc := agents.New(found, func(context.Context, string, []string, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
 	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": fileSkill{}},
 		func(_, _ []string, path string) error { return fmt.Errorf("%s is a file", path) }, nil)
@@ -124,10 +144,10 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	testcheck.NoErr(t, json.Unmarshal(b, &facts))
 	var got []agentFacts
 	for _, a := range listed {
-		got = append(got, agentFacts{Name: a.Name, Title: a.Title, McpUserOnly: a.McpUserOnly, GoAgentSwitch: a.GoAgentSwitch,
+		got = append(got, agentFacts{Name: a.Name, Title: a.Title, McpUserOnly: a.McpUserOnly, McpShape: shapeOf(a.McpShape), GoAgentSwitch: a.GoAgentSwitch,
 			SignIn: a.SignIn, Expires: a.Expires, Adapter: a.GetAdapter().GetPackage()})
 	}
-	if !slices.Equal(got, facts) {
+	if !reflect.DeepEqual(got, facts) {
 		t.Errorf("listed agents' facts\n%v\nwant testdata/agents.json's\n%v", got, facts)
 	}
 	// Codex's Go agent on (Settings, TestCodexGoAgentSetting): Codex is

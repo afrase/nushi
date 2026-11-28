@@ -7,9 +7,16 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/features/mcp"
+	"github.com/afrase/nushi/internal/model"
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
+
+// userSwitch is the API's word for where the switch on yours reaches.
+var userSwitch = map[model.Reach]nushiv1.McpUserSwitch{
+	model.SwitchProject:    nushiv1.McpUserSwitch_MCP_USER_SWITCH_PROJECT,
+	model.SwitchEverywhere: nushiv1.McpUserSwitch_MCP_USER_SWITCH_EVERYWHERE,
+}
 
 // mcpOf is the MCP servers of agent (the default when empty).
 func (s *server) mcpOf(agent string) (*mcp.Service, error) {
@@ -47,12 +54,15 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 		return nil, refused(err)
 	}
 	resp := &nushiv1.ListMcpServersResponse{CheckError: why}
+	if trusted, ok := m.TrustsFolder(req.Msg.Folder); ok {
+		resp.FolderTrusted = &trusted
+	}
 	if checkErr != nil {
 		resp.CheckError = checkErr.Error()
 	}
 	for _, sv := range servers {
 		resp.Servers = append(resp.Servers, &nushiv1.McpServer{Name: sv.Name, Scope: sv.Scope, Source: sv.Source,
-			ConfigJson: sv.Config, State: sv.State, Detail: sv.Detail, Shadowed: sv.Shadowed, Off: sv.Off, OffBy: sv.OffBy, Approved: sv.Approved})
+			ConfigJson: sv.Config, State: sv.State, Detail: sv.Detail, Shadowed: sv.Shadowed, Off: sv.Off, OffBy: sv.OffBy, Approved: sv.Approved, Untrusted: sv.Untrusted, Held: sv.Held})
 	}
 	return connect.NewResponse(resp), nil
 }

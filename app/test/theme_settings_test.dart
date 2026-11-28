@@ -225,7 +225,7 @@ void main() {
       findsOne,
     );
     expect(onCard('Dim', find.textContaining('Light:')), findsNothing);
-    expect(onCard('Good', find.text('Yours · Good.json')), findsOne);
+    expect(onCard('Good', find.text('Yours, Good.json')), findsOne);
     // A built-in card is its name alone: no file, no Yours line.
     expect(onCard('Nord', find.textContaining('Yours')), findsNothing);
     expect(onCard('Nord', find.byType(IconTap)), findsNothing);

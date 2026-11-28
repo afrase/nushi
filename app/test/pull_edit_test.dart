@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -86,7 +89,7 @@ void main() {
     await tester.pumpAndSettle();
     // The source as written, its template comment too.
     expect(tester.widget<TextField>(description).controller!.text, source);
-    expect(find.text('Markdown · saves to GitHub as afrase'), findsOneWidget);
+    expect(find.text('Markdown, saves to GitHub as afrase'), findsOneWidget);
     await tester.enterText(description, 'Stops the redirect loop.');
     final reads = fake.calls.whereType<GetGitHubPullRequest>().length;
     await tester.tap(find.text('Save'));
@@ -280,6 +283,36 @@ void main() {
       d.dispose();
     }, variant: onMac);
   }
+
+  testWidgets('Save keeps its width while it reads Saving…, so Cancel '
+      'stays put, on the title and on the description', (tester) async {
+    var held = Completer<EditGitHubPullResponse>();
+    final (d, _) = await open(
+      tester,
+      editable(),
+      more: (input) => input is EditGitHubPullRequest ? held.future : null,
+    );
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    for (final (key, field) in [
+      ('edit title', title),
+      ('edit description', description),
+    ]) {
+      await tester.tap(find.byKey(ValueKey(key)));
+      await tester.pumpAndSettle();
+      await tester.enterText(field, 'Stop the login redirect loop');
+      final save = tester.getRect(button('Save'));
+      final cancel = tester.getRect(button('Cancel'));
+      await tester.tap(button('Save'));
+      await tester.pump();
+      expect(tester.getRect(button('Saving…')), save, reason: key);
+      expect(tester.getRect(button('Cancel')), cancel, reason: key);
+      held.complete(EditGitHubPullResponse());
+      await tester.pumpAndSettle();
+      held = Completer();
+    }
+    d.dispose();
+  }, variant: onMac);
 
   for (final (name, tokens) in [
     ('dark', Tokens.dark),

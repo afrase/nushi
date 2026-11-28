@@ -150,7 +150,7 @@ class AgentRow extends StatelessWidget {
     final found = [
       if (a.version.isNotEmpty) a.version,
       tildePath(a.path),
-    ].join(' · ');
+    ].join(', ');
     // An agent that isn't installed says so on its own line, not again as
     // its problem.
     final problem = installed ? a.problem : '';
@@ -215,6 +215,7 @@ class AgentRow extends StatelessWidget {
       if (!setUp)
         Button(
           label: onRemove == null ? 'Removing…' : 'Remove',
+          roomFor: const ['Removing…'],
           onPressed: onRemove,
         ),
       if (setUp || update) ...[
@@ -339,6 +340,9 @@ class _SetUpState extends State<_SetUp> {
             label: _working
                 ? (update ? 'Updating…' : 'Setting up…')
                 : (update ? 'Update' : 'Set up'),
+            roomFor: update
+                ? const ['Updating…', 'Update']
+                : const ['Setting up…', 'Set up'],
             kind: ButtonKind.primary,
             autofocus: true,
             onPressed: _working ? null : _run,

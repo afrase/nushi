@@ -45,7 +45,7 @@ func (r *run) agents(ended bool) []model.WorkflowAgent {
 			state = model.RunStopped // the run ended without it
 		}
 		wa := model.WorkflowAgent{ID: row.AgentID, Label: label(row.Label, row.AgentID), Phase: label(row.Phase, ""), State: state}
-		if a := r.tokens[row.AgentID]; a != nil {
+		if a := r.logs[row.AgentID]; a != nil {
 			wa.Tokens = int(a.tokens)
 		}
 		out = append(out, wa)

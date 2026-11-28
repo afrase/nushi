@@ -8,8 +8,10 @@ import 'package:nushi/browser_pane.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
+import 'package:nushi/chat_files.dart' show fileChanged;
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/conventions.dart';
@@ -781,6 +783,11 @@ void main() {
       for (final width in [1700.0, 720.0]) {
         testWidgets('a turn, $name, ${width.toInt()} wide', (tester) async {
           sidebarHidden.value = true;
+          // The turn's report is on no disk: it changed a minute ago, so
+          // Artifacts shows its kind, not "Gone".
+          final was = fileChanged;
+          fileChanged = (_) => clock().subtract(const Duration(minutes: 1));
+          addTearDown(() => fileChanged = was);
           final d = await _app(tester, width: width, brightness: brightness);
           showDetails.value = width > 720;
           await tester.pumpAndSettle();

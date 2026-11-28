@@ -24,9 +24,12 @@ type Shell interface {
 	Program() string    // the foreground program, as last seen
 	Foreground() string // the foreground program now, "" at the prompt
 	Exit() (exited bool, code int)
-	// Follow attaches fn until the shell exits or stop is closed, and says
-	// whether fn kept up (false: dropped for falling behind).
-	Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool)
+	// FollowAt attaches fn until the shell exits or stop is closed, and
+	// says whether fn kept up (false: dropped for falling behind). Each
+	// piece of output comes with its place, the first with the clear's.
+	FollowAt(stop <-chan struct{}, fn func(model.TerminalOutput) bool) (kept bool)
+	// Clear keeps the place of a client's clear, the latest only.
+	Clear(at int64)
 	Close()
 	// Name is the shell's name ("zsh", "pwsh"), "" when it doesn't say.
 	// It may differ from one shell to the next: on Windows each is
@@ -198,18 +201,31 @@ func (s *Service) Resize(id string, cols, rows int) error {
 	return sh.Resize(cols, rows)
 }
 
+// Clear keeps where a client cleared a terminal (its ⌘K, issue #122): the
+// place in its output the client had shown, which each later attach's
+// first piece gives, so that client clears again there. It goes to the
+// shell of now, whose output it marks, and goes with it.
+func (s *Service) Clear(id string, at int64) error {
+	_, sh, err := s.get(id)
+	if err != nil {
+		return err
+	}
+	sh.Clear(at)
+	return nil
+}
+
 // Attach calls fn with the terminal's recent output, then with new output,
-// until its shell exits (and says how) or stop is closed; a client dropped
-// for falling behind isn't told it exited. A shell that
-// ended because the terminal restarted (Restart) isn't the terminal
-// exiting: it says not exited, so the client attaches again, to the new
-// one.
-func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) (exited bool, code int, err error) {
+// each piece with its place (the first with the clear's), until its shell
+// exits (and says how) or stop is closed; a client dropped for falling
+// behind isn't told it exited. A shell that ended because the terminal
+// restarted (Restart) isn't the terminal exiting: it says not exited, so
+// the client attaches again, to the new one.
+func (s *Service) Attach(id string, stop <-chan struct{}, fn func(model.TerminalOutput) bool) (exited bool, code int, err error) {
 	t, sh, err := s.get(id)
 	if err != nil {
 		return false, 0, err
 	}
-	kept := sh.Follow(stop, fn)
+	kept := sh.FollowAt(stop, fn)
 	s.mu.Lock()
 	replaced := t.shell != sh
 	s.mu.Unlock()

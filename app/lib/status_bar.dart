@@ -183,6 +183,13 @@ String bytes(int n) => n >= 1000 << 20
     ? '${(n / (1 << 30)).toStringAsFixed(1)} GB'
     : '${(n / (1 << 20)).round()} MB';
 
+/// Every label the memory menu's buttons can show: each button keeps room
+/// for all of them.
+const _actions = ['Sleep', 'Restart', 'Restarting…'];
+
+/// A row of the memory menu, a menu row's height (`docs/design.md`).
+const _rowHeight = 30.0;
+
 /// The total, and on a click what makes it up; [onOpen] reads it again.
 class _MemoryButton extends StatelessWidget {
   const new(this.m, this.daemon, {required this.onOpen, required this.style});
@@ -204,41 +211,54 @@ class _MemoryButton extends StatelessWidget {
     final asleep = daemon.chats.values
         .where((c) => c.asleep && !c.archived)
         .length;
-    Widget row(Widget name, int n, {ChatState? chat, Widget? action}) =>
-        Padding(
-          padding: const EdgeInsets.fromLTRB(10, 3, 6, 3),
-          child: SizedBox(
-            width: 340,
-            child: Row(
-              children: [
-                if (chat != null) ...[
-                  AgentMark(chat.agent, size: 12),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(child: name),
-                Text(bytes(n), style: theme.ui(t.textSecondary, size: 12)),
-                SizedBox(
-                  width: 70,
-                  child: action != null
-                      ? Align(alignment: Alignment.centerRight, child: action)
-                      : chat != null && chat.canSleep
-                      ? Align(
-                          alignment: Alignment.centerRight,
-                          child: Button(
-                            label: 'Sleep',
-                            onPressed: () => sleepChat(
-                              context,
-                              chat,
-                              daemon,
-                            ).then((_) => onOpen()),
-                          ),
-                        )
-                      : null,
-                ),
+    // Every row is a menu row's height, its action a compact button in
+    // one column, each as wide as the widest label the menu can show, so
+    // Sleep and Restart match and Restarting… keeps Restart's place. When
+    // any row has one, a row without keeps the column empty, so the
+    // numbers line up; when none has, the numbers end at the menu's edge.
+    final restarts = native.install.restartsDaemon;
+    final anyAction = restarts || chats.any((e) => e.$1.canSleep);
+    Widget button(String label, VoidCallback? onPressed) =>
+        Button(label: label, roomFor: _actions, onPressed: onPressed);
+    Widget row(Widget name, int n, {ChatState? chat, Widget? action}) {
+      final act =
+          action ??
+          (chat != null && chat.canSleep
+              ? button(
+                  'Sleep',
+                  () => sleepChat(context, chat, daemon).then((_) => onOpen()),
+                )
+              : null);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 6, 0),
+        child: SizedBox(
+          width: 340,
+          height: _rowHeight,
+          child: Row(
+            children: [
+              if (chat != null) ...[
+                AgentMark(chat.agent, size: 12),
+                const SizedBox(width: 6),
               ],
-            ),
+              Expanded(child: name),
+              Text(bytes(n), style: theme.ui(t.textSecondary, size: 12)),
+              if (act != null || anyAction) const SizedBox(width: 12),
+              if (act != null)
+                act
+              else if (anyAction)
+                Visibility(
+                  visible: false,
+                  maintainState: true,
+                  maintainAnimation: true,
+                  maintainSize: true,
+                  child: button('', null),
+                ),
+            ],
           ),
-        );
+        ),
+      );
+    }
+
     Widget label(String text, [String detail = '']) => Text.rich(
       TextSpan(
         children: [
@@ -253,31 +273,35 @@ class _MemoryButton extends StatelessWidget {
     return MenuAnchor(
       alignmentOffset: const Offset(0, 4),
       menuChildren: [
-        for (final (c, n) in chats) row(label(c.shownTitle), n, chat: c),
-        if (chats.isNotEmpty) const Divider(height: 9),
-        // Apart: one large number for both read as the daemon's.
-        if (m.app > 0) row(label('Nushi app'), m.app.toInt()),
-        row(
-          label('Nushi daemon'),
-          m.daemon.toInt(),
-          action: native.install.restartsDaemon
-              ? Button(
-                  label: daemon.restarting ? 'Restarting…' : 'Restart',
-                  onPressed: daemon.restarting
-                      ? null
-                      : () => restartDaemonAsking(context, daemon),
-                )
-              : null,
-        ),
-        if (m.other > 0) row(label('Terminals and other'), m.other.toInt()),
-        if (asleep > 0)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 3, 10, 3),
-            child: Text(
-              '$asleep asleep',
-              style: theme.ui(t.textMuted, size: 12),
-            ),
+        for (final w in <Widget>[
+          for (final (c, n) in chats) row(label(c.shownTitle), n, chat: c),
+          if (chats.isNotEmpty) const Divider(height: 9),
+          // Apart: one large number for both read as the daemon's.
+          if (m.app > 0) row(label('Nushi app'), m.app.toInt()),
+          row(
+            label('Nushi daemon'),
+            m.daemon.toInt(),
+            action: restarts
+                ? button(
+                    daemon.restarting ? 'Restarting…' : 'Restart',
+                    daemon.restarting
+                        ? null
+                        : () => restartDaemonAsking(context, daemon),
+                  )
+                : null,
           ),
+          if (m.other > 0) row(label('Terminals and other'), m.other.toInt()),
+          if (asleep > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 3, 10, 3),
+              child: Text(
+                '$asleep asleep',
+                style: theme.ui(t.textMuted, size: 12),
+              ),
+            ),
+        ])
+          // A menu's row: compact (ADR 0122).
+          ControlScale.compact(child: w),
       ],
       builder: (context, menu, _) => Tap(
         onTap: () {

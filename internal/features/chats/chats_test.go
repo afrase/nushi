@@ -610,3 +610,46 @@ func TestReplayedAgentMessageHasNoTime(t *testing.T) {
 		t.Errorf("merged, sent at %v, want the copy's %v", got.Sent, sent)
 	}
 }
+
+// A file a workflow's agent wrote (a Workflow call's Written) counts as
+// the chat's, by exact name: an absolute one cleaned, a relative one only
+// inside the run's folder (else the chat's), never one that leads out of
+// it; a pending or failed write (never in Written) and another chat's
+// run's files don't count.
+func TestWroteTakesAWorkflowsFiles(t *testing.T) {
+	svc := newService(t, nil, Options{})
+	run := func(folder string, written ...string) model.Item {
+		w := &model.Workflow{RunID: "wf_a", State: model.RunDone, Folder: folder}
+		for _, p := range written {
+			w.Written = append(w.Written, model.WrittenFile{Path: p})
+		}
+		return model.Item{ID: "wf", Kind: model.ToolCall, Status: "completed", Workflow: w}
+	}
+	svc.chats = map[string]*chat{
+		"c": {id: "c", record: model.ChatRecord{ID: "c", Folder: "/work/app"}, items: []model.Item{
+			run("", "/work/app-wt/audit.md", "/work/app-wt/x/../clean.md", "docs/in.md", "../../etc/passwd", "../app-wt/up.md"),
+			func() model.Item { it := run("/work/moved-from", "notes.md"); it.ID = "wf2"; return it }(),
+		}},
+		"other": {id: "other", record: model.ChatRecord{ID: "other", Folder: "/work/other"}, items: []model.Item{
+			run("", "/work/other-wt/theirs.md"),
+		}},
+	}
+	for path, want := range map[string]bool{
+		"/work/app-wt/audit.md":      true,
+		"/work/app-wt/clean.md":      true,
+		"/work/app-wt/x/../audit.md": true, // cleaned as the preview cleans it
+		"/work/app/docs/in.md":       true,
+		"/work/moved-from/notes.md":  true, // the run's own folder
+		"/work/app/notes.md":         false,
+		"/etc/passwd":                false,
+		"/work/app-wt/up.md":         false,
+		"/work/app-wt":               false, // no prefix
+		"/work/app-wt/audit.md.bak":  false,
+		"/work/app-wt/pending.md":    false,
+		"/work/other-wt/theirs.md":   false,
+	} {
+		if got := svc.Wrote("c", path); got != want {
+			t.Errorf("Wrote(%s) = %v, want %v", path, got, want)
+		}
+	}
+}

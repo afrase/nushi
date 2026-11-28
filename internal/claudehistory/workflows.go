@@ -97,8 +97,8 @@ type run struct {
 	// agentStat is how often the running agents' transcripts are looked
 	// at.
 	agentStat time.Duration
-	steps     map[string]*steps       // the agents' transcripts read for the pane
-	tokens    map[string]*agentTokens // and for their tokens, by agent id
+	steps     map[string]*steps    // the agents' transcripts read for the pane
+	logs      map[string]*agentLog // and for their tokens and files, by agent id
 }
 
 // runKey is the folder of session sid in folder's history, for a run of
@@ -133,7 +133,7 @@ func (l Local) readRun(sid, folder string, w model.Workflow, read func(r *run, r
 	if r.snap == nil {
 		r.readSnapshot(root, w)
 	}
-	if jerr := r.readJournal(root, w.RunID); jerr != nil && r.snap == nil {
+	if jerr := r.readJournal(root, w.RunID, w.State.Ended()); jerr != nil && r.snap == nil {
 		return jerr
 	}
 	if !r.scripted {
@@ -147,12 +147,14 @@ func (l Local) readRun(sid, folder string, w model.Workflow, read func(r *run, r
 // files say. Its State is "running" until its snapshot says it ended,
 // then how (the run's task, which the agent tells chats of, ends it
 // whether or not the snapshot comes: ADR 0127); Active is when its files last
-// changed. An error matching fs.ErrNotExist says none of its files is
-// there (yet).
+// changed. A w that ended (its task did, or its agent went, with no
+// snapshot) has every agent the journal still shows running read once
+// more to its end, for what it wrote last. An error matching
+// fs.ErrNotExist says none of its files is there (yet).
 func (l Local) ReadWorkflow(sid, folder string, w model.Workflow) (model.Workflow, error) {
 	got := w
 	err := l.readRun(sid, folder, w, func(r *run, _ *os.Root) error {
-		got = r.summary(w)
+		got = r.summary(w, folder)
 		return nil
 	})
 	return got, err
@@ -182,9 +184,12 @@ func (r *run) readSnapshot(root *os.Root, w model.Workflow) {
 	}
 }
 
-// readJournal reads what the journal added, and when the run last changed
-// a file: the journal, or now and then an agent's transcript that runs.
-func (r *run) readJournal(root *os.Root, runID string) error {
+// readJournal reads what the journal added, and what its agents'
+// transcripts did (readLogs), and when the run last changed a file: the
+// journal, or now and then an agent's transcript that runs. ending says
+// the run ended though its snapshot may not be there: every agent is
+// read to its end.
+func (r *run) readJournal(root *os.Root, runID string, ending bool) error {
 	dir := path.Join("subagents", "workflows", runID)
 	f, fi, err := regularfile.OpenIn(root, path.Join(dir, "journal.jsonl"), false)
 	if err != nil {
@@ -197,17 +202,11 @@ func (r *run) readJournal(root *os.Root, runID string) error {
 			r.tooBig = true
 		}
 	}
-	if r.snap == nil && time.Since(r.statted) >= r.agentStat {
+	due := r.snap == nil && time.Since(r.statted) >= r.agentStat
+	if due {
 		r.statted = time.Now()
-		r.readTokens(root, dir)
-		for _, row := range r.j.rows {
-			if row.State == "running" && agentID.MatchString(row.AgentID) {
-				if fi, err := root.Lstat(path.Join(dir, "agent-"+row.AgentID+".jsonl")); err == nil {
-					r.active = latest(r.active, fi.ModTime())
-				}
-			}
-		}
 	}
+	r.readLogs(root, dir, due, ending)
 	return nil
 }
 
@@ -250,14 +249,18 @@ func latest(a, b time.Time) time.Time {
 
 // summary is w with what was read: while it runs, the journal's phases in
 // the order reached, its counts and who runs, and the phases its script
-// plans that it hasn't reached; once it ended, the snapshot's.
-func (r *run) summary(w model.Workflow) model.Workflow {
+// plans that it hasn't reached; once it ended, the snapshot's; and the
+// files its agents wrote, named as the chat in folder names its own, and
+// the worktrees Claude gave them.
+func (r *run) summary(w model.Workflow, folder string) model.Workflow {
 	w.Started = cmp.Or(w.Started, r.started)
 	w.Active = r.active
 	w.Phases, w.Running, w.RunningPhases = nil, nil, nil
 	rows := r.rows(w.State.Ended())
 	w.Agents, w.Done, w.Failed, w.RunningCount = len(rows), 0, 0, 0
 	w.Tokens = r.tokensSum(rows)
+	w.Written = r.written(rows, folder)
+	w.Worktrees = r.worktrees(rows)
 	if s := r.snap; s != nil {
 		return r.ended(w, *s)
 	}

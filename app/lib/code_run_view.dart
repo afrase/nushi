@@ -82,7 +82,7 @@ class RunnableBlock extends StatelessWidget {
                 size: 13,
                 padding: 4,
                 color: style.muted,
-                tooltip: 'Running — click to cancel',
+                tooltip: 'Running, click to cancel',
                 onTap: () =>
                     tryOrShow(context, () => chat.runs.stop(terms, run)),
               )

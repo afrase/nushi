@@ -230,3 +230,54 @@ func TestExplain(t *testing.T) {
 		}
 	}
 }
+
+// An agent whose Version reads its own (PiG 0.8.0's --version names only
+// the Pi it ports) shows that one, on the list and in Explain's hint. A
+// bare run of it has the agents' PATH and what it was given alone, and
+// the HOME it was given as its working folder.
+func TestOwnVersion(t *testing.T) {
+	bin := t.TempDir()
+	rec := filepath.Join(bin, "env")
+	script := "#!/bin/sh\ncase \"$1\" in\n--version) echo 1.6.0 ;;\nversion) /usr/bin/env > " + rec + "; pwd -P > " + rec + ".cwd; printf 'pig: 0.8.1\\nupstream pi: 1.6.0\\n' ;;\nesac\n"
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(bin, "pig"), []byte(script), 0o755))
+	t.Setenv("PATH", bin)
+	t.Setenv("FIREWORKS_API_KEY", "fw-not-a-key")
+	home := t.TempDir()
+	own := func(run func([]string, ...string) ([]byte, error)) string {
+		out, err := run([]string{"HOME=" + home}, "version")
+		if err != nil {
+			return ""
+		}
+		v, _ := strings.CutPrefix(strings.SplitN(string(out), "\n", 2)[0], "pig: ")
+		return v
+	}
+	svc := newService([]Agent{{Name: "pig", Title: "PiG", CLI: "pig", Tested: []string{"0.5.3", "0.8.0"}, Version: own}}, "", &fakeInstaller{}, &fakeChats{})
+	if got := svc.List(context.Background())[0]; got.Version != "0.8.1" {
+		t.Errorf("version = %q", got.Version)
+	}
+	if got := svc.Explain("pig")(errors.New("it quit")); got.Error() != "it quit (Nushi was tested with PiG 0.5.3 and 0.8.0; this is 0.8.1)" {
+		t.Errorf("explain = %v", got)
+	}
+	b, err := os.ReadFile(rec)
+	testcheck.NoErr(t, err)
+	for line := range strings.SplitSeq(strings.TrimSpace(string(b)), "\n") {
+		switch k, v, _ := strings.Cut(line, "="); k {
+		case "PATH":
+			if v != bin {
+				t.Errorf("PATH = %q", v)
+			}
+		case "HOME":
+			if v != home {
+				t.Errorf("HOME = %q", v)
+			}
+		case "PWD", "SHLVL", "OLDPWD", "_": // the shell's own
+		default:
+			t.Errorf("the bare run had %s", k)
+		}
+	}
+	cwd, err := os.ReadFile(rec + ".cwd")
+	testcheck.NoErr(t, err)
+	if want, _ := filepath.EvalSymlinks(home); strings.TrimSpace(string(cwd)) != want {
+		t.Errorf("the bare run was in %s, not its HOME %s", cwd, want)
+	}
+}

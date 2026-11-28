@@ -7,21 +7,24 @@
 // literal (NushiTheme's ui() or code() at a size instead), a size given
 // to ui() or code() off the type scale, a Duration(milliseconds: …)
 // literal (Motion's or Waits' instead), a raw SnackBar (showToast
-// instead, toast.dart's), a corner as a number (a radius token
-// instead, ADR 0110), and a second press path (Material's ink, a ListTile,
-// a GestureDetector that takes a tap, or hover, focus and press kept by
-// hand: Tap or Pressable instead, which show a press at once, take the
-// keyboard's focus and say button to a screen reader). The controls'
-// and the theme's own files make the pieces, so they're left out, the
-// controls' files but for durations, corners, the type scale and the
-// press path (controls_press.dart makes it), and so are motion.dart for
-// durations,
+// instead, toast.dart's), a corner as a number (a radius token instead,
+// ADR 0110), a string that joins a line's parts with a middle dot, a
+// dash or a bullet (a comma, a second line or muted ink instead; read as
+// Dart reads strings, so one nested in an interpolation, a multi-line
+// one and an escape count), and a second press path (Material's ink, a
+// ListTile, a GestureDetector that takes a tap, or hover, focus and press
+// kept by hand: Tap or Pressable instead, which show a press at once,
+// take the keyboard's focus and say button to a screen reader).
+//
+// The controls' and the theme's own files make the pieces, so they're
+// left out: the controls' files but for durations, corners, the type
+// scale, separators and the press path (controls_press.dart makes it),
+// the theme's but for separators. So are motion.dart for durations,
 // toast.dart for the snack bar it makes, and generated code. A deliberate
 // use stays with a marker on its line or alone on the line above:
 // `// design: <why>` (or `// not a corner: <why>` for a corner's rule
-// alone). It prints each use and
-// exits 1. make lint-dart runs it from the repository root over app/lib
-// (or the folders it's given).
+// alone). It prints each use and exits 1. make lint-dart runs it from the
+// repository root over app/lib (or the folders it's given).
 package main
 
 import (
@@ -124,18 +127,50 @@ func check(root string) ([]dartcheck.Use, error) {
 		case err != nil:
 			return err
 		case d.IsDir():
-			if rel, _ := filepath.Rel(root, path); rel == "gen" || rel == "theme" {
+			if rel, _ := filepath.Rel(root, path); rel == "gen" {
 				return filepath.SkipDir
 			}
 			return nil
 		case !strings.HasSuffix(path, ".dart") || dartcheck.Generated(path):
 			return nil
 		}
-		found, err := inFile(path, controls(path))
+		var found []dartcheck.Use
+		if theme(root, path) {
+			found, err = separatorsIn(path)
+		} else {
+			found, err = inFile(path, controls(path))
+		}
 		uses = append(uses, found...)
 		return err
 	})
 	return uses, err
+}
+
+// theme says whether path is one of the theme's files under root, which
+// make the tokens and so hold only to the separators' rule: a theme's name
+// or a line it shows is words a user reads.
+func theme(root, path string) bool {
+	rel, _ := filepath.Rel(root, path)
+	return strings.HasPrefix(rel, "theme"+string(filepath.Separator))
+}
+
+// separatorsIn lists the lines of path whose strings join a line's parts,
+// marked lines left out.
+func separatorsIn(path string) ([]dartcheck.Use, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var uses []dartcheck.Use
+	found := separatorLines(string(b))
+	lines := strings.Split(string(b), "\n")
+	for i, line := range lines {
+		above := i > 0 && strings.HasPrefix(strings.TrimSpace(lines[i-1]), marker)
+		if found[i+1] && !above && !strings.Contains(line, marker) {
+			uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: separator})
+		}
+	}
+	return uses, nil
 }
 
 // controls says whether path makes the shared pieces (controls.dart and
@@ -153,6 +188,7 @@ func inFile(path string, controls bool) ([]dartcheck.Use, error) {
 		return nil, err
 	}
 	var uses []dartcheck.Use
+	seps := separatorLines(string(b))
 	var call styleCall
 	var taps tapCalls
 	pressOK := filepath.Base(path) == "controls_press.dart" // it makes the press path
@@ -182,6 +218,9 @@ func inFile(path string, controls bool) ([]dartcheck.Use, error) {
 		cornerOK := cornerAbove || strings.Contains(line, cornerMarker)
 		for _, what := range onLine(code, filepath.Base(path), controls, cornerOK) {
 			uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: what})
+		}
+		if seps[i+1] {
+			uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: separator})
 		}
 		for _, s := range sizes {
 			if !onScale(s, path) {

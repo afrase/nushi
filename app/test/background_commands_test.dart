@@ -25,7 +25,7 @@ void main() {
     );
     expect(
       commandState(command('done', end: 'exited with code 0', ms: 1)),
-      'done · exited with code 0 · 15s',
+      'done, exited with code 0, 15s',
     );
     expect(commandState(command('stopped', end: 'killed')), 'stopped');
     expect(commandState(command('started')), 'started');
@@ -34,7 +34,7 @@ void main() {
     final ms = fixtureNow.subtract(const Duration(seconds: 12));
     expect(
       commandState(command('running', ms: ms.millisecondsSinceEpoch)),
-      'running · 12s',
+      'running, 12s',
     );
     expect(lastLine(command('running', out: 'a\nb  \n\n')), 'b');
     expect(

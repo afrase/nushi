@@ -21,7 +21,7 @@ void main() {
     expect(find.text('Show the whole review'), findsOneWidget);
     expect(find.text('Resolved'), findsOneWidget);
     expect(find.text('nit: zoneinfo over pytz now?'), findsNothing);
-    expect(find.text('Markdown · posts to GitHub as afrase'), findsOneWidget);
+    expect(find.text('Markdown, posts to GitHub as afrase'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
 
@@ -70,7 +70,10 @@ void main() {
     final (d, _) = await openPullTab(tester, fixturePull());
     await tester.tap(find.text('Files changed  12'));
     await tester.pumpAndSettle();
-    expect(find.text('With unresolved threads · 2'), findsOneWidget);
+    expect(
+      find.text('With unresolved threads 2', findRichText: true),
+      findsOneWidget,
+    );
     final export = tester.getRect(find.text('nightly_sightings_csv.py'));
     final spec = tester.getRect(find.text('test_zones.py'));
     final helper = tester.getRect(find.text('zone_lookup.py'));

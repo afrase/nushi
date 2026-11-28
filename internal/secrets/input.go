@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -16,14 +17,19 @@ const InputMask = "••••"
 var (
 	// secretKey is a JSON key whose string value is a secret.
 	secretKey = regexp.MustCompile(`(?i)token|secret|passw(?:or)?d|api[_-]?key|authorization|cookie|private[_-]?key|credential`)
-	// countKey is a key about how many tokens (a model's max_tokens, a
-	// usage's input_tokens), not a token: its value shows.
-	countKey = regexp.MustCompile(`(?i)(max|min|input|output|total|cached|reasoning|thinking)[_-]?tokens?|tokens?[_-]?(count|limit|budget|used|usage)`)
-	// secretName is a NAME=value pair whose name says secret, masked after
-	// the shapes every secret mask knows. Narrower than
-	// the log's rule: a tool call's input holds code ("key: value" in it is
-	// rarely a secret).
-	secretName = regexp.MustCompile(`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`)
+	// secretName is a NAME=value pair whose name says secret: it ends
+	// in a word for one (secretWords), password=, MY_TOKEN=, apiKey=, but
+	// isn't a plain name (NotSecret), masked beside the shapes every
+	// secret mask knows. Narrower than the log's rule: a tool call's input
+	// holds code ("key: value" in it is rarely a secret, nor is
+	// secretary=, tokenizer= or credentialsFile=). Its floor is the rule
+	// as main had it, which took any name holding the word after another
+	// character (my_secretary=, max_tokens=).
+	secretName = &NameRule{
+		patterns: []*regexp.Regexp{regexp.MustCompile(`((?i)\b[\w.-]*(?:token|secret|passw(?:or)?d|key|credentials?)=)[^\s"',;&|]{4,}`)},
+		accept:   secretNamed,
+		floor:    regexp.MustCompile(`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`),
+	}
 )
 
 // MaskInput masks what looks secret in a tool call's input, as JSON (its
@@ -36,6 +42,60 @@ func MaskInput(input string) string {
 		return out
 	}
 	return MaskText(input)
+}
+
+// secretWords are the last parts of a name that say secret (lower case).
+var secretWords = map[string]bool{
+	"token": true, "secret": true, "password": true, "passwd": true,
+	"apikey": true, "credential": true, "credentials": true,
+}
+
+// secretNamed says whether a NAME= (its = kept) names a secret: split at
+// . _ and - and where lower case turns upper (apiKey is api and Key), its
+// last part is one of secretWords, or it is key after api (apiKey), or
+// key with secret or private anywhere before it (SECRET_KEY,
+// private_key, SECRET_ACCESS_KEY); and it isn't a plain name
+// (NotSecret). The word must be a whole part, so secretary, tokenizer,
+// tokens and passwordless are no secret's name, and the last, so
+// credentialsFile and tokenUrl (a file, a URL) aren't; a key alone
+// (primary_key, KEY) names no secret.
+func secretNamed(group string) bool {
+	name := strings.TrimSuffix(group, "=")
+	parts := nameParts(name)
+	n := len(parts)
+	if n == 0 || NotSecret(name) {
+		return false
+	}
+	if secretWords[parts[n-1]] {
+		return true
+	}
+	if parts[n-1] != "key" || n < 2 {
+		return false
+	}
+	return parts[n-2] == "api" || slices.Contains(parts[:n-1], "secret") || slices.Contains(parts[:n-1], "private")
+}
+
+// nameParts are a name's parts, lower case: split at . _ and -, and
+// before an upper-case letter that follows a lower-case one.
+func nameParts(name string) []string {
+	var parts []string
+	start := 0
+	for i := 0; i <= len(name); i++ {
+		switch {
+		case i == len(name) || name[i] == '.' || name[i] == '_' || name[i] == '-':
+		case i > 0 && 'a' <= name[i-1] && name[i-1] <= 'z' && 'A' <= name[i] && name[i] <= 'Z':
+			parts = append(parts, strings.ToLower(name[start:i]))
+			start = i
+			continue
+		default:
+			continue
+		}
+		if i > start {
+			parts = append(parts, strings.ToLower(name[start:i]))
+		}
+		start = i + 1
+	}
+	return parts
 }
 
 // MaskText masks the secret shapes in s and NAME=value pairs whose name
@@ -108,7 +168,7 @@ func (m *jsonMasker) token(tok json.Token) error {
 	if top != nil && !top.object && top.n > 0 {
 		m.out.WriteByte(',')
 	}
-	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key) && !countKey.MatchString(top.key))
+	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key) && !NotSecret(top.key))
 	if top != nil {
 		top.n++
 		top.keyed = false

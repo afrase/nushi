@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -18,7 +19,7 @@ import (
 )
 
 // A chat's related worktrees (ADR 0081) are the worktrees its subagents
-// work in. git says what exists: its list of the chat's repository. The
+// work in, and its workflows' subagents (related_workflow.go). git says what exists: its list of the chat's repository. The
 // chat's tool calls say whose a worktree is. Neither is trusted for more
 // than that, as both are the agent's to write (.git/worktrees/*/gitdir
 // included): a path counts only if git lists it and it is the top of a work
@@ -28,8 +29,11 @@ import (
 // filter or a hook, whoever asks for it.
 
 const (
-	// maxRelated is the most worktrees a chat keeps: each costs a run of
-	// git at every look, and an agent can list as many as it likes.
+	// maxRelated is the most worktrees a chat keeps of its subagents', and
+	// the most of its workflows' (counted): each costs a run of git at
+	// every look, and an agent can list as many as it likes. Each kind has
+	// its own, so a big run can't keep a subagent's worktree out, nor the
+	// other way round.
 	maxRelated = 64
 	// relatedEvery is how often a subagent's finished steps bring a look;
 	// its end always does.
@@ -52,11 +56,24 @@ func (s *Service) RelatedWorktrees(ctx context.Context, chatID string) ([]model.
 	c.lookRelated(ctx)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return slices.Clone(c.record.RelatedWorktrees), nil
+	return visible(c.record.RelatedWorktrees), nil
+}
+
+// presentRelatedLocked is the paths of the chat's related worktrees still
+// there, as last looked at.
+func (c *chat) presentRelatedLocked() []string {
+	var paths []string
+	for _, k := range c.record.RelatedWorktrees {
+		if k.State == model.RelatedPresent {
+			paths = append(paths, k.Path)
+		}
+	}
+	return paths
 }
 
 // KnownRelated is the chat's folder and its related worktrees as last
-// looked at: no run of git, for what asks often.
+// looked at, as the app is sent them (visible): no run of git, for what asks
+// often.
 func (s *Service) KnownRelated(chatID string) (string, []model.RelatedWorktree, error) {
 	c, err := s.find(chatID)
 	if err != nil {
@@ -64,7 +81,7 @@ func (s *Service) KnownRelated(chatID string) (string, []model.RelatedWorktree, 
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.record.Folder, slices.Clone(c.record.RelatedWorktrees), nil
+	return c.record.Folder, visible(c.record.RelatedWorktrees), nil
 }
 
 // plainText says a worktree's path and branch are valid UTF-8. git takes
@@ -155,28 +172,63 @@ func (c *chat) relatedStepLocked() {
 	}
 }
 
+// workflowLookLocked is a workflow's read bringing a claim that could make
+// a record (fresh), or following one the limiter dropped: a look, unless
+// one started just now, and then one is owed, asked for again at the
+// follower's next read (it reads about once a second), so a claim isn't
+// lost when its run goes quiet. A look that reads the chat's calls pays it.
+func (c *chat) workflowLookLocked(fresh bool) {
+	if !fresh && !c.relatedOwed {
+		return
+	}
+	if time.Since(c.relatedAt) < relatedEvery {
+		c.relatedOwed = true
+		return
+	}
+	c.lookRelatedLocked()
+}
+
 // relatedStep is what one tool call says about the worktree its subagent
 // works in.
 type relatedStep struct {
-	call  string   // the tool call that started the subagent
-	paths []string // the files it worked on
-	shell string   // its command, for one that runs one
+	id      string   // its item's: where it is in the chat's order
+	call    string   // the tool call that started the subagent
+	paths   []string // the files it worked on
+	shell   string   // its command, for one that runs one
+	running bool     // it ran (or waited for a permission) when read: its status says so and its end isn't stamped
+	ended   int64    // when it ended (Unix nanoseconds), 0 if not stamped
 }
 
-// relatedStepsLocked is what the chat's subagents' tool calls name, in the
-// order they came; of a chat whose items were let go, only those calls are
-// read from the copy, picked from its heads (which opening it read).
-func (c *chat) relatedStepsLocked() []relatedStep {
+// runningAt says the step hadn't ended at the look that read the chat's
+// steps at (Unix nanoseconds): it still runs, or it ended after. A step
+// whose end wasn't stamped (a replayed one) ended before; at 0 (a point
+// kept before this was) says none did.
+func (st relatedStep) runningAt(at int64) bool {
+	return st.running || at != 0 && st.ended > at
+}
+
+// relatedCallsLocked is what the chat's subagents' tool calls name, in the
+// order they came, and what its workflows claim; of a chat whose items
+// were let go, only the subagents' calls are read from the copy, picked
+// from its heads (which opening it read), and the workflows' claims come
+// from the heads, which carry them.
+func (c *chat) relatedCallsLocked() ([]relatedStep, []workflowClaim) {
 	if !c.inCopy {
-		return relatedSteps(c.items)
+		return relatedSteps(c.items), workflowClaims(c.items, c.record.Folder)
 	}
-	calls, err := c.copiedLocked(func(it model.Item) bool {
-		return it.Kind == model.ToolCall && (it.WorktreePath != "" || it.Parent != "")
-	})
+	heads, err := c.headsLocked()
+	if err != nil {
+		c.logLocked().Warn("transcript copy not read", "err", err)
+		return nil, nil
+	}
+	claims := workflowClaims(heads, c.record.Folder)
+	calls, err := c.wholeLocked(slices.DeleteFunc(heads, func(it model.Item) bool {
+		return it.Kind != model.ToolCall || it.WorktreePath == "" && it.Parent == ""
+	}))
 	if err != nil {
 		c.logLocked().Warn("transcript copy not read", "err", err)
 	}
-	return relatedSteps(calls)
+	return relatedSteps(calls), claims
 }
 
 // relatedSteps is what the subagents' tool calls among items name.
@@ -187,9 +239,9 @@ func relatedSteps(items []model.Item) []relatedStep {
 		switch {
 		case it.Kind != model.ToolCall:
 		case it.WorktreePath != "":
-			steps = append(steps, relatedStep{call: it.ID, paths: []string{it.WorktreePath}})
+			steps = append(steps, relatedStep{id: it.ID, call: it.ID, paths: []string{it.WorktreePath}, running: callRuns(it), ended: endedAt(it)})
 		case it.Parent != "":
-			st := relatedStep{call: it.Parent, paths: slices.Clone(it.Paths)}
+			st := relatedStep{id: it.ID, call: it.Parent, paths: slices.Clone(it.Paths), running: callRuns(it), ended: endedAt(it)}
 			for _, d := range it.Diffs {
 				st.paths = append(st.paths, d.Path)
 			}
@@ -200,6 +252,23 @@ func relatedSteps(items []model.Item) []relatedStep {
 		}
 	}
 	return steps
+}
+
+// callRuns says the tool call it runs: its status says so, and its end
+// isn't stamped. A call its turn's end left running (endCallsLocked: its
+// end stamped, the agent's status kept) is over, or it would count as
+// running for as long as the agent lives.
+func callRuns(it *model.Item) bool {
+	return callRunning(it.Status) && it.Ended.IsZero()
+}
+
+// endedAt is when the tool call it ended, in Unix nanoseconds; 0 if it
+// hasn't, or its end wasn't stamped.
+func endedAt(it *model.Item) int64 {
+	if it.Ended.IsZero() {
+		return 0
+	}
+	return it.Ended.UnixNano()
 }
 
 // lookRelated brings the chat's related worktrees up to date and, when they
@@ -222,16 +291,21 @@ func (c *chat) lookRelated(ctx context.Context) {
 	if wt := c.record.Worktree; wt != nil {
 		base = wt.Base
 	}
-	steps := c.relatedStepsLocked()
+	steps, claims := c.relatedCallsLocked()
+	readNano := time.Now().UnixNano()
+	c.relatedOwed = false
+	if c.rewound {
+		known = c.rewoundPointsLocked(steps)
+	}
 	c.mu.Unlock()
-	if len(known) == 0 && len(steps) == 0 {
+	if len(known) == 0 && len(steps) == 0 && !c.gate.couldCount(claims, folder) {
 		return
 	}
 	var given map[string]string
 	if c.kind.worktreeFinder != nil && sid != "" {
 		given = c.kind.worktreeFinder.SubagentWorktrees(sid, folder)
 	}
-	next, err := c.related(ctx, folder, known, steps, given)
+	next, err := c.related(ctx, folder, known, relatedRead{steps, claims, readNano}, given)
 	if err != nil {
 		c.log().Debug("looking at related worktrees", "err", err)
 		return
@@ -243,9 +317,11 @@ func (c *chat) lookRelated(ctx context.Context) {
 	if c.halting || slices.Equal(next, c.record.RelatedWorktrees) {
 		return
 	}
+	was := visible(c.record.RelatedWorktrees)
 	c.saveLocked(func(r *model.ChatRecord) { r.RelatedWorktrees = next })
-	list := slices.Clone(next)
-	c.publish(model.Event{ChatID: c.id, Related: &list})
+	if list := visible(next); !slices.Equal(list, was) {
+		c.publish(model.Event{ChatID: c.id, Related: &list})
+	}
 }
 
 // markMerged says which of list git shows on the chat's branch or base
@@ -294,6 +370,13 @@ type pullOpen struct {
 	wait time.Duration
 }
 
+// pullKey is k's in pullsOpen: its path, branch and last head, as a path
+// made again is another record (issue #118), on another branch or on the
+// same one redone, and each waits on its own.
+func pullKey(k *model.RelatedWorktree) string {
+	return k.Path + "\x00" + k.Branch + "\x00" + k.LastHead
+}
+
 // askPulls asks GitHub whether the worktrees of list that went away with
 // commits of their own that git doesn't show merged had their branch
 // merged by a pull request opened since the chat began (a squash merge;
@@ -311,7 +394,7 @@ func (c *chat) askPulls(ctx context.Context, folder string, since time.Time, lis
 	var ask, open []*model.RelatedWorktree
 	for i := range list {
 		k := &list[i]
-		o, waits := c.pullsOpen[k.Path]
+		o, waits := c.pullsOpen[pullKey(k)]
 		switch {
 		case k.State != model.RelatedRemoved || k.Merged || k.PullAsked || k.Branch == "" || k.BaseCommit == "" || k.LastHead == k.BaseCommit:
 		case !waits:
@@ -321,27 +404,32 @@ func (c *chat) askPulls(ctx context.Context, folder string, since time.Time, lis
 		}
 	}
 	slices.SortStableFunc(open, func(a, b *model.RelatedWorktree) int {
-		return c.pullsOpen[a.Path].next.Compare(c.pullsOpen[b.Path].next)
+		return c.pullsOpen[pullKey(a)].next.Compare(c.pullsOpen[pullKey(b)].next)
 	})
 	if c.pullsOpen == nil {
 		c.pullsOpen = map[string]pullOpen{}
 	}
 	ask = append(ask, open...)
+	answered := map[string]string{} // by branch: records of one branch are asked about once a look
 	for _, k := range ask[:min(maxPullAsks, len(ask))] {
-		state, err := c.svc.gitHub.BranchPull(ctx, folder, k.Branch, since)
-		if err != nil {
-			c.log().Debug("asking GitHub about a related worktree's branch", "err", err)
-			c.pullsAfter = time.Now().Add(pullsBackoff)
-			return
+		state, ok := answered[k.Branch]
+		if !ok {
+			var err error
+			if state, err = c.svc.gitHub.BranchPull(ctx, folder, k.Branch, since); err != nil {
+				c.log().Debug("asking GitHub about a related worktree's branch", "err", err)
+				c.pullsAfter = time.Now().Add(pullsBackoff)
+				return
+			}
+			answered[k.Branch] = state
 		}
 		if state == "open" {
-			o := c.pullsOpen[k.Path]
+			o := c.pullsOpen[pullKey(k)]
 			o.wait = min(max(2*o.wait, pullsOpenFirst), pullsOpenMax)
 			o.next = now.Add(o.wait)
-			c.pullsOpen[k.Path] = o
+			c.pullsOpen[pullKey(k)] = o
 			continue
 		}
-		delete(c.pullsOpen, k.Path)
+		delete(c.pullsOpen, pullKey(k))
 		k.PullAsked, k.PullMerged = true, state == "merged"
 	}
 }
@@ -355,12 +443,25 @@ type relatedLook struct {
 	tips   []string                       // the default branch's commits (DefaultTips)
 	moved  bool                           // tips aren't the last look's
 	listed map[string]model.WorktreeEntry // git's worktrees, by path
+	last   string                         // the last step's id: a record removed now went before what comes after
+	at     int64                          // when this look read the steps: one still running then counts as after last
+	before string                         // the last look's last: one made again unseen went after it
+	since  int64                          // the last look's at
+}
+
+// relatedRead is the chat's steps and its workflows' claims as a look
+// read them, and when.
+type relatedRead struct {
+	steps  []relatedStep
+	claims []workflowClaim
+	at     int64
 }
 
 // related is known brought up to date with git's list of folder's
 // repository, and the worktrees found in it for the subagents: steps and
 // given (a worktree by the call that started its subagent) say whose.
-func (c *chat) related(ctx context.Context, folder string, known []model.RelatedWorktree, steps []relatedStep, given map[string]string) ([]model.RelatedWorktree, error) {
+func (c *chat) related(ctx context.Context, folder string, known []model.RelatedWorktree, read relatedRead, given map[string]string) ([]model.RelatedWorktree, error) {
+	steps := read.steps
 	list, err := c.worktrees.List(ctx, folder)
 	if err != nil {
 		return nil, err
@@ -369,7 +470,13 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 	if err != nil {
 		return nil, err
 	}
+	c.gate.setCommon(common, folder)
+	c.gate.setListed(list)
 	r := relatedLook{c: c, folder: folder, common: common, tips: c.worktrees.DefaultTips(ctx, folder), listed: map[string]model.WorktreeEntry{}}
+	r.before, r.last, r.since, r.at = c.lookedStep, c.lookedStep, c.lookedAt, read.at
+	if len(steps) > 0 {
+		r.last = steps[len(steps)-1].id
+	}
 	r.moved = !slices.Equal(r.tips, c.lookedTips)
 	for _, e := range list {
 		r.listed[e.Path] = e
@@ -377,14 +484,9 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 			r.head = e.Head
 		}
 	}
-	next := slices.Clone(known)
-	for i := range next {
-		if err := r.refresh(ctx, &next[i]); err != nil {
-			return nil, err
-		}
-		if r.moved || next[i].LastHead != known[i].LastHead || !git.ObjectID(next[i].BaseCommit) {
-			r.moveBase(ctx, &next[i]) // else it would find the base it found last time
-		}
+	next, again, err := r.refreshAll(ctx, known)
+	if err != nil {
+		return nil, err
 	}
 	owned, err := c.svc.ownedWorktrees(c.id)
 	if err != nil {
@@ -393,14 +495,17 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 	for i, o := range owned {
 		owned[i] = realpath.Of(o) // once a look, not once for each worktree git lists
 	}
+	j := newClaimsJudge(folder, steps, given, read.claims, c.gate.resolver())
+	held := counted(next)
 	for _, e := range list {
-		if len(next) >= maxRelated {
+		if held.full() {
 			break
 		}
-		if e.Main || e.Current || slices.ContainsFunc(next, func(k model.RelatedWorktree) bool { return k.Path == e.Path }) || isOwned(e.Path, owned) {
+		cut, back := again[e.Path]
+		if e.Main || e.Current || !back && slices.ContainsFunc(next, func(k model.RelatedWorktree) bool { return k.Path == e.Path }) || isOwned(e.Path, owned) {
 			continue
 		}
-		call := whose(e.Path, folder, steps, given)
+		call, run := j.owner(cut, e.Path, held)
 		if call == "" {
 			continue
 		}
@@ -411,11 +516,89 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 		if ok, err := r.verified(ctx, e.Path); err != nil {
 			return nil, err
 		} else if ok {
-			next = append(next, r.found(ctx, e, call))
+			k := r.found(ctx, e, call)
+			k.RunID = run
+			next = append(next, k)
+			held = counted(next)
 		}
 	}
-	c.lookedTips = r.tips // the bases are moved on to them
-	return next, nil
+	c.lookedTips, c.lookedStep, c.lookedAt = r.tips, r.last, r.at // the bases are moved on to them
+	return forgetHidden(next), nil
+}
+
+// claimsJudge weighs, in one look, the claims on a listed worktree with no
+// record: the subagents' steps and Claude's word on their worktrees
+// (given), and the workflows' claims, resolving through one resolver
+// (the gate's), each folder once.
+type claimsJudge struct {
+	folder string
+	steps  []relatedStep
+	given  map[string]string
+	claims []workflowClaim
+	reals  *realPaths
+	of     func(string) string // realpath.Of, through the same resolver
+}
+
+// newClaimsJudge is a claimsJudge for a look of the chat in folder.
+func newClaimsJudge(folder string, steps []relatedStep, given map[string]string, claims []workflowClaim, resolve func(string) (string, error)) claimsJudge {
+	of := func(p string) string {
+		if p == "" {
+			return ""
+		}
+		if r, err := resolve(p); err == nil {
+			return r
+		}
+		return filepath.Clean(p)
+	}
+	return claimsJudge{folder, steps, given, claims, newRealPaths(resolve), of}
+}
+
+// owner is the call, and its run ("" for a subagent's), that has the
+// worktree at path, of a kind under its cap (h); "" when none. A kind
+// at its cap judges nothing more: a subagent's claim comes before a
+// run's, so with the subagents full theirs are weighed only for a
+// worktree a run claims, to leave it out.
+func (j claimsJudge) owner(cut madeAgain, path string, h held) (call, run string) {
+	if h.roomForSubagents() {
+		if call = cut.whose(path, j.folder, j.steps, j.given, j.of); call != "" || !h.roomForRuns() {
+			return call, ""
+		}
+		return cut.workflowWhose(path, j.claims, j.reals)
+	}
+	if call, run = cut.workflowWhose(path, j.claims, j.reals); call != "" && cut.whose(path, j.folder, j.steps, j.given, j.of) != "" {
+		return "", ""
+	}
+	return call, run
+}
+
+// refreshAll is known brought up to date with what git lists, and the
+// paths made again (refresh's back), each with what may own its new
+// record. Only a path's latest record is looked at: those before it went
+// for good, and only it can be present.
+func (r relatedLook) refreshAll(ctx context.Context, known []model.RelatedWorktree) ([]model.RelatedWorktree, map[string]madeAgain, error) {
+	next := slices.Clone(known)
+	latest := map[string]int{}
+	for i := range next {
+		latest[next[i].Path] = i
+	}
+	again := map[string]madeAgain{}
+	for i := range next {
+		if latest[next[i].Path] == i {
+			back, err := r.refresh(ctx, &next[i])
+			if err != nil {
+				return nil, nil, err
+			}
+			if back {
+				again[next[i].Path] = madeAgain{after: next[i].RemovedAfter, at: next[i].RemovedAt, before: callsAt(next, next[i].Path), made: madeAt(next[i].Path)}
+			}
+		} else {
+			next[i].State = model.RelatedRemoved // an older daemon refreshed every record of a path, so more than one could be left present
+		}
+		if r.moved || next[i].LastHead != known[i].LastHead || !git.ObjectID(next[i].BaseCommit) {
+			r.moveBase(ctx, &next[i]) // else it would find the base it found last time
+		}
+	}
+	return next, again, nil
 }
 
 // verified says a path git listed is what it says: the top of a work tree
@@ -429,27 +612,76 @@ func (r relatedLook) verified(ctx context.Context, path string) (bool, error) {
 	return err == nil && common == r.common && top == realpath.Of(path), nil
 }
 
-// refresh brings a known worktree up to date: removed unless git lists it
-// and it passes, else its branch and head as they are now. A branch
-// renamed to what isn't valid UTF-8 doesn't pass.
-func (r relatedLook) refresh(ctx context.Context, k *model.RelatedWorktree) error {
+// refresh brings a path's latest record up to date: removed unless git
+// lists it and it passes, else its branch and head as they are now. A
+// branch renamed to what isn't valid UTF-8 doesn't pass. A removed one
+// whose path git lists again on another branch, or at a head that isn't
+// its last or after it, is another worktree made there (issue #118): it
+// stays removed, with its last commit, and back says so, for a new record.
+// So is a present one whose .git file changed since it was first seen
+// (Made), which a look saw no gap in: it goes removed as it was at the
+// last look, after which it went.
+func (r relatedLook) refresh(ctx context.Context, k *model.RelatedWorktree) (back bool, err error) {
 	e, ok := r.listed[k.Path]
 	ok = ok && plainText(e.Path, e.Branch)
 	if ok {
-		var err error
 		if ok, err = r.verified(ctx, k.Path); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if !ok {
-		k.State = model.RelatedRemoved
-		return nil
+		if k.State != model.RelatedRemoved {
+			k.State, k.RemovedAfter, k.RemovedAt = model.RelatedRemoved, r.last, r.at
+		}
+		return false, nil
 	}
-	k.State, k.Branch = model.RelatedPresent, cmp.Or(e.Branch, k.Branch)
+	made := madeAt(k.Path)
+	if k.State == model.RelatedRemoved || k.Made != 0 && made != 0 && made != k.Made {
+		same, err := r.sameWork(ctx, *k, e)
+		if err != nil || !same {
+			if err == nil && k.State != model.RelatedRemoved {
+				k.State, k.RemovedAfter, k.RemovedAt = model.RelatedRemoved, r.before, r.since
+			}
+			return !same && err == nil, err
+		}
+	}
+	k.State, k.Branch, k.RemovedAfter, k.RemovedAt = model.RelatedPresent, cmp.Or(e.Branch, k.Branch), "", 0
+	if made != 0 {
+		k.Made = made
+	}
 	if git.ObjectID(e.Head) {
 		k.LastHead = e.Head
 	}
-	return nil
+	return false, nil
+}
+
+// sameWork says the worktree git lists as e, at a removed record k's path,
+// is k's back again: on its branch, at its last head or one after it. A
+// head git can't place (k's collected) is not after it; only ctx ending is
+// an error.
+func (r relatedLook) sameWork(ctx context.Context, k model.RelatedWorktree, e model.WorktreeEntry) (bool, error) {
+	if e.Branch != k.Branch {
+		return false, nil
+	}
+	if !git.ObjectID(k.LastHead) || !git.ObjectID(e.Head) || e.Head == k.LastHead {
+		return true, nil // nothing to tell them apart by but the branch
+	}
+	base, err := r.c.worktrees.MergeBase(ctx, r.folder, e.Head, k.LastHead)
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return false, ctxErr
+	}
+	return err == nil && base == k.LastHead, nil
+}
+
+// callsAt are the tool calls of list's records of path, the latest last.
+func callsAt(list []model.RelatedWorktree, path string) []string {
+	var calls []string
+	for _, k := range list {
+		if k.Path == path {
+			calls = append(calls, k.CallID)
+		}
+	}
+	return calls
 }
 
 // moveBase moves k's base on to where its head left the default branch,
@@ -476,7 +708,7 @@ func (r relatedLook) moveBase(ctx context.Context, k *model.RelatedWorktree) {
 // found is the record of a worktree seen for the first time. Its base is
 // where it left the chat's branch or the default branch, the later.
 func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call string) model.RelatedWorktree {
-	k := model.RelatedWorktree{Path: e.Path, Branch: e.Branch, CallID: call, State: model.RelatedPresent}
+	k := model.RelatedWorktree{Path: e.Path, Branch: e.Branch, CallID: call, State: model.RelatedPresent, Made: madeAt(e.Path)}
 	if git.ObjectID(e.Head) {
 		k.LastHead = e.Head
 		from := slices.Clone(r.tips)
@@ -492,6 +724,18 @@ func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call stri
 	return k
 }
 
+// madeAt is when the .git file of the worktree at path last changed, in
+// Unix nanoseconds: git writes it when it makes the worktree, and when it
+// moves it or a repair changes it (ADR 0081 lists which), not when a
+// branch is switched in it. One stat, no git; 0 when it can't be read.
+func madeAt(path string) int64 {
+	fi, err := os.Lstat(filepath.Join(path, ".git"))
+	if err != nil {
+		return 0
+	}
+	return fi.ModTime().UnixNano()
+}
+
 // isOwned says path is one of owned (real paths), or holds one: a chat
 // that works in a folder of the worktree has it.
 func isOwned(path string, owned []string) bool {
@@ -499,26 +743,140 @@ func isOwned(path string, owned []string) bool {
 	return slices.ContainsFunc(owned, func(o string) bool { return realpath.Under(o, path) })
 }
 
+// madeAgain is what may own a new record at a path whose latest record
+// went (issue #118): only the steps after the one it went after (after),
+// and those before it still running at the look that took it (at), and of
+// the agent's word what names none of the path's records before (their
+// calls, before), whose steps go last too. A step whose end was stamped
+// before the new worktree's .git file was written (made) can only have
+// seen the old one, or none: it doesn't count, wherever it stands. A
+// record removed before that was kept (after "") is judged by every step
+// as it was, a call that had none of those first.
+type madeAgain struct {
+	after  string
+	at     int64
+	before []string
+	made   int64
+}
+
+// over says st ended before the worktree at the path was made again: an
+// end stamped before its .git file's time. A step with no end stamped (a
+// replayed one, or one still running), or a time not read, is judged as
+// before this was kept.
+func (m madeAgain) over(st relatedStep) bool {
+	return m.made != 0 && st.ended != 0 && st.ended < m.made
+}
+
+// whose is whose (below) for a path made again, or for one seen the
+// first time (a zero madeAgain). A point gone from the chat was cut by a
+// rewind that kept no step: a rewind that keeps one moves the point back
+// to it (rewoundLocked), so then every step there now came after
+// the rewind, and all count.
+func (m madeAgain) whose(path, folder string, steps []relatedStep, given map[string]string, of func(string) string) string {
+	if m.after == "" {
+		return whose(path, folder, slices.DeleteFunc(slices.Clone(steps), m.over), given, m.before, of)
+	}
+	i := slices.IndexFunc(steps, func(st relatedStep) bool { return st.id == m.after })
+	var since []relatedStep
+	for j, st := range steps {
+		if (j > i || st.runningAt(m.at)) && !m.over(st) {
+			since = append(since, st)
+		}
+	}
+	mine := map[string]string{}
+	for call, p := range given {
+		if !slices.Contains(m.before, call) {
+			mine[call] = p
+		}
+	}
+	return whose(path, folder, since, mine, m.before, of)
+}
+
+// rewoundLocked is a rewind that keeps kept: the related worktrees' points
+// it cut (a removed record's RemovedAfter) moved back to the last step it
+// kept, the list the rewind saves with the record, so a restart before the
+// next look keeps them. It also notes the rewind, so the next look moves
+// what a look in flight during it read before the cut (its records and its
+// last step) back the same way (rewoundPointsLocked). Of two rewinds before
+// a look, the one that cut further back holds.
+func (c *chat) rewoundLocked(kept []model.Item) []model.RelatedWorktree {
+	steps := relatedSteps(kept)
+	to := ""
+	if len(steps) > 0 {
+		to = steps[len(steps)-1].id
+	}
+	if !c.rewound || c.rewoundTo != "" && !slices.ContainsFunc(steps, func(st relatedStep) bool { return st.id == c.rewoundTo }) {
+		c.rewoundTo = to
+	}
+	c.rewound = true
+	list, _ := movePoints(c.record.RelatedWorktrees, steps, to)
+	return list
+}
+
+// rewoundPointsLocked moves the points a rewind cut (a removed record's
+// RemovedAfter, the last look's step) back to the last step it kept, and
+// returns the records as they are then: what a look in flight during the
+// rewind read and saved from before it. Every step kept came before the
+// cut point, so a reader of the old worktree stays before it, and the
+// steps after the rewind count. A rewind that kept no step leaves them,
+// and madeAgain counts every step. It runs under looking.
+func (c *chat) rewoundPointsLocked(steps []relatedStep) []model.RelatedWorktree {
+	to := c.rewoundTo
+	c.rewound, c.rewoundTo = false, ""
+	if cutBy(c.lookedStep, steps, to) {
+		c.lookedStep = to
+	}
+	list, moved := movePoints(c.record.RelatedWorktrees, steps, to)
+	if moved {
+		c.saveLocked(func(r *model.ChatRecord) { r.RelatedWorktrees = slices.Clone(list) })
+	}
+	return list
+}
+
+// movePoints is list with each removed record's point that steps no longer
+// hold moved back to step to, and whether any moved; with to "" (a rewind
+// that kept no step) none moves.
+func movePoints(list []model.RelatedWorktree, steps []relatedStep, to string) ([]model.RelatedWorktree, bool) {
+	list = slices.Clone(list)
+	moved := false
+	for i := range list {
+		if cutBy(list[i].RemovedAfter, steps, to) {
+			list[i].RemovedAfter, moved = to, true
+		}
+	}
+	return list, moved
+}
+
+// cutBy says a rewind to step to cut the step id: it isn't among steps.
+func cutBy(id string, steps []relatedStep, to string) bool {
+	return id != "" && to != "" && !slices.ContainsFunc(steps, func(st relatedStep) bool { return st.id == id })
+}
+
 // whose is the tool call of the subagent the worktree at path is for, ""
 // when none shows: the agent's word first, then the first of the steps to
-// name it, in any of the ways a step can.
-func whose(path, folder string, steps []relatedStep, given map[string]string) string {
-	here := realpath.Of(path)
-	var calls []string
+// name it, in any of the ways a step can, but that a call that had none
+// of the path's records before (their calls, before) goes first. of is
+// realpath.Of, or the look's own.
+func whose(path, folder string, steps []relatedStep, given map[string]string, before []string, of func(string) string) string {
+	here := of(path)
+	var named []string
 	for call, p := range given {
-		if realpath.Of(p) == here {
-			calls = append(calls, call)
+		if of(p) == here {
+			named = append(named, call)
 		}
 	}
-	if len(calls) > 0 {
-		slices.Sort(calls) // a forged file can name one worktree twice: the same answer each look
-		return calls[0]
-	}
-	names := spellings(path, folder)
+	slices.Sort(named) // a forged file can name one worktree twice: the same answer each look
+	names := spellings(path, folder, of)
 	for _, st := range steps {
 		if st.names(names) {
-			return st.call
+			named = append(named, st.call)
 		}
+	}
+	if i := slices.IndexFunc(named, func(call string) bool { return !slices.Contains(before, call) }); i >= 0 {
+		return named[i]
+	}
+	if len(named) > 0 {
+		return named[0]
 	}
 	return ""
 }
@@ -527,9 +885,9 @@ func whose(path, folder string, steps []relatedStep, given map[string]string) st
 // path, its real path, the same under the chat's folder as the chat spells
 // it, and relative to that folder, as Paths are inside it and as a
 // command in it would say it.
-func spellings(path, folder string) []string {
-	names := []string{path, realpath.Of(path)}
-	if rel, err := filepath.Rel(realpath.Of(folder), realpath.Of(path)); err == nil {
+func spellings(path, folder string, of func(string) string) []string {
+	names := []string{path, of(path)}
+	if rel, err := filepath.Rel(of(folder), of(path)); err == nil {
 		names = append(names, filepath.Join(folder, rel), rel)
 	}
 	slices.Sort(names)

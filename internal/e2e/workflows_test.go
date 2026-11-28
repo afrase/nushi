@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,10 +21,12 @@ import (
 )
 
 // claudeOnFake's workflows are Claude's files in the test daemon's own
-// Claude config folder, read as main reads them (claudehistory.Local),
-// whole each time: these readers look at files only, not this machine's
-// processes.
-func (c claudeOnFake) local() claudehistory.Local { return claudehistory.Local{Projects: c.projects} }
+// Claude config folder, read as main reads them (claudehistory.Local,
+// what was read kept in its Runs, so a read takes only what was added):
+// these readers look at files only, not this machine's processes.
+func (c claudeOnFake) local() claudehistory.Local {
+	return claudehistory.Local{Projects: c.projects, Workflows: c.runs}
+}
 
 func (c claudeOnFake) ReadWorkflow(sid, folder string, w model.Workflow) (model.Workflow, error) {
 	return c.local().ReadWorkflow(sid, folder, w)
@@ -79,6 +82,31 @@ func TestAWorkflowsFilesThroughTheAPI(t *testing.T) {
 	alpha := filepath.Join(session, "subagents", "workflows", runID, "agent-"+alphaID+".jsonl")
 	f, err := os.OpenFile(alpha, os.O_APPEND|os.O_WRONLY, 0)
 	testcheck.NoErr(t, err)
+	// map:alpha writes in a worktree beside the chat's folder: a file, a
+	// name that is a link to another folder's file, and a file in a
+	// worktree removed since.
+	beside, _ := filepath.EvalSymlinks(t.TempDir())
+	other, _ := filepath.EvalSymlinks(t.TempDir())
+	removed := filepath.Join(beside, "removed-wt")
+	testcheck.Write(t, filepath.Join(beside, "audit.md"), "the audit")
+	testcheck.Write(t, filepath.Join(other, "secret.md"), "not the run's")
+	testcheck.NoErr(t, os.Symlink(filepath.Join(other, "secret.md"), filepath.Join(beside, "linked.md")))
+	testcheck.Write(t, filepath.Join(removed, "old.md"), "merged")
+	for i, p := range []string{filepath.Join(beside, "audit.md"), filepath.Join(beside, "linked.md"), filepath.Join(removed, "old.md")} {
+		_, err = fmt.Fprintf(f, `{"type":"assistant","timestamp":"2026-11-16T03:07:1%[1]d.000Z","message":{"role":"assistant","content":[`+
+			`{"type":"tool_use","id":"toolu_o%[1]d","name":"Write","input":{"file_path":%[2]q,"content":"x"}}]}}`+"\n"+
+			`{"type":"user","timestamp":"2026-11-16T03:07:1%[1]d.000Z","message":{"role":"user","content":[`+
+			`{"type":"tool_result","tool_use_id":"toolu_o%[1]d","content":"ok"}]}}`+"\n", i, p)
+		testcheck.NoErr(t, err)
+	}
+	// map:alpha writes a file in the chat's folder, and fails to write
+	// another.
+	_, err = fmt.Fprintf(f, `{"type":"assistant","timestamp":"2026-11-16T03:07:17.000Z","message":{"role":"assistant","content":[`+
+		`{"type":"tool_use","id":"toolu_w1","name":"Write","input":{"file_path":%q,"content":"x"}},{"type":"tool_use","id":"toolu_w2","name":"Write","input":{"file_path":%q}}]}}`+"\n"+
+		`{"type":"user","timestamp":"2026-11-16T03:07:18.000Z","message":{"role":"user","content":[`+
+		`{"type":"tool_result","tool_use_id":"toolu_w1","content":"ok"},{"type":"tool_result","tool_use_id":"toolu_w2","content":"no","is_error":true}]}}`+"\n",
+		filepath.Join(folder, "notes", "plan.md"), filepath.Join(folder, "refused.md"))
+	testcheck.NoErr(t, err)
 	for i := range moreSteps {
 		_, err = fmt.Fprintf(f, `{"type":"assistant","isSidechain":true,"agentId":%q,"uuid":"step-%d","timestamp":"2026-11-16T03:07:16.150Z","message":{"role":"assistant","content":[{"type":"text","text":"step %d"}]}}`+"\n", alphaID, i, i)
 		testcheck.NoErr(t, err)
@@ -119,6 +147,47 @@ func TestAWorkflowsFilesThroughTheAPI(t *testing.T) {
 	}
 	if done.Workflow.Agents != 4 || done.Workflow.Done != 4 || done.More {
 		t.Errorf("done: %v", done.Workflow)
+	}
+	// The file its agent wrote, named in the chat's folder, on the call;
+	// and among what the items before a recent part wrote.
+	var written []string
+	for _, w := range done.Workflow.Written {
+		written = append(written, w.Path)
+	}
+	want := []string{filepath.Join("notes", "plan.md"), filepath.Join(removed, "old.md"), filepath.Join(beside, "linked.md"), filepath.Join(beside, "audit.md")}
+	if w := done.Workflow.Written; !slices.Equal(written, want) || w[0].Changed != 1794798438000 {
+		t.Errorf("written: %v", w)
+	}
+	part := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, Recent: 1})))
+	if part.Older == 0 || !slices.Equal(part.OlderWritten, want) {
+		t.Errorf("older %d, written before them %q", part.Older, part.OlderWritten)
+	}
+
+	// The preview opens the file the run wrote beside the chat's folder;
+	// refuses the name that leads to another folder; and says a file
+	// whose worktree was removed isn't there, not that it failed.
+	testcheck.NoErr(t, os.RemoveAll(removed))
+	watch := func(path string) (*nushiv1.WatchChatFileResponse, error) {
+		t.Helper()
+		stream, err := a.c.WatchChatFile(ctx, connect.NewRequest(&nushiv1.WatchChatFileRequest{ChatId: id, Path: path}))
+		testcheck.NoErr(t, err)
+		defer stream.Close() //nolint:errcheck // a test's stream
+		if !stream.Receive() {
+			return nil, stream.Err()
+		}
+		return stream.Msg(), nil
+	}
+	if got, err := watch(filepath.Join(beside, "audit.md")); err != nil || string(got.Data) != "the audit" {
+		t.Errorf("the run's file beside the folder: %v, %v", got, err)
+	}
+	if got, err := watch(filepath.Join(beside, "linked.md")); err == nil || got != nil {
+		t.Errorf("a link to another folder's file: %v, %v", got, err)
+	}
+	if got, err := watch(filepath.Join(removed, "old.md")); err != nil || !got.Missing || got.Data != nil {
+		t.Errorf("a removed worktree's file: %v, %v", got, err)
+	}
+	if got, err := watch(filepath.Join(beside, "never.md")); err == nil || got != nil {
+		t.Errorf("a file the run didn't write: %v, %v", got, err)
 	}
 
 	// No limit is the most there is: the last 400 steps, and how many came
@@ -183,11 +252,31 @@ func TestStoppingAWorkflowThroughTheAPI(t *testing.T) {
 	session := filepath.Join(sessions.Store{ConfigDir: filepath.Join(data, "claude")}.ProjectDir(folder), sid)
 	testcheck.NoErr(t, os.CopyFS(session, os.DirFS(recordedRun)))
 	testcheck.NoErr(t, os.Remove(filepath.Join(session, "workflows", runID+".json")))
+	// Its first two agents still running.
+	journal := filepath.Join(session, "subagents", "workflows", runID, "journal.jsonl")
+	whole, err := os.ReadFile(journal)
+	testcheck.NoErr(t, err)
+	testcheck.Write(t, journal, strings.Join(strings.SplitAfter(string(whole), "\n")[:3], ""))
 
 	a.send(id, "launch the workflow")
 	callID := waitWorkflow(a, id, "running", 1)
+	// A running agent writes a file just before the run is stopped: no
+	// snapshot comes, and the run is read once more as it ends.
+	alpha := filepath.Join(session, "subagents", "workflows", runID, "agent-"+alphaID+".jsonl")
+	f, err := os.OpenFile(alpha, os.O_APPEND|os.O_WRONLY, 0)
+	testcheck.NoErr(t, err)
+	_, err = fmt.Fprintf(f, `{"type":"assistant","timestamp":"2026-11-16T03:07:17.000Z","message":{"role":"assistant","content":[`+
+		`{"type":"tool_use","id":"toolu_last","name":"Write","input":{"file_path":%q,"content":"x"}}]}}`+"\n"+
+		`{"type":"user","timestamp":"2026-11-16T03:07:18.000Z","message":{"role":"user","content":[`+
+		`{"type":"tool_result","tool_use_id":"toolu_last","content":"ok"}]}}`+"\n", filepath.Join(folder, "last.md"))
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, f.Close())
 	must(a.c.StopTask(ctx, connect.NewRequest(&nushiv1.StopTaskRequest{ChatId: id, CallId: callID})))
 	waitWorkflow(a, id, "stopped", 0)
+	stopped := must(a.c.GetWorkflow(ctx, connect.NewRequest(&nushiv1.GetWorkflowRequest{ChatId: id, CallId: callID})))
+	if w := stopped.Workflow.Written; len(w) != 1 || w[0].Path != "last.md" {
+		t.Errorf("written once stopped: %v", w)
+	}
 	users := 0
 	for _, it := range a.get(id).Items {
 		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE {

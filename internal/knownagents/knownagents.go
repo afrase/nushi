@@ -1,7 +1,7 @@
 // Package knownagents is the one table of the agents Nushi runs: each
 // agent's harness (capabilities.go lists what each has) and its facts, as
 // every feature takes them (finding and setting it up, its skills, its
-// trust, its MCP servers). It is wiring, as cmd/nushid is: main builds the
+// trust, its MCP servers: Claude's, Ante's and PiG's). It is wiring, as cmd/nushid is: main builds the
 // features from it, and the e2e tests run its harnesses on fake agents. What
 // each agent does is in its own packages: internal/claude*, internal/codex*,
 // internal/ante* (Ante's bridge too, ADR 0030), internal/omp*,
@@ -40,6 +40,7 @@ import (
 	"github.com/afrase/nushi/internal/opencodeskills"
 	"github.com/afrase/nushi/internal/opencodetrust"
 	"github.com/afrase/nushi/internal/pi"
+	"github.com/afrase/nushi/internal/pigmcp"
 	"github.com/afrase/nushi/internal/piskills"
 )
 
@@ -137,12 +138,24 @@ func All(projects string, goAgent func(name string) bool) []Agent {
 	return all
 }
 
-// piFlavor is an agent of Pi's RPC mode.
+// piFlavor is an agent of Pi's RPC mode. PiG's MCP servers are its own
+// files, checked and signed in to by its CLI as a chat would run it;
+// plain Pi has no MCP of its own.
 func piFlavor(f pi.Flavor) Agent {
 	h := pi.Harness{Flavor: f}
-	return Agent{
+	a := Agent{
 		Harness: h, Local: h,
-		Agent:  agents.Agent{CLI: f.CLI, Min: f.Min, Tested: []string{f.Version}},
+		Agent:  agents.Agent{CLI: f.CLI, Min: f.Min, Tested: f.Tested},
 		Skills: piskills.Skills{Flavor: f}, Trust: pi.Trust{},
 	}
+	if f.Own != "" { // --version names the Pi it ports
+		a.Agent.Version = func(run func(bare []string, args ...string) ([]byte, error)) string {
+			v, _ := f.ReadVersion(run)
+			return v
+		}
+	}
+	if f.Name == pi.PiG.Name {
+		a.MCP = func(run func() (model.AgentRun, error)) mcp.Config { return pigmcp.PiG{Flavor: f, Run: run} }
+	}
+	return a
 }

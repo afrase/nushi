@@ -22,12 +22,14 @@ import 'paged_chat.dart';
 
 /// The window on a long chat (100 turns, over a thousand items) whose
 /// fifth turn's reply ([far]'s), far above what's loaded, and 98th, loaded,
-/// say "needle".
+/// say "needle"; with `top`, the first text loaded ([_top]) has a lone
+/// marker.
 Future<(Daemon, PagedChat, FakeDaemon)> _window(
   WidgetTester tester, {
   Size size = const Size(1400, 900),
   Brightness brightness = Brightness.dark,
   int far = 5,
+  bool top = false,
 }) async {
   viewport(tester, size, brightness: brightness);
   showDetails.value = false;
@@ -37,6 +39,11 @@ Future<(Daemon, PagedChat, FakeDaemon)> _window(
     final i = items.indexWhere((it) => it.id == 'c-a$n');
     items[i] = items[i].deepCopy()
       ..text = 'Turn $n left a needle in the upload path.\n\n${items[i].text}';
+  }
+  if (top) {
+    final i = items.indexWhere((it) => it.id == _top);
+    items[i] = items[i].deepCopy()
+      ..text = 'A lone marker at the top.\n\n${items[i].text}';
   }
   final paged = PagedChat(c, items);
   final fake = FakeDaemon([c])..answer = paged.answer;
@@ -48,6 +55,9 @@ Future<(Daemon, PagedChat, FakeDaemon)> _window(
 }
 
 ChatState _chat(Daemon d) => d.chats['c']!;
+
+/// The first text of what [_window] loads: a thought of turn 81.
+const _top = 'c-t81';
 
 /// Whether [text]'s first match shows in the transcript.
 bool _shows(WidgetTester tester, String text) {
@@ -62,7 +72,7 @@ void main() {
   setUpAll(loadFonts);
 
   testWidgets('a match above what’s loaded is counted, nothing loaded and no '
-      'Load all; the typed query goes to the match that’s loaded', (
+      'Load all; the typed query goes to the newest match, loaded', (
     tester,
   ) async {
     final (d, paged, _) = await _window(tester);
@@ -75,12 +85,12 @@ void main() {
     final asked = paged.asked.whereType<FindInChatRequest>().single;
     expect(asked.text, 'needle');
     expect(asked.before, c.items.first.id, reason: 'the rest it finds');
-    expect(c.find.count, '2 of 2');
+    expect(c.find.count, '1 of 2');
     expect(c.find.whole, isTrue);
     expect(paged.pages, isEmpty);
     expect(c.older, older);
     expect(find.text('Load all'), findsNothing);
-    expect(find.text('Searching loaded messages · '), findsNothing);
+    expect(find.text('Searching loaded messages. '), findsNothing);
     expect(_shows(tester, 'Turn 98 left a needle'), isTrue);
     await closeView(tester, d);
   }, variant: onMac);
@@ -93,14 +103,14 @@ void main() {
       ..open()
       ..query = 'needle';
     await tester.pumpAndSettle();
-    expect(c.find.count, '2 of 2');
+    expect(c.find.count, '1 of 2');
     // Each key typed while the daemon is asked: no line, no Load all.
     final hold = paged.holdFind = Completer<void>();
     for (final q in ['needles', 'needles in', 'needles in a haystack']) {
       c.find.query = q;
       for (var i = 0; i < 4; i++) {
         await tester.pump(ChatFind.pause ~/ 3);
-        expect(find.text('Searching loaded messages · '), findsNothing);
+        expect(find.text('Searching loaded messages. '), findsNothing);
         expect(find.text('Load all'), findsNothing);
       }
     }
@@ -126,7 +136,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.find.whole, isFalse);
     expect(c.find.count, '1 of 1');
-    expect(find.text('Searching loaded messages · '), findsOneWidget);
+    expect(find.text('Searching loaded messages. '), findsOneWidget);
     expect(find.text('Load all'), findsOneWidget);
     c.find.query = 'needles';
     await tester.pump(ChatFind.pause ~/ 2);
@@ -146,18 +156,18 @@ void main() {
       ..open()
       ..query = 'needle';
     await tester.pumpAndSettle();
-    c.find.step(1); // past the last: round to the first, far above
+    c.find.step(c.find.order.onward); // ⏎: older, far above
     expect(ChatFind.farItem(c.find.current), 'c-a5');
     await tester.pumpAndSettle();
     final page = paged.pages.first;
     expect(page.through, 'c-a5', reason: 'one page reaching back to it');
     expect(c.items.any((it) => it.id == 'c-a5'), isTrue);
-    expect(c.find.count, '1 of 2');
+    expect(c.find.count, '2 of 2');
     expect(ChatFind.farItem(c.find.current), isNull);
     expect(_shows(tester, 'Turn 5 left a needle'), isTrue);
-    c.find.step(1);
+    c.find.step(c.find.order.onward); // past the oldest: round to the newest
     await tester.pumpAndSettle();
-    expect(c.find.count, '2 of 2');
+    expect(c.find.count, '1 of 2');
     expect(_shows(tester, 'Turn 98 left a needle'), isTrue);
     await closeView(tester, d);
   }, variant: onMac);
@@ -173,27 +183,31 @@ void main() {
         ..open()
         ..query = 'needle';
       await tester.pumpAndSettle();
-      expect(c.find.count, '2 of 2');
-      c.find.step(1);
+      expect(c.find.count, '1 of 2');
+      c.find.step(c.find.order.onward);
       expect(ChatFind.farItem(c.find.current), 'c-a$turn');
       await tester.pumpAndSettle();
-      expect(c.find.count, '1 of 2');
+      expect(c.find.count, '2 of 2');
       expect(c.find.current, startsWith('c-a$turn '));
       expect(_shows(tester, 'Turn $turn left a needle'), isTrue);
       await closeView(tester, d);
     }, variant: onMac);
   }
 
-  testWidgets('a typed query whose first match is at the very top of '
+  testWidgets('a typed query whose newest match is at the very top of '
       'what’s loaded loads nothing; a wheel up there, which moves nothing, '
       'loads the page before', (tester) async {
-    final (d, paged, _) = await _window(tester);
+    final (d, paged, _) = await _window(tester, top: true);
     final c = _chat(d);
     final older = c.older;
-    final first = c.items.firstWhere((it) => it.text.trim().isNotEmpty);
+    expect(
+      c.items.firstWhere((it) => it.text.trim().isNotEmpty).id,
+      _top,
+      reason: 'the first text loaded',
+    );
     c.find
       ..open()
-      ..query = first.text.trim().split('\n').first;
+      ..query = 'lone marker';
     await tester.pumpAndSettle();
     expect(c.find.hits, isNotEmpty);
     final p = tester.state<ScrollableState>(
@@ -215,9 +229,46 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
-  testWidgets('typing a word that is everywhere goes to its first match '
-      'loaded and loads nothing; scrolling up from there loads the page '
-      'before', (tester) async {
+  testWidgets('after a typed query takes the list to the top of what’s '
+      'loaded, the user’s own scroll up there loads the page before', (
+    tester,
+  ) async {
+    final (d, paged, _) = await _window(tester, top: true);
+    final c = _chat(d);
+    final older = c.older;
+    c.find
+      ..open()
+      ..query = 'lone marker';
+    await tester.pump(ChatFind.pause);
+    await tester.pumpAndSettle();
+    expect(c.find.hits, isNotEmpty);
+    final p = tester
+        .state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(SelectionArea),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position;
+    expect(
+      p.extentBefore,
+      lessThan(p.viewportDimension),
+      reason: 'its newest match is at the top of what is loaded',
+    );
+    expect(paged.pages, isEmpty, reason: 'typing loads nothing');
+    p.jumpTo(p.pixels + 40); // the user scrolls down a little
+    await tester.pumpAndSettle();
+    p.jumpTo(p.pixels - 1); // and back up
+    await tester.pumpAndSettle();
+    expect(paged.pages, isNotEmpty);
+    expect(c.older, lessThan(older));
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('typing a word that is everywhere goes to its newest match '
+      'and loads nothing; the chat stays at its end', (tester) async {
     final (d, paged, _) = await _window(tester);
     final c = _chat(d);
     final older = c.older;
@@ -225,6 +276,7 @@ void main() {
       c.find
         ..open()
         ..query = q;
+      await tester.pump(ChatFind.pause);
       await tester.pumpAndSettle();
       expect(c.find.hits, isNotEmpty);
       expect(paged.pages, isEmpty, reason: 'typing "$q" loaded a page');
@@ -239,14 +291,10 @@ void main() {
           .first,
     );
     expect(
-      p.position.extentBefore,
+      p.position.extentAfter,
       lessThan(p.position.viewportDimension),
-      reason: 'the first match loaded is at the top of what is loaded',
+      reason: 'the newest match is at the end of what is loaded',
     );
-    p.position.jumpTo(p.position.pixels - 1); // the user scrolls up
-    await tester.pumpAndSettle();
-    expect(paged.pages, isNotEmpty);
-    expect(c.older, lessThan(older));
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -261,7 +309,7 @@ void main() {
     final current = c.find.current;
     await d.loadOlder(c);
     await tester.pumpAndSettle();
-    expect(c.find.count, '2 of 2');
+    expect(c.find.count, '1 of 2');
     expect(c.find.current, current);
     await closeView(tester, d);
   }, variant: onMac);
@@ -337,7 +385,7 @@ void main() {
         await tester.pumpAndSettle();
         final name = 'find-all-${brightness.name}-${width.toInt()}';
         await render(tester, find.byType(NushiApp), '$name-count');
-        c.find.step(1);
+        c.find.step(c.find.order.onward);
         await tester.pumpAndSettle();
         expect(_shows(tester, 'Turn 5 left a needle'), isTrue);
         await render(tester, find.byType(NushiApp), '$name-stepped');
@@ -365,7 +413,7 @@ void main() {
       ..open()
       ..query = 'needle';
     await tester.pumpAndSettle();
-    c.find.step(1); // past the last: round to the first, far above
+    c.find.step(c.find.order.onward); // ⏎: older, far above
     await tester.pumpAndSettle();
     expect(paged.pages, isNotEmpty);
     expect([for (final p in paged.pages) p.through], everyElement(isEmpty));

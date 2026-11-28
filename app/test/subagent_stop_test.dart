@@ -152,12 +152,8 @@ void main() {
     // The stopped one: its row says "stopped", time frozen (its pane and
     // the card's finished ones below).
     final card = find.byType(DetailsPanel);
-    final stopped = find.textContaining('stopped · 2 tools');
+    final stopped = find.text('stopped, 2 tools, 1m 02s');
     expect(find.descendant(of: _line('a'), matching: stopped), findsOne);
-    expect(
-      find.descendant(of: _line('a'), matching: find.text('· 1m 02s')),
-      findsOne,
-    );
     final cardStops = find.descendant(of: card, matching: _stops);
     // The card's running ones show theirs, as Claude's rail; the rows
     // none until under the pointer.

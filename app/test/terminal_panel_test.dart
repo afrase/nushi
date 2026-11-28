@@ -2,15 +2,23 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_screen.dart';
 import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/contrast.dart';
+import 'package:nushi/theme/theme_file.dart';
+import 'package:nushi/theme/tokens.dart';
+import 'package:nushi/theme/tokyo_night.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:xterm2/xterm.dart' show TerminalView;
 
 import 'fake_daemon.dart' show FakeDaemon, loadFonts;
 import 'fake_shells.dart';
 import 'harness.dart';
+import 'theme_sets.dart';
 
 /// Two terminals of the chat on a fake daemon, each first showing
 /// [replay], and [live] after it once attached; a new one shows [replay].
@@ -30,9 +38,11 @@ Future<void> _panel(
   WidgetTester tester,
   Terminals terms, {
   VoidCallback? onHide,
+  Tokens tokens = Tokens.dark,
 }) async {
   await tester.pumpWidget(
     themed(
+      tokens: tokens,
       TerminalPanel(
         chatId: 'chat',
         terms: terms,
@@ -54,7 +64,7 @@ void main() {
     final terms = Terminals(NushiServiceClient(fake));
     var hidden = false;
     await _panel(tester, terms, onHide: () => hidden = true);
-    expect(find.text('zsh — veg'), findsNWidgets(2));
+    expect(find.text('zsh in veg'), findsNWidgets(2));
     expect(terms.active['chat'], 'b'); // the last one shows
     expect(terms.looked, {'b'}, reason: 'seen in the open panel');
 
@@ -98,8 +108,9 @@ void main() {
     expect(hidden, isTrue);
   });
 
-  testWidgets('⌘F in a terminal starts at the latest match; ⏎ goes down '
-      '(round to the first), ⇧⏎ up', (tester) async {
+  testWidgets('⌘F in a terminal reads newest first, as a chat: the latest '
+      'match is 1, ⏎ goes up to older output (round to the latest), ⇧⏎ '
+      'down', (tester) async {
     final (fake, shells) = _daemon(replay: 'one x\r\ntwo x\r\nthree x\r\n\$ ');
     final terms = Terminals(NushiServiceClient(fake));
     await _panel(tester, terms);
@@ -107,7 +118,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'x');
     await tester.pump();
-    expect(find.text('3 of 3'), findsOne);
+    expect(find.text('1 of 3'), findsOne, reason: 'the latest, counted 1');
+    // The arrows go up and down the scrollback, their words the chat's.
+    Finder arrow(IconData icon) =>
+        find.descendant(of: find.byType(FindBar), matching: find.byIcon(icon));
+    final (up, down) = (
+      arrow(Icons.keyboard_arrow_up),
+      arrow(Icons.keyboard_arrow_down),
+    );
+    String tip(Finder arrow) => tester
+        .widget<IconTap>(
+          find.ancestor(of: arrow, matching: find.byType(IconTap)).first,
+        )
+        .tooltip;
+    expect(tip(up), 'Older match\u2002⏎');
+    expect(tip(down), 'Newer match\u2002⇧⏎');
     for (final w in [1700.0, 720.0]) {
       viewport(tester, Size(w, 500));
       await tester.pumpAndSettle();
@@ -117,14 +142,21 @@ void main() {
         'terminal_find_${w.toInt()}',
       );
     }
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pump();
-    expect(find.text('1 of 3'), findsOne);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pump();
-    expect(find.text('2 of 3'), findsOne);
+    for (final count in ['2 of 3', '3 of 3', '1 of 3']) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(find.text(count), findsOne, reason: '⏎ goes older, round');
+    }
     await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
-    expect(find.text('1 of 3'), findsOne);
+    expect(find.text('3 of 3'), findsOne, reason: '⇧⏎ from the latest, round');
+    await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
+    expect(find.text('2 of 3'), findsOne, reason: '⇧⏎ goes newer');
+    await tester.tap(up);
+    await tester.pump();
+    expect(find.text('3 of 3'), findsOne, reason: 'the up arrow goes up');
+    await tester.tap(down);
+    await tester.pump();
+    expect(find.text('2 of 3'), findsOne, reason: 'the down arrow goes down');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
     expect(find.byType(TextField), findsNothing);
@@ -233,4 +265,95 @@ void main() {
     expect(shells.typedAll.join(), isNot(contains('52;')));
     expect(asked, isNot(contains('Clipboard.getData')));
   });
+
+  test("a terminal's current search hit reads, and is told from the rest", () {
+    for (final (name, t) in everySet) {
+      final theme = terminalTheme(t);
+      final ink = theme.searchHitForeground;
+      final now = theme.searchHitBackgroundCurrent;
+      final other = theme.searchHitBackground;
+      // xterm draws every hit's text in the one colour: it reads on both.
+      expect(contrast(ink, now), greaterThanOrEqualTo(4.5), reason: name);
+      expect(contrast(ink, other), greaterThanOrEqualTo(4.5), reason: name);
+      // The current hit is plainly another fill than the rest.
+      expect(
+        contrast(now, other),
+        greaterThanOrEqualTo(Tokens.searchHitGap),
+        reason: name,
+      );
+      // In hue too, as the app's other finds tell theirs: the current one
+      // the accent's (its lightness alone moved), the rest still needsSoft,
+      // the hue of needs.
+      final h = HSLColor.fromColor(now);
+      final (a, n) = (
+        HSLColor.fromColor(t.accent),
+        HSLColor.fromColor(t.needs),
+      );
+      expect(_hueApart(h.hue, a.hue), lessThan(2), reason: name);
+      expect((h.saturation - a.saturation).abs(), lessThan(0.03), reason: name);
+      expect(_hueApart(h.hue, n.hue), greaterThan(90), reason: name);
+      expect(other, t.needsSoft, reason: name);
+      // xterm swaps an ink within 1.5:1 of a selection: ours never is.
+      final picked = Color.alphaBlend(theme.selection, t.base);
+      expect(contrast(ink, picked), greaterThanOrEqualTo(1.5), reason: name);
+    }
+  });
+
+  test("the hits' text starts from the terminal's own, where a theme "
+      'gives one', () {
+    // Tokyo Night Day gives its terminal a text of its own; a made-up
+    // green body text shows which one the hits' text comes from.
+    const green = Color(0xFF1E5631);
+    for (final (from, want) in [
+      (tokyoNightLight, tokyoNightLight.terminal.foreground!),
+      (Tokens.dark, green),
+    ]) {
+      final t = withColors(from, {'text': green});
+      final ink = HSLColor.fromColor(terminalTheme(t).searchHitForeground);
+      final own = HSLColor.fromColor(want);
+      expect(_hueApart(ink.hue, own.hue), lessThan(2));
+      expect((ink.saturation - own.saturation).abs(), lessThan(0.03));
+    }
+    // Where it reads already, it is the terminal's text as published.
+    const deep = Color(0xFF0F2E1A);
+    final t = withColors(Tokens.light, {'text': deep});
+    expect(terminalTheme(t).searchHitForeground, deep);
+  });
+
+  // A terminal with ⌘F open, in every built-in set: on a word with three
+  // matches, and on one character, the hardest to pick out.
+  for (final (name, tokens) in everySet) {
+    for (final (query, what) in [('pear', 'word'), ('x', 'char')]) {
+      final file = name
+          .toLowerCase()
+          .replaceAll(', ', '_')
+          .replaceAll(' ', '_');
+      renderTest('a terminal search for a $what in $name', (tester) async {
+        final (fake, _) = _daemon(
+          replay:
+              'pear tart, mix 2\r\nplum jam, pear pie, wax\r\n'
+              'pear roll, box 4\r\n\$ ',
+        );
+        final terms = Terminals(NushiServiceClient(fake));
+        viewport(tester, const Size(900, 300));
+        await _panel(tester, terms, tokens: tokens);
+        await press(tester, LogicalKeyboardKey.keyF, cmd: true, settle: false);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), query);
+        await tester.pump();
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(TerminalPanel),
+          'terminal_hit_${what}_$file',
+        );
+      });
+    }
+  }
+}
+
+/// How far apart two hues are, round the circle.
+double _hueApart(double a, double b) {
+  final d = (a - b).abs() % 360;
+  return d > 180 ? 360 - d : d;
 }

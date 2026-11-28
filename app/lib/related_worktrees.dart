@@ -17,6 +17,18 @@ import 'package:nushi/plain_text.dart';
 /// for one that's present (its uncommitted work can change without any
 /// commit), or Reload. A removed one's commits can't change: it's read once.
 /// Nothing here runs on a timer.
+///
+/// A path can have several records: a worktree removed and another made
+/// at its path since (issue #118). Each is told by its key ([keyOf]), its
+/// place among its path's records, and the daemon answers stats for each
+/// record of a path asked, in its list's order. That list only grows, but
+/// for a run's removed record with nothing to show: the daemon holds it
+/// back while it is its path's last, and sends it again, in its place,
+/// once a later record at its path comes. So a record's place never moves
+/// and no key is ever another record's, but for a hidden record forgotten
+/// past 256 (ADR 0081), whose place and key a later record at its path
+/// takes: a record held back takes its row and its key with it, and comes
+/// back to them.
 class RelatedWorktrees extends ChangeNotifier {
   new(this.chatId);
 
@@ -27,9 +39,12 @@ class RelatedWorktrees extends ChangeNotifier {
   NushiServiceClient? client;
 
   /// The worktrees, in the order they were found.
-  List<RelatedWorktree> list = const [];
+  List<RelatedWorktree> get list => _list;
+  List<RelatedWorktree> _list = const [];
+  List<String> _keys = const []; // list's, each record's key
 
-  /// The path the Changes view shows, null for the chat's own folder.
+  /// The key of the worktree the Changes view shows ([keyOf]), null for
+  /// the chat's own folder.
   String? get shown => _shown;
   String? _shown;
 
@@ -48,8 +63,37 @@ class RelatedWorktrees extends ChangeNotifier {
   int _taken = 0; // lists taken: an answer asked before one is older
 
   /// The worktree the Changes view shows, if one is.
-  RelatedWorktree? get picked =>
-      list.where((w) => w.path == _shown).firstOrNull;
+  RelatedWorktree? get picked => recordOf(_shown);
+
+  /// [w]'s key: its path, or for a later record of a path made again its
+  /// path and how many came before it. It stays as long as its record. A
+  /// [w] the list no longer holds as it is (a newer list came, its head
+  /// moved) is the one record of its path, call and branch, or of those
+  /// the one at its last head (one call can make a path again on its
+  /// branch); null when that's not one record, never another record's key.
+  String? keyOf(RelatedWorktree w) {
+    bool same(RelatedWorktree k) =>
+        k.path == w.path && k.callId == w.callId && k.branch == w.branch;
+    var i = _list.indexWhere((k) => identical(k, w));
+    if (i < 0) i = _list.indexOf(w);
+    if (i < 0) i = _onlyOne(same);
+    if (i == -2) i = _onlyOne((k) => same(k) && k.lastHead == w.lastHead);
+    return i < 0 ? null : _keys[i];
+  }
+
+  /// The index of the one record of the list that [test] takes, -1 for
+  /// none, -2 for more than one.
+  int _onlyOne(bool Function(RelatedWorktree) test) {
+    final i = _list.indexWhere(test);
+    if (i < 0) return -1;
+    return _list.lastIndexWhere(test) == i ? i : -2;
+  }
+
+  /// The record of [key], if there is one.
+  RelatedWorktree? recordOf(String? key) {
+    final i = key == null ? -1 : _keys.indexOf(key);
+    return i < 0 ? null : _list[i];
+  }
 
   /// The worktrees to list: present ones, then removed ones, each the
   /// latest first.
@@ -78,7 +122,8 @@ class RelatedWorktrees extends ChangeNotifier {
   void take(List<RelatedWorktree> worktrees) {
     _taken++;
     final same = listEquals(worktrees, list);
-    list = worktrees;
+    _list = worktrees;
+    _keys = relatedKeys(worktrees);
     _fetchSoon();
     if (same) return;
     if (picked == null) _shown = null; // it's the chat's folder again
@@ -88,23 +133,26 @@ class RelatedWorktrees extends ChangeNotifier {
   /// A turn ended: what's on screen of the worktrees still there is read
   /// again. Their heads may not have moved, so an event may not come.
   void turnEnded() {
-    _dirty.addAll(list.where((w) => w.state == 'present').map((w) => w.path));
+    _dirty.addAll([
+      for (var i = 0; i < _list.length; i++)
+        if (_list[i].state == 'present') _keys[i],
+    ]);
     _fetchSoon();
   }
 
   /// Reload: looks, then reads what's on screen again.
   Future<void> reload() async {
     if (list.isEmpty) return;
-    _dirty.addAll(list.map((w) => w.path));
+    _dirty.addAll(_keys);
     await read();
     _fetchSoon();
   }
 
-  /// Shows [path] in the Changes view, or the chat's own folder (null). A
-  /// click asks for this: it's read at once.
-  void pick(String? path) {
-    _shown = path;
-    _asked = path != null;
+  /// Shows the worktree of [key] in the Changes view, or the chat's own
+  /// folder (null). A click asks for this: it's read at once.
+  void pick(String? key) {
+    _shown = key;
+    _asked = key != null;
     notifyListeners();
   }
 
@@ -132,44 +180,47 @@ class RelatedWorktrees extends ChangeNotifier {
     return was;
   }
 
-  /// A row of [path] is on screen: its stats are read when due.
-  void want(String path) {
-    _wanted.update(path, (n) => n + 1, ifAbsent: () => 1);
+  /// A row of the worktree of [key] is on screen: its stats are read when
+  /// due.
+  void want(String key) {
+    _wanted.update(key, (n) => n + 1, ifAbsent: () => 1);
     _fetchSoon();
   }
 
-  /// A row of [path] left the screen.
-  void unwant(String path) {
-    final n = _wanted[path] ?? 0;
+  /// A row of the worktree of [key] left the screen.
+  void unwant(String key) {
+    final n = _wanted[key] ?? 0;
     if (n <= 1) {
-      _wanted.remove(path);
+      _wanted.remove(key);
     } else {
-      _wanted[path] = n - 1;
+      _wanted[key] = n - 1;
     }
   }
 
-  /// [path]'s stats as last read, if they have been.
-  RelatedWorktreeStats? stats(String path) => _stats[path];
+  /// The stats of the worktree of [key] as last read, if they have been.
+  RelatedWorktreeStats? stats(String key) => _stats[key];
 
-  /// Reads [path]'s stats now, for a click: never from what was read.
-  Future<RelatedWorktreeStats?> statsNow(String path) async {
-    final w = list.where((w) => w.path == path).firstOrNull;
+  /// Reads the stats of the worktree of [key] now, for a click: never from
+  /// what was read.
+  Future<RelatedWorktreeStats?> statsNow(String key) async {
+    final w = recordOf(key);
     final client = this.client;
     if (w == null || client == null) return null;
-    final key = {path: _key(w)};
-    _counted.addAll(key); // no row's fetch for the same thing
-    _dirty.remove(path);
+    final counted = {key: _key(w)};
+    _counted.addAll(counted); // no row's fetch for the same thing
+    _dirty.remove(key);
     final got = await client.getRelatedWorktreeStats(
-      GetRelatedWorktreeStatsRequest(chatId: chatId, paths: [path]),
+      GetRelatedWorktreeStatsRequest(chatId: chatId, paths: [w.path]),
     );
-    _hold(got.stats, key);
-    return got.stats.firstOrNull;
+    _hold(got.stats, counted);
+    return _stats[key];
   }
 
-  /// What [path] amounts to now, to tell when it changes; null until read.
-  String? stamp(String path) {
-    final s = _stats[path];
-    final w = list.where((w) => w.path == path).firstOrNull;
+  /// What the worktree of [key] amounts to now, to tell when it changes;
+  /// null until read.
+  String? stamp(String key) {
+    final s = _stats[key];
+    final w = recordOf(key);
     return s == null || w == null
         ? null
         : '${_key(w)} ${s.files} ${s.added} ${s.removed} ${s.ahead}';
@@ -185,9 +236,11 @@ class RelatedWorktrees extends ChangeNotifier {
 
   String _key(RelatedWorktree w) => '${w.state} ${w.baseCommit} ${w.lastHead}';
 
-  bool _due(RelatedWorktree w) =>
-      _wanted.containsKey(w.path) &&
-      (_dirty.contains(w.path) || _counted[w.path] != _key(w));
+  bool _due(int i) {
+    final key = _keys[i];
+    return _wanted.containsKey(key) &&
+        (_dirty.contains(key) || _counted[key] != _key(_list[i]));
+  }
 
   void _fetchSoon() {
     if (_soon) return;
@@ -206,7 +259,10 @@ class RelatedWorktrees extends ChangeNotifier {
       _again = true;
       return;
     }
-    final due = {for (final w in list.where(_due)) w.path: _key(w)};
+    final due = {
+      for (var i = 0; i < _list.length; i++)
+        if (_due(i)) _keys[i]: _key(_list[i]),
+    };
     if (due.isEmpty) return;
     _fetching = true;
     // Marked first: a failure waits for the next event, turn or Reload.
@@ -214,7 +270,10 @@ class RelatedWorktrees extends ChangeNotifier {
     _dirty.removeAll(due.keys);
     try {
       final got = await client.getRelatedWorktreeStats(
-        GetRelatedWorktreeStatsRequest(chatId: chatId, paths: due.keys),
+        GetRelatedWorktreeStatsRequest(
+          chatId: chatId,
+          paths: {for (final k in due.keys) recordOf(k)!.path},
+        ),
       );
       _hold(got.stats, due);
     } on Object {
@@ -228,13 +287,34 @@ class RelatedWorktrees extends ChangeNotifier {
     }
   }
 
+  /// Keeps [stats], the n-th of a path the n-th record of it ([keyOf]):
+  /// the daemon's list may have more of a path than this one yet, after.
   void _hold(List<RelatedWorktreeStats> stats, Map<String, String> keys) {
+    final seen = <String, int>{};
     for (final s in stats) {
-      _stats[s.path] = s;
+      final n = seen[s.path] = (seen[s.path] ?? -1) + 1;
+      _stats[relatedKey(s.path, n)] = s;
     }
     _counted.addAll(keys);
     if (stats.isNotEmpty) notifyListeners();
   }
+}
+
+/// The key of the [n]-th record (from 0) of [path] in a chat's list: its
+/// path for the first, as nearly every path has one. git refuses a NUL in
+/// a path, so none can be another's.
+String relatedKey(String path, int n) => n == 0 ? path : '$path\u0000$n';
+
+/// The folder of the record of [key] ([relatedKey]).
+String relatedPath(String key) => key.split('\u0000').first;
+
+/// The keys of [list]'s records, in its order ([relatedKey]).
+List<String> relatedKeys(List<RelatedWorktree> list) {
+  final seen = <String, int>{};
+  return [
+    for (final w in list)
+      relatedKey(w.path, seen[w.path] = (seen[w.path] ?? -1) + 1),
+  ];
 }
 
 /// [w]'s name to show: its branch as plain text (git takes control and bidi
